@@ -1,0 +1,73 @@
+/**
+ * Brand & Platform Constants
+ * المصدر الوحيد لمعلومات المنصة المعروضة للمستخدم.
+ */
+
+export const BRAND = {
+  nameAr: 'مَمسَى',
+  nameEn: 'Mamsa',
+  tagline: 'منصة رائدة في مجال حجز أماكن الإقامة الفريدة حول العالم.',
+  email: 'info@mamsa.sa',
+  phone: '+966 50 000 0000',
+  licenseNumber: '00000',
+  licenseAuthority: 'وزارة السياحة',
+} as const;
+
+export const SOCIAL_LINKS = {
+  linkedin: 'https://linkedin.com/company/mamsa',
+  instagram: 'https://instagram.com/mamsa',
+  twitter: 'https://twitter.com/mamsa',
+  facebook: 'https://facebook.com/mamsa',
+} as const;
+
+export const CURRENCY = {
+  code: 'SAR',
+  symbolAr: 'ر.س',
+  symbolEn: 'SAR',
+} as const;
+
+export const DATE_FORMAT = {
+  display: 'dd/MM/yyyy', // gregorian only — قرار معتمد
+  displayLong: 'dd MMMM yyyy',
+  iso: 'yyyy-MM-dd',
+} as const;
+
+export const OTP_CONFIG = {
+  length: 6,
+  expirySeconds: 60,
+  maxAttempts: 3,
+  resendCooldownSeconds: 30,
+} as const;
+
+export const PAGINATION = {
+  pageSize: 12,
+} as const;
+
+export const PRICE_FILTER = {
+  min: 0,
+  max: 5000,
+  step: 50,
+} as const;
+
+export const AMENITIES_CATALOG = [
+  { key: 'wifi', labelAr: 'واي فاي' },
+  { key: 'pool', labelAr: 'مسبح' },
+  { key: 'kitchen', labelAr: 'مطبخ' },
+  { key: 'parking', labelAr: 'موقف سيارات' },
+  { key: 'ac', labelAr: 'تكييف' },
+  { key: 'garden', labelAr: 'حديقة' },
+  { key: 'tv', labelAr: 'تلفزيون ذكي' },
+  { key: 'washer', labelAr: 'غسالة ملابس' },
+  { key: 'security', labelAr: 'أمن 24 ساعة' },
+  { key: 'self_checkin', labelAr: 'دخول ذاتي' },
+] as const;
+
+export const UNIT_TYPE_LABELS_AR: Record<string, string> = {
+  apartment: 'شقة',
+  studio: 'استديو',
+  villa: 'فيلا',
+  chalet: 'شاليه',
+  resort: 'منتجع',
+  farm: 'مزرعة',
+  all: 'الكل',
+};

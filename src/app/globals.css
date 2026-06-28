@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Brand → shadcn semantic tokens (HSL channels) */
+    --background: 0 0% 100%;
+    --foreground: 150 14% 14%;          /* brand.ink */
+
+    --card: 0 0% 100%;
+    --card-foreground: 150 14% 14%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 150 14% 14%;
+
+    --primary: 140 30% 25%;             /* brand.primary #2E5339 */
+    --primary-foreground: 40 31% 93%;   /* brand.cream */
+
+    --secondary: 90 17% 73%;            /* brand.sage */
+    --secondary-foreground: 150 14% 14%;
+
+    --muted: 40 27% 95%;
+    --muted-foreground: 140 7% 45%;
+
+    --accent: 40 31% 93%;               /* brand.cream */
+    --accent-foreground: 150 14% 14%;
+
+    --destructive: 0 60% 48%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 36 25% 87%;
+    --input: 36 25% 87%;
+    --ring: 140 30% 25%;
+
+    --radius: 14px;
+  }
+
+  * {
+    @apply border-border;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+  /* RTL focus ring visible on green */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+    border-radius: 8px;
+  }
+  /* Hide number input arrows */
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+}
+
+@layer components {
+  /* Common pill shapes used across the design */
+  .pill {
+    @apply rounded-full bg-brand-cream/60 px-4 py-1.5 text-sm text-brand-ink;
+  }
+  .pill-primary {
+    @apply rounded-full bg-brand-primary px-5 py-2 text-sm font-medium text-white transition hover:bg-brand-primaryDark;
+  }
+  .pill-ghost {
+    @apply rounded-full border border-brand-border bg-white px-4 py-1.5 text-sm text-brand-ink transition hover:bg-brand-cream/60;
+  }
+  /* Brand input style on white card */
+  .field {
+    @apply h-11 w-full rounded-xl border border-brand-border bg-white px-4 text-brand-ink placeholder:text-brand-muted focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20;
+  }
+}
