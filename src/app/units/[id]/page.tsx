@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CancellationPolicyDisplay } from '@/components/features/booking/CancellationPolicyDisplay';
+import { getPolicyByTemplate } from '@/lib/constants/cancellation-policies';
 import { formatSAR } from '@/lib/utils/format';
 import { cn } from '@/lib/utils/cn';
 import type { Unit, Review } from '@/types';
@@ -150,7 +151,7 @@ export default function UnitDetailsPage() {
               <p className="font-semibold">قواعد البيت</p>
               <p className="text-sm text-brand-muted">تسجيل الوصول بعد {unit.checkInTime} م — تسجيل المغادرة قبل {unit.checkOutTime} ص</p>
             </Card>
-            <CancellationPolicyDisplay policy={unit.cancellationPolicy} />
+            <CancellationPolicyDisplay policy={getPolicyByTemplate(unit.cancellationPolicy)} />
           </section>
 
           {/* Reviews */}

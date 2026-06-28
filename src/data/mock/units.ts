@@ -1,5 +1,4 @@
 import type { Unit } from '@/types';
-import { FLEXIBLE_POLICY, MODERATE_POLICY, STRICT_POLICY } from '@/lib/constants/cancellation-policies';
 
 const baseImage = (id: string) =>
   `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=1200&q=80`;
@@ -58,7 +57,7 @@ export const MOCK_UNITS: Unit[] = [
     reviewCount: 156,
     checkInTime: '15:00',
     checkOutTime: '12:00',
-    cancellationPolicy: FLEXIBLE_POLICY,
+    cancellationPolicy: 'flexible',
     isFeatured: true,
     createdAt: '2026-01-15T08:30:00Z',
   },
@@ -95,7 +94,7 @@ export const MOCK_UNITS: Unit[] = [
     reviewCount: 156,
     checkInTime: '15:00',
     checkOutTime: '12:00',
-    cancellationPolicy: MODERATE_POLICY,
+    cancellationPolicy: 'moderate',
     createdAt: '2026-02-10T10:00:00Z',
   },
   {
@@ -131,7 +130,7 @@ export const MOCK_UNITS: Unit[] = [
     reviewCount: 156,
     checkInTime: '15:00',
     checkOutTime: '12:00',
-    cancellationPolicy: FLEXIBLE_POLICY,
+    cancellationPolicy: 'flexible',
     createdAt: '2026-03-01T12:00:00Z',
   },
   {
@@ -166,7 +165,7 @@ export const MOCK_UNITS: Unit[] = [
     reviewCount: 156,
     checkInTime: '15:00',
     checkOutTime: '12:00',
-    cancellationPolicy: STRICT_POLICY,
+    cancellationPolicy: 'strict',
     createdAt: '2026-03-15T09:00:00Z',
   },
   {
@@ -201,7 +200,7 @@ export const MOCK_UNITS: Unit[] = [
     reviewCount: 156,
     checkInTime: '15:00',
     checkOutTime: '12:00',
-    cancellationPolicy: MODERATE_POLICY,
+    cancellationPolicy: 'moderate',
     createdAt: '2026-04-01T11:00:00Z',
   },
   {
@@ -236,7 +235,7 @@ export const MOCK_UNITS: Unit[] = [
     reviewCount: 156,
     checkInTime: '15:00',
     checkOutTime: '12:00',
-    cancellationPolicy: FLEXIBLE_POLICY,
+    cancellationPolicy: 'flexible',
     isFeatured: true,
     hasDiscount: true,
     discountPercent: 20,

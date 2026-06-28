@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Suspense } from 'react';
 import { ArrowLeft, Award, MapPin, Star, ShieldCheck, Search, Compass, CalendarCheck } from 'lucide-react';
 import { FilterBar } from '@/components/features/units/FilterBar';
 import { UnitCard } from '@/components/features/units/UnitCard';
@@ -93,7 +94,9 @@ export default async function HomePage() {
           </p>
         </div>
         <div className="container mx-auto -mt-12 px-4 pb-10">
-          <FilterBar />
+          <Suspense fallback={<div className="mx-auto max-w-5xl rounded-full border border-brand-border bg-white/80 p-4 text-center text-sm text-brand-muted">جاري تحميل البحث...</div>}>
+            <FilterBar />
+          </Suspense>
         </div>
       </section>
 

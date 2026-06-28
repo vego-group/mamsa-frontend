@@ -16,7 +16,7 @@ export function OtpStep({ phone, displayPhone, onVerify, onResend, onBack }: Otp
   const [digits, setDigits] = useState<string[]>(Array(OTP_CONFIG.length).fill(''));
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [cooldown, setCooldown] = useState(OTP_CONFIG.resendCooldownSeconds);
+  const [cooldown, setCooldown] = useState<number>(OTP_CONFIG.resendCooldownSeconds);
   const inputsRef = useRef<Array<HTMLInputElement | null>>([]);
 
   // cooldown ticker

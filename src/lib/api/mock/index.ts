@@ -9,6 +9,7 @@ import { MOCK_REVIEWS, getReviewForBooking } from '@/data/mock/reviews';
 import { MOCK_CURRENT_USER, MOCK_SAVED_CARDS, MOCK_TRANSACTIONS } from '@/data/mock/users';
 import { OTP_CONFIG } from '@/lib/constants/brand';
 import { previewCancellation, buildRefundRecord } from '@/lib/cancellation/engine';
+import { getPolicyByTemplate } from '@/lib/constants/cancellation-policies';
 import type {
   Booking,
   Review,
@@ -169,7 +170,7 @@ export const mockApi = {
           total: Math.round(total * 100) / 100,
         },
         payment: { method: input.paymentMethod, last4: input.paymentMethod === 'mada' ? '8888' : '4242' },
-        policySnapshot: { ...unit.cancellationPolicy }, // deep snapshot
+        policySnapshot: getPolicyByTemplate(unit.cancellationPolicy), // frozen at booking time
         createdAt: new Date().toISOString(),
       };
       bookings = [booking, ...bookings];
