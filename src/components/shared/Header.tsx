@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Globe, Heart, Calendar, CreditCard, Settings, LogOut, ChevronDown, User as UserIcon } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth';
@@ -17,6 +18,7 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { authApi } from '@/lib/api/client';
 import { BRAND } from '@/lib/constants/brand';
+import { cn } from '@/lib/utils/cn';
 
 const NAV_ITEMS = [
   { href: '/', labelAr: 'الرئيسية' },
@@ -28,6 +30,8 @@ const NAV_ITEMS = [
 export function Header() {
   const { user, isAuthenticated, logout } = useAuthStore();
   const openAuth = useUiStore((s) => s.openAuth);
+  const pathname = usePathname();
+  const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.startsWith(href));
   // Avoid hydration mismatch since auth state is from localStorage
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -50,21 +54,30 @@ export function Header() {
 
         {/* Center nav */}
         <nav className="hidden items-center gap-8 md:flex">
-          {NAV_ITEMS.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="text-sm font-medium text-brand-ink transition hover:text-brand-primary"
-            >
-              {item.labelAr}
-            </Link>
-          ))}
+          {NAV_ITEMS.map((item) => {
+            const active = isActive(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={active ? 'page' : undefined}
+                className={cn(
+                  'relative text-sm font-medium transition hover:text-brand-primary',
+                  active
+                    ? 'font-bold text-brand-primary after:absolute after:-bottom-1.5 after:right-0 after:h-0.5 after:w-full after:rounded-full after:bg-brand-primary'
+                    : 'text-brand-ink',
+                )}
+              >
+                {item.labelAr}
+              </Link>
+            );
+          })}
         </nav>
 
         {/* Left side: actions */}
         <div className="flex items-center gap-2">
           <Button asChild variant="default" size="default" className="hidden sm:inline-flex">
-            <Link href="/partner-onboarding">إدراج عقار</Link>
+            <Link href="/host">سجّل عقارك</Link>
           </Button>
 
           {mounted && isAuthenticated && user ? (

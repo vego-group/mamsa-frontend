@@ -8,9 +8,11 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CancelBookingDialog } from '@/components/features/booking/CancelBookingDialog';
+import { ContactHostDialog } from '@/components/features/booking/ContactHostDialog';
 import { ReviewDialog } from '@/components/features/reviews/ReviewDialog';
 import { bookingsApi, reviewsApi } from '@/lib/api/client';
 import { formatDate, formatSAR } from '@/lib/utils/format';
+import { downloadBookingConfirmation } from '@/lib/utils/booking-confirmation';
 import { isBookingCancellable } from '@/lib/cancellation/engine';
 import type { Booking, Review } from '@/types';
 
@@ -20,6 +22,7 @@ export default function BookingDetailsPage() {
   const [review, setReview] = useState<Review | null>(null);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [contactOpen, setContactOpen] = useState(false);
 
   useEffect(() => {
     if (!bookingId) return;
@@ -68,10 +71,10 @@ export default function BookingDetailsPage() {
           </Card>
 
           <Card className="space-y-2 p-3">
-            <Button variant="outline" className="w-full" size="sm">
+            <Button variant="outline" className="w-full" size="sm" onClick={() => setContactOpen(true)}>
               <MessageCircle className="h-4 w-4" /> تواصل مع المضيف
             </Button>
-            <Button variant="ghost" className="w-full" size="sm">
+            <Button variant="ghost" className="w-full" size="sm" onClick={() => downloadBookingConfirmation(booking)}>
               <Download className="h-4 w-4" /> تحميل تأكيد الحجز
             </Button>
 
@@ -169,6 +172,11 @@ export default function BookingDetailsPage() {
         </div>
       </div>
 
+      <ContactHostDialog
+        open={contactOpen}
+        onClose={() => setContactOpen(false)}
+        hostName={booking.unitSnapshot.ownerName}
+      />
       <CancelBookingDialog booking={booking} open={cancelOpen} onClose={() => setCancelOpen(false)} />
       <ReviewDialog
         bookingId={booking.id}

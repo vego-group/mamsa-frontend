@@ -1,8 +1,11 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { CalendarRange } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { BookingCard } from '@/components/features/booking/BookingCard';
+import { Button } from '@/components/ui/button';
 import { bookingsApi } from '@/lib/api/client';
 import { Skeleton } from '@/components/ui/separator';
 import type { Booking } from '@/types';
@@ -47,7 +50,10 @@ export default function MyReservationsPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="mb-6 text-3xl font-bold text-brand-ink">حجوزاتي</h1>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-brand-ink md:text-3xl">حجوزاتي</h1>
+        <p className="mt-1 text-sm text-brand-muted">تابع حجوزاتك الحالية والسابقة وأدِرها من مكان واحد.</p>
+      </div>
 
       <Tabs defaultValue="upcoming">
         <TabsList>
@@ -95,8 +101,12 @@ function Section({
 }) {
   if (bookings.length === 0) {
     return (
-      <div className="mt-6 rounded-2xl border border-dashed border-brand-border bg-white p-10 text-center text-brand-muted">
-        {empty}
+      <div className="mt-6 flex flex-col items-center gap-3 rounded-2xl border border-dashed border-brand-border bg-white p-12 text-center">
+        <CalendarRange className="h-10 w-10 text-brand-border" />
+        <p className="text-sm text-brand-muted">{empty}</p>
+        <Button asChild size="sm" variant="outline">
+          <Link href="/units">تصفّح الإقامات</Link>
+        </Button>
       </div>
     );
   }

@@ -28,7 +28,7 @@ export interface AuthSession {
 
 // ============ Units (Properties) ============
 
-export type UnitType = 'apartment' | 'studio' | 'villa' | 'chalet' | 'resort' | 'farm';
+export type UnitType = 'apartment' | 'studio' | 'villa';
 export type UnitStatus = 'draft' | 'pending' | 'approved' | 'rejected';
 
 export interface UnitAmenity {

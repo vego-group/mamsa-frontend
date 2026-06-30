@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PhoneInput } from '@/components/ui/phone-input';
 import { registerSchema, type RegisterFormValues } from '@/lib/validation/schemas';
 import { normalizeSaudiPhone, formatPhoneDisplay } from '@/lib/utils/phone';
 import { OtpStep } from './OtpStep';
@@ -94,7 +95,13 @@ export function RegisterDialog() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">رقم الجوال</Label>
-                <Input id="phone" type="tel" placeholder="05XXXXXXXX" dir="ltr" className="text-start" {...form.register('phone')} />
+                <PhoneInput
+                  id="phone"
+                  placeholder="5XXXXXXXX"
+                  dir="ltr"
+                  className="text-start"
+                  {...form.register('phone')}
+                />
                 {form.formState.errors.phone && (
                   <p className="text-xs text-status-danger">{form.formState.errors.phone.message}</p>
                 )}

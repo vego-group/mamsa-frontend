@@ -5,10 +5,10 @@ import { FilterBar } from '@/components/features/units/FilterBar';
 import { UnitCard } from '@/components/features/units/UnitCard';
 import { TestimonialCarousel } from '@/components/features/home/TestimonialCarousel';
 import { PicksSection } from '@/components/features/home/PicksSection';
+import { LocationExplorer } from '@/components/features/home/LocationExplorer';
 import { contentApi } from '@/lib/api/client';
 import { MOCK_UNITS } from '@/data/mock/units';
 import type { Unit } from '@/types';
-import { Button } from '@/components/ui/button';
 
 /** Best-effort fetch — never let a backend hiccup break the homepage render. */
 async function safe<T>(p: Promise<T>, fallback: T): Promise<T> {
@@ -20,12 +20,9 @@ async function safe<T>(p: Promise<T>, fallback: T): Promise<T> {
 }
 
 const CATEGORIES = [
-  { type: 'villa',    labelAr: 'فلل',      count: 3120, image: 'https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=600&q=80' },
-  { type: 'chalet',   labelAr: 'استراحات', count: 1890, image: 'https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=600&q=80' },
-  { type: 'apartment',labelAr: 'شاليهات',  count: 2450, image: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=600&q=80' },
-  { type: 'resort',   labelAr: 'منتجعات',  count: 670,  image: 'https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?auto=format&fit=crop&w=600&q=80' },
-  { type: 'apartment',labelAr: 'شقق',      count: 4560, image: 'https://images.unsplash.com/photo-1568605114967-8130f3a36994?auto=format&fit=crop&w=600&q=80' },
-  { type: 'farm',     labelAr: 'مخيمات',   count: 980,  image: 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=600&q=80' },
+  { type: 'apartment', labelAr: 'شقق',        count: 4560, image: 'https://images.unsplash.com/photo-1568605114967-8130f3a36994?auto=format&fit=crop&w=600&q=80' },
+  { type: 'studio',    labelAr: 'استديوهات', count: 1340, image: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=600&q=80' },
+  { type: 'villa',     labelAr: 'فلل',        count: 3120, image: 'https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=600&q=80' },
 ];
 
 const SEASONAL_OFFERS = [
@@ -45,7 +42,12 @@ const SEASONAL_OFFERS = [
   },
 ];
 
-const BUDGET_RANGES = ['2000 - 3000', '1000 - 2000', '500 - 1000', 'أقل من 500'];
+const BUDGET_RANGES = [
+  { label: '2000 - 3000', min: 2000, max: 3000 },
+  { label: '1000 - 2000', min: 1000, max: 2000 },
+  { label: '500 - 1000', min: 500, max: 1000 },
+  { label: 'أقل من 500', min: 0, max: 500 },
+];
 
 const HOW_IT_WORKS = [
   { n: '١', icon: <Search className="h-5 w-5" />, title: 'اكتشف', body: 'ابحث بين آلاف العقارات الموثّقة في المملكة بحسب وجهتك واحتياجك.' },
@@ -102,21 +104,13 @@ export default async function HomePage() {
 
       {/* Categories */}
       <section className="container mx-auto space-y-6 px-4 py-16">
-        <header className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-brand-ink">اكتشف وجهتك</h2>
-            <p className="text-sm text-brand-muted">استكشف أفضل الوجهات والإقامات المميزة</p>
-          </div>
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/units">عرض الكل <ArrowLeft className="h-4 w-4" /></Link>
-          </Button>
-        </header>
+        <SectionHeader title="اكتشف وجهتك" subtitle="استكشف أفضل الوجهات والإقامات المميزة" href="/units" />
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
           {CATEGORIES.map((c) => (
             <Link
               key={c.labelAr}
               href={`/units?type=${c.type}`}
-              className="group relative h-44 overflow-hidden rounded-2xl"
+              className="group relative h-44 overflow-hidden rounded-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
             >
               <img src={c.image} alt={c.labelAr} className="h-full w-full object-cover transition group-hover:scale-110" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
@@ -131,21 +125,13 @@ export default async function HomePage() {
 
       {/* Seasonal offers */}
       <section className="container mx-auto space-y-6 px-4 py-10">
-        <header className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-brand-ink">العروض الموسمية</h2>
-            <p className="text-sm text-brand-muted">استكشف أفضل العروض الموسمية</p>
-          </div>
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/units">عرض الكل <ArrowLeft className="h-4 w-4" /></Link>
-          </Button>
-        </header>
+        <SectionHeader title="العروض الموسمية" subtitle="استكشف أفضل العروض الموسمية" href="/offers" />
         <div className="grid gap-4 md:grid-cols-2">
           {offerCards.map((offer, i) => (
             <Link
               key={i}
-              href="/units"
-              className="group relative h-52 overflow-hidden rounded-2xl"
+              href="/offers"
+              className="group relative h-52 overflow-hidden rounded-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
             >
               <img src={offer.image} alt={offer.title} className="h-full w-full object-cover transition group-hover:scale-105" />
               <div className="absolute inset-0 bg-gradient-to-l from-black/70 via-black/40 to-transparent" />
@@ -164,15 +150,7 @@ export default async function HomePage() {
 
       {/* Featured / Most requested */}
       <section className="container mx-auto space-y-6 px-4 py-10">
-        <header className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-brand-ink">الأكثر طلبًا</h2>
-            <p className="text-sm text-brand-muted">وحدات مختارة خصيصًا لك</p>
-          </div>
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/units">عرض الكل <ArrowLeft className="h-4 w-4" /></Link>
-          </Button>
-        </header>
+        <SectionHeader title="الأكثر طلبًا" subtitle="وحدات مختارة خصيصًا لك" href="/units" />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {featured.slice(0, 4).map((u) => (
             <UnitCard key={u.id} unit={u} variant="grid" />
@@ -187,18 +165,18 @@ export default async function HomePage() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           {BUDGET_RANGES.map((range, i) => (
             <Link
-              key={range}
-              href="/units"
-              className="group relative h-44 overflow-hidden rounded-2xl"
+              key={range.label}
+              href={`/units?minPrice=${range.min}&maxPrice=${range.max}`}
+              className="group relative h-44 overflow-hidden rounded-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
             >
               <img
                 src={featured[i % featured.length]?.imageUrls[0] ?? ''}
-                alt={range}
+                alt={range.label}
                 className="h-full w-full object-cover transition group-hover:scale-110"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
               <div className="absolute bottom-3 right-3 text-white">
-                <div className="font-bold">{range} ر.س</div>
+                <div className="font-bold">{range.label} ر.س</div>
                 <div className="text-xs opacity-90">{180 + i * 13} وحدة متاحة</div>
               </div>
             </Link>
@@ -210,49 +188,21 @@ export default async function HomePage() {
       <section className="container mx-auto space-y-6 px-4 py-10">
         <div>
           <h2 className="text-2xl font-bold text-brand-ink">البحث حسب الموقع</h2>
-          <p className="text-sm text-brand-muted">استكشف العقارات على الخريطة</p>
+          <p className="text-sm text-brand-muted">استكشف العقارات على الخريطة داخل المملكة</p>
         </div>
-        <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
-          {/* listings sidebar */}
-          <div className="space-y-3">
-            {MOCK_UNITS.slice(0, 4).map((u) => (
-              <Link
-                key={u.id}
-                href={`/units/${u.id}`}
-                className="flex gap-3 rounded-xl border border-brand-border bg-white p-2 transition hover:shadow-sm"
-              >
-                <img src={u.imageUrls[0]} alt={u.title} className="h-16 w-20 shrink-0 rounded-lg object-cover" />
-                <div className="min-w-0 flex-1">
-                  <p className="line-clamp-1 text-sm font-semibold text-brand-ink">{u.title}</p>
-                  <p className="line-clamp-1 text-xs text-brand-muted">{u.city}</p>
-                  <p className="mt-1 text-sm font-bold text-brand-primary">{u.pricePerNight} ر.س</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-          {/* map */}
-          <div className="relative min-h-[360px] overflow-hidden rounded-2xl border border-brand-border">
-            <img
-              src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Equirectangular_projection_SW.jpg/1280px-Equirectangular_projection_SW.jpg"
-              alt="خريطة العقارات"
-              className="h-full w-full object-cover"
-            />
-            {[
-              { label: '1200 ر.س', top: '32%', left: '58%' },
-              { label: '980 ر.س', top: '46%', left: '52%' },
-              { label: '1500 ر.س', top: '40%', left: '64%' },
-              { label: '760 ر.س', top: '55%', left: '60%' },
-            ].map((pin) => (
-              <span
-                key={pin.label}
-                className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-primary px-3 py-1 text-xs font-bold text-white shadow-md"
-                style={{ top: pin.top, left: pin.left }}
-              >
-                {pin.label}
-              </span>
-            ))}
-          </div>
-        </div>
+        <LocationExplorer
+          units={MOCK_UNITS.filter((u, i) => MOCK_UNITS.findIndex((x) => x.id === u.id) === i).map((u) => ({
+            id: u.id,
+            title: u.title,
+            price: u.pricePerNight,
+            lat: u.latitude,
+            lng: u.longitude,
+            city: u.city,
+            district: u.district,
+            image: u.imageUrls[0] ?? '',
+            rating: u.rating,
+          }))}
+        />
       </section>
 
       {/* Picks for you */}
@@ -287,16 +237,16 @@ export default async function HomePage() {
         <div className="container mx-auto grid items-center gap-12 px-4 md:grid-cols-2">
           {/* stats */}
           <div>
-            <p className="mb-2 text-sm text-brand-sage">منذ عام 1998 ونحن نعمل لتقديم أفضل خدمة وجودة</p>
-            <h2 className="mb-8 text-2xl font-bold">ثقة بنيناها عبر نتائج استثنائية</h2>
+            <p className="mb-2 text-sm text-brand-sage">منصة سعودية حديثة لحجز الإقامات الفريدة</p>
+            <h2 className="mb-8 text-2xl font-bold">نبني الثقة معك من اليوم الأول</h2>
             <p className="mb-8 max-w-md text-sm leading-relaxed text-white/70">
-              نخدم عملاءنا الذين يرفضون أي تنازل عن أعلى معايير التمثيل العقاري.
+              نوفّر لك تجربة حجز سلسة وآمنة، بإقامات موثّقة ومعايير جودة عالية تستحق ثقتك.
             </p>
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              <FeatureItem icon={<Award className="h-5 w-5" />} title="جائزة أفضل وكالة" body="حازت منصتنا على جوائز عديدة لتقديم الخدمات." />
-              <FeatureItem icon={<ShieldCheck className="h-5 w-5" />} title="موثّق" body="كل إدراج يخضع لمراجعة قانونية وتدقيق ميداني قبل النشر." />
-              <FeatureItem icon={<MapPin className="h-5 w-5" />} title="ذكاء السوق" body="تحليلات أسعار لحظية مدعومة بالذكاء الاصطناعي." />
-              <FeatureItem icon={<Star className="h-5 w-5" />} title="خدمة راقية" body="مستشار شخصي مخصص يرافقك في كل خطوة من رحلتك." />
+              <FeatureItem icon={<ShieldCheck className="h-5 w-5" />} title="مرخّصة وموثوقة" body="منصة معتمدة من وزارة السياحة، نعمل ضمن الأطر النظامية." />
+              <FeatureItem icon={<Award className="h-5 w-5" />} title="جودة عالية" body="معايير دقيقة للصور والمرافق لضمان أفضل تجربة إقامة." />
+              <FeatureItem icon={<MapPin className="h-5 w-5" />} title="تغطية واسعة" body="إقامات متنوّعة في مختلف مدن المملكة." />
+              <FeatureItem icon={<Star className="h-5 w-5" />} title="دعم متواصل" body="فريق دعم جاهز لمساعدتك في كل خطوة من رحلتك." />
             </div>
           </div>
 
@@ -305,6 +255,24 @@ export default async function HomePage() {
         </div>
       </section>
     </div>
+  );
+}
+
+function SectionHeader({ title, subtitle, href }: { title: string; subtitle: string; href: string }) {
+  return (
+    <header className="flex items-end justify-between gap-4">
+      <div>
+        <h2 className="text-2xl font-bold text-brand-ink">{title}</h2>
+        <p className="text-sm text-brand-muted">{subtitle}</p>
+      </div>
+      <Link
+        href={href}
+        className="group inline-flex shrink-0 items-center gap-1.5 rounded-full border border-brand-border bg-white px-4 py-2 text-sm font-semibold text-brand-primary transition hover:border-brand-primary hover:bg-brand-primary hover:text-white"
+      >
+        عرض الكل
+        <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+      </Link>
+    </header>
   );
 }
 

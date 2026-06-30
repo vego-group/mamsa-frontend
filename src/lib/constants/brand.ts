@@ -66,8 +66,5 @@ export const UNIT_TYPE_LABELS_AR: Record<string, string> = {
   apartment: 'شقة',
   studio: 'استديو',
   villa: 'فيلا',
-  chalet: 'شاليه',
-  resort: 'منتجع',
-  farm: 'مزرعة',
   all: 'الكل',
 };
