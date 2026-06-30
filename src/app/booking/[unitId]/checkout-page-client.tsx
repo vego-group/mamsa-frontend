@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PhoneInput } from '@/components/ui/phone-input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { CancellationPolicyDisplay } from '@/components/features/booking/CancellationPolicyDisplay';
 import { unitsApi, bookingsApi } from '@/lib/api/client';
@@ -88,7 +89,7 @@ export function CheckoutPageClient() {
           </div>
           <div className="space-y-2">
             <Label>رقم الهاتف</Label>
-            <Input type="tel" placeholder="05xxxxxxxx" dir="ltr" className="text-start" />
+            <PhoneInput placeholder="5XXXXXXXX" dir="ltr" className="text-start" />
           </div>
         </Card>
 

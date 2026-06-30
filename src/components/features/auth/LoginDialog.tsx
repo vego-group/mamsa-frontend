@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PhoneInput } from '@/components/ui/phone-input';
 import { loginSchema, type LoginFormValues } from '@/lib/validation/schemas';
 import { normalizeSaudiPhone, formatPhoneDisplay } from '@/lib/utils/phone';
 import { OtpStep } from './OtpStep';
@@ -71,10 +72,9 @@ export function LoginDialog() {
             <form onSubmit={form.handleSubmit(onSubmitPhone)} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="phone">رقم الجوال</Label>
-                <Input
+                <PhoneInput
                   id="phone"
-                  type="tel"
-                  placeholder="05XXXXXXXX"
+                  placeholder="5XXXXXXXX"
                   dir="ltr"
                   className="text-start"
                   {...form.register('phone')}

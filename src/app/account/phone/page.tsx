@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PhoneInput } from '@/components/ui/phone-input';
 import { Badge } from '@/components/ui/badge';
 import { useAuthStore } from '@/stores/auth';
 import { accountApi, authApi } from '@/lib/api/client';
@@ -95,9 +96,8 @@ export default function ChangePhonePage() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
             <div className="space-y-2">
               <Label>رقم الجوال الجديد</Label>
-              <Input
-                type="tel"
-                placeholder="05XXXXXXXX"
+              <PhoneInput
+                placeholder="5XXXXXXXX"
                 dir="ltr"
                 className="text-start"
                 {...form.register('newPhone')}

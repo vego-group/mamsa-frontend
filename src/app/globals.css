@@ -76,3 +76,29 @@
     @apply h-11 w-full rounded-xl border border-brand-border bg-white px-4 text-brand-ink placeholder:text-brand-muted focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20;
   }
 }
+
+/* Leaflet price markers for the "search by location" map */
+.mamsa-pin {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+  border-radius: 9999px;
+  border: 1px solid theme('colors.brand.border');
+  background: #fff;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: theme('colors.brand.ink');
+  box-shadow: 0 2px 8px rgba(31, 42, 36, 0.18);
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+.mamsa-pin:hover {
+  transform: translate(-50%, -50%) scale(1.06);
+}
+.mamsa-pin--active {
+  background: theme('colors.brand.primary');
+  border-color: theme('colors.brand.primary');
+  color: #fff;
+  transform: translate(-50%, -50%) scale(1.12);
+}

@@ -94,8 +94,9 @@ export function OnboardingForm({
             onChange={(e) => onPhone(e.target.value.replace(/[^\d]/g, ''))}
             onBlur={() => setTouched((t) => ({ ...t, phone: true }))}
             inputMode="tel"
+            maxLength={10}
             dir="ltr"
-            placeholder="رقم الجوال"
+            placeholder="5XXXXXXXX"
             className="h-11 w-full bg-transparent px-4 text-start text-brand-ink placeholder:text-brand-muted focus:outline-none"
           />
         </div>

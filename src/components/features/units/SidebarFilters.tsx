@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { AMENITIES_CATALOG, UNIT_TYPE_LABELS_AR } from '@/lib/constants/brand';
 import { formatNumber } from '@/lib/utils/format';
 
-const TYPES = ['all', 'villa', 'chalet', 'apartment', 'resort'] as const;
+const TYPES = ['all', 'apartment', 'studio', 'villa'] as const;
 const RATINGS = [5, 4, 3, 2, 1] as const;
 
 export interface SidebarFiltersValue {

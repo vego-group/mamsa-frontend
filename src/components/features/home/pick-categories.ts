@@ -1,4 +1,4 @@
-import { Tent, Building2, TreePalm, Hotel, Umbrella, type LucideIcon } from 'lucide-react';
+import { Home, Building2, Tent, type LucideIcon } from 'lucide-react';
 
 export interface PickCategory {
   key: string;
@@ -8,11 +8,9 @@ export interface PickCategory {
 
 /** Keys map directly to the backend `?type=` filter ('vacation' = no filter). */
 export const PICK_CATEGORIES: readonly PickCategory[] = [
-  { key: 'chalet', label: 'شاليهات', Icon: Tent },
+  { key: 'villa', label: 'فلل', Icon: Tent },
+  { key: 'studio', label: 'استديوهات', Icon: Home },
   { key: 'apartment', label: 'شقق', Icon: Building2 },
-  { key: 'rest', label: 'استراحات', Icon: TreePalm },
-  { key: 'resort', label: 'منتجعات سياحية', Icon: Hotel },
-  { key: 'vacation', label: 'إجازات', Icon: Umbrella },
 ];
 
 export const DEFAULT_PICK_CATEGORY = PICK_CATEGORIES[0]!.key;
