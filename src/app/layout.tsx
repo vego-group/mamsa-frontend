@@ -1,10 +1,13 @@
 import type { Metadata } from 'next';
 import { IBM_Plex_Sans_Arabic, Inter } from 'next/font/google';
+import { NextIntlClientProvider } from 'next-intl';
+import { getLocale, getMessages, getTranslations } from 'next-intl/server';
 import { Header } from '@/components/shared/Header';
 import { Footer } from '@/components/shared/Footer';
 import { QueryProvider } from '@/components/shared/QueryProvider';
 import { LoginDialog } from '@/components/features/auth/LoginDialog';
 import { RegisterDialog } from '@/components/features/auth/RegisterDialog';
+import { FavoritesSync } from '@/components/shared/FavoritesSync';
 import './globals.css';
 
 const arabic = IBM_Plex_Sans_Arabic({
@@ -16,29 +19,41 @@ const arabic = IBM_Plex_Sans_Arabic({
 
 const latin = Inter({
   subsets: ['latin'],
-  weight: ['400', '500', '600'],
+  weight: ['400', '500', '600', '700'],
   variable: '--font-latin',
   display: 'swap',
 });
 
-export const metadata: Metadata = {
-  title: 'مَمسَى — منصة حجز الإقامات',
-  description: 'منصة رائدة في مجال حجز أماكن الإقامة الفريدة حول العالم.',
-  keywords: ['حجز', 'فلل', 'شاليهات', 'شقق', 'الرياض', 'السعودية'],
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('meta');
+  return {
+    title: t('title'),
+    description: t('description'),
+  };
+}
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = await getLocale();
+  const messages = await getMessages();
+  const isArabic = locale === 'ar';
+
   return (
-    <html lang="ar" dir="rtl" className={`${arabic.variable} ${latin.variable}`}>
-      <body className="min-h-screen bg-brand-cream/30 font-arabic text-brand-ink">
-        <QueryProvider>
-          <Header />
-          <main>{children}</main>
-          <Footer />
-          {/* Global auth modals — controlled by ui store */}
-          <LoginDialog />
-          <RegisterDialog />
-        </QueryProvider>
+    <html lang={locale} dir={isArabic ? 'rtl' : 'ltr'} className={`${arabic.variable} ${latin.variable}`}>
+      <body
+        className={`min-h-screen bg-brand-cream/30 text-brand-ink ${isArabic ? 'font-arabic' : 'font-latin'}`}
+      >
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <QueryProvider>
+            <Header />
+            <main>{children}</main>
+            <Footer />
+            {/* Global auth modals — controlled by ui store */}
+            <LoginDialog />
+            <RegisterDialog />
+            {/* Keeps favourites in sync with the account across login/logout */}
+            <FavoritesSync />
+          </QueryProvider>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

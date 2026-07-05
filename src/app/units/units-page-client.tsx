@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { LayoutGrid, List, Map as MapIcon, SlidersHorizontal, X } from 'lucide-react';
 import { FilterBar } from '@/components/features/units/FilterBar';
 import { SidebarFilters, type SidebarFiltersValue } from '@/components/features/units/SidebarFilters';
@@ -9,7 +10,6 @@ import { UnitCard } from '@/components/features/units/UnitCard';
 import { LocationExplorer } from '@/components/features/home/LocationExplorer';
 import { Skeleton } from '@/components/ui/separator';
 import { unitsApi } from '@/lib/api/client';
-import { AMENITIES_CATALOG, UNIT_TYPE_LABELS_AR } from '@/lib/constants/brand';
 import { cn } from '@/lib/utils/cn';
 import type { Unit } from '@/types';
 
@@ -24,17 +24,12 @@ const DEFAULT_SIDEBAR: SidebarFiltersValue = {
   amenities: [],
 };
 
-const SORT_OPTIONS: { value: SortKey; label: string }[] = [
-  { value: 'recommended', label: 'الأكثر طلباً' },
-  { value: 'price_asc', label: 'السعر: من الأقل' },
-  { value: 'price_desc', label: 'السعر: من الأعلى' },
-  { value: 'rating', label: 'الأعلى تقييماً' },
-];
+const SORT_KEYS: SortKey[] = ['recommended', 'price_asc', 'price_desc', 'rating'];
 
-const VIEWS: { value: ViewMode; label: string; icon: typeof List }[] = [
-  { value: 'list', label: 'قائمة', icon: List },
-  { value: 'grid', label: 'شبكة', icon: LayoutGrid },
-  { value: 'map', label: 'خريطة', icon: MapIcon },
+const VIEWS: { value: ViewMode; icon: typeof List }[] = [
+  { value: 'list', icon: List },
+  { value: 'grid', icon: LayoutGrid },
+  { value: 'map', icon: MapIcon },
 ];
 
 function sortUnits(arr: Unit[], sort: SortKey): Unit[] {
@@ -54,6 +49,9 @@ function sortUnits(arr: Unit[], sort: SortKey): Unit[] {
 }
 
 export function UnitsPageClient() {
+  const t = useTranslations('unitsPage');
+  const tTypes = useTranslations('types');
+  const tAmenities = useTranslations('amenities');
   const params = useSearchParams();
   const [units, setUnits] = useState<Unit[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,26 +94,26 @@ export function UnitsPageClient() {
 
   const sorted = useMemo(() => sortUnits(filtered, sort), [filtered, sort]);
 
-  // Context-aware heading, e.g. "شقق في الرياض"
-  const typeWord = sidebar.type !== 'all' ? UNIT_TYPE_LABELS_AR[sidebar.type] : 'إقامات';
-  const heading = city ? `${typeWord} في ${city}` : typeWord;
+  // Context-aware heading, e.g. "شقق في الرياض" / "Apartments in Riyadh"
+  const typeWord = sidebar.type !== 'all' ? tTypes(sidebar.type) : t('stays');
+  const heading = city ? t('headingIn', { type: typeWord, city }) : typeWord;
 
   // Active filter chips (sidebar-controlled filters)
   const update = (patch: Partial<SidebarFiltersValue>) => setSidebar((s) => ({ ...s, ...patch }));
   const priceDirty = sidebar.priceRange[0] !== DEFAULT_PRICE[0] || sidebar.priceRange[1] !== DEFAULT_PRICE[1];
   const chips: { key: string; label: string; onRemove: () => void }[] = [
     ...(sidebar.type !== 'all'
-      ? [{ key: 'type', label: `النوع: ${UNIT_TYPE_LABELS_AR[sidebar.type]}`, onRemove: () => update({ type: 'all' }) }]
+      ? [{ key: 'type', label: t('chipType', { type: tTypes(sidebar.type) }), onRemove: () => update({ type: 'all' }) }]
       : []),
     ...(sidebar.minRating > 0
-      ? [{ key: 'rating', label: `${sidebar.minRating}+ نجوم`, onRemove: () => update({ minRating: 0 }) }]
+      ? [{ key: 'rating', label: t('chipRating', { rating: sidebar.minRating }), onRemove: () => update({ minRating: 0 }) }]
       : []),
     ...(priceDirty
-      ? [{ key: 'price', label: `السعر: ${sidebar.priceRange[0]}–${sidebar.priceRange[1]} ر.س`, onRemove: () => update({ priceRange: DEFAULT_PRICE }) }]
+      ? [{ key: 'price', label: t('chipPrice', { min: sidebar.priceRange[0], max: sidebar.priceRange[1] }), onRemove: () => update({ priceRange: DEFAULT_PRICE }) }]
       : []),
     ...sidebar.amenities.map((a) => ({
       key: `am-${a}`,
-      label: AMENITIES_CATALOG.find((x) => x.key === a)?.labelAr ?? a,
+      label: tAmenities.has(a) ? tAmenities(a) : a,
       onRemove: () => update({ amenities: sidebar.amenities.filter((x) => x !== a) }),
     })),
   ];
@@ -150,7 +148,7 @@ export function UnitsPageClient() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h1 className="text-2xl font-bold text-brand-ink">{heading}</h1>
-              <p className="text-sm text-brand-muted">{sorted.length} وحدة متاحة</p>
+              <p className="text-sm text-brand-muted">{t('available', { count: sorted.length })}</p>
             </div>
 
             <div className="flex items-center gap-2">
@@ -160,7 +158,7 @@ export function UnitsPageClient() {
                 className="inline-flex items-center gap-2 rounded-full border border-brand-border bg-white px-4 py-2 text-sm font-medium text-brand-ink transition hover:bg-brand-cream/60 md:hidden"
               >
                 <SlidersHorizontal className="h-4 w-4" />
-                الفلاتر
+                {t('filters.title')}
                 {chips.length > 0 && (
                   <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-primary px-1 text-xs text-white">
                     {chips.length}
@@ -174,22 +172,22 @@ export function UnitsPageClient() {
                   value={sort}
                   onChange={(e) => setSort(e.target.value as SortKey)}
                   className="appearance-none rounded-full border border-brand-border bg-white py-2 pe-9 ps-4 text-sm text-brand-ink focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
-                  aria-label="ترتيب النتائج"
+                  aria-label={t('sortLabel')}
                 >
-                  {SORT_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
+                  {SORT_KEYS.map((k) => (
+                    <option key={k} value={k}>{t(`sort.${k}`)}</option>
                   ))}
                 </select>
               </div>
 
               {/* view toggle */}
-              <div className="hidden items-center rounded-full border border-brand-border bg-white p-1 sm:flex">
+              <div className="flex items-center rounded-full border border-brand-border bg-white p-1">
                 {VIEWS.map((v) => (
                   <button
                     key={v.value}
                     onClick={() => setView(v.value)}
-                    aria-label={v.label}
-                    title={v.label}
+                    aria-label={t(`views.${v.value}`)}
+                    title={t(`views.${v.value}`)}
                     className={cn(
                       'flex h-8 w-9 items-center justify-center rounded-full transition',
                       view === v.value ? 'bg-brand-primary text-white' : 'text-brand-muted hover:bg-brand-cream/60',
@@ -216,7 +214,7 @@ export function UnitsPageClient() {
                 </button>
               ))}
               <button onClick={clearAll} className="text-xs font-medium text-brand-primary hover:underline">
-                مسح الكل
+                {t('clearAll')}
               </button>
             </div>
           )}
@@ -230,10 +228,10 @@ export function UnitsPageClient() {
             </div>
           ) : sorted.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-brand-border bg-white p-10 text-center text-brand-muted">
-              لا توجد وحدات تطابق الفلاتر المحددة.
+              {t('empty')}
               {chips.length > 0 && (
                 <button onClick={clearAll} className="ms-2 font-medium text-brand-primary hover:underline">
-                  مسح الفلاتر
+                  {t('clearFilters')}
                 </button>
               )}
             </div>
@@ -268,11 +266,11 @@ export function UnitsPageClient() {
           <div className="absolute inset-0 bg-black/40" onClick={() => setMobileFilters(false)} />
           <div className="absolute inset-y-0 right-0 flex w-[88%] max-w-sm flex-col bg-white shadow-xl">
             <div className="flex items-center justify-between border-b border-brand-border p-4">
-              <h2 className="text-lg font-bold text-brand-ink">الفلاتر</h2>
+              <h2 className="text-lg font-bold text-brand-ink">{t('filters.title')}</h2>
               <button
                 onClick={() => setMobileFilters(false)}
                 className="inline-flex h-9 w-9 items-center justify-center rounded-full text-brand-muted transition hover:bg-brand-cream"
-                aria-label="إغلاق"
+                aria-label={t('close')}
               >
                 <X className="h-5 w-5" />
               </button>
@@ -285,7 +283,7 @@ export function UnitsPageClient() {
                 onClick={() => setMobileFilters(false)}
                 className="w-full rounded-full bg-brand-primary py-2.5 text-sm font-medium text-white transition hover:bg-brand-primaryDark"
               >
-                عرض {sorted.length} وحدة
+                {t('showUnits', { count: sorted.length })}
               </button>
             </div>
           </div>

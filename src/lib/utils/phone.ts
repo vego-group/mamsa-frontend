@@ -23,6 +23,12 @@ export function isValidSaudiPhone(raw: string): boolean {
   return normalizeSaudiPhone(raw) !== null;
 }
 
+/** Backend-friendly local Saudi form: 05XXXXXXXX (or null when invalid). */
+export function toSaudiLocal(raw: string): string | null {
+  const e164 = normalizeSaudiPhone(raw);
+  return e164 ? `0${e164.slice(4)}` : null;
+}
+
 /** تنسيق الرقم للعرض: +966 50 *** 4567 (إخفاء جزء للأمان) */
 export function maskPhone(e164: string): string {
   if (e164.length < 8) return e164;

@@ -79,6 +79,9 @@ export function resolveTier(
 
 // ============ Refund calculation ============
 
+/** Machine-readable reason codes — the UI maps these to localized copy. */
+export type NotAllowedReason = 'alreadyCancelled' | 'completed' | 'afterCheckIn';
+
 export interface RefundPreview {
   /** نسبة الاسترداد المطبقة (0..100) */
   refundPercent: number;
@@ -86,12 +89,20 @@ export interface RefundPreview {
   refundAmount: number;
   /** المبلغ الذي سيُخصم من العميل */
   forfeitedAmount: number;
-  /** نص يصف المستوى المطبق (يُعرض للعميل) */
-  tierLabel: string;
+  /** المستوى المطبق (numeric — the UI derives the localized label from this) */
+  tier: CancellationTier | null;
+  /**
+   * Pre-rendered fallback label from the live backend (which doesn't return
+   * structured tier data) — only used when `tier` is null and this preview
+   * didn't come from the local engine above.
+   */
+  rawTierLabel?: string;
   /** هل الإلغاء مسموح أصلًا */
   isAllowed: boolean;
-  /** سبب المنع إن وُجد */
-  notAllowedReasonAr?: string;
+  /** سبب المنع إن وُجد (machine-readable — translated by the UI) */
+  notAllowedReason?: NotAllowedReason;
+  /** Pre-rendered fallback reason from the live backend, when no structured code applies. */
+  rawNotAllowedReason?: string;
   /** للعرض في الـ UI: عدد الأيام/الساعات قبل الدخول */
   daysRemaining: number;
   hoursRemaining: number;
@@ -112,9 +123,9 @@ export function previewCancellation(booking: Booking, requestAt: Date): RefundPr
       refundPercent: 0,
       refundAmount: 0,
       forfeitedAmount: booking.price.total,
-      tierLabel: 'الحجز ملغى مسبقًا',
+      tier: null,
       isAllowed: false,
-      notAllowedReasonAr: 'هذا الحجز ملغى بالفعل.',
+      notAllowedReason: 'alreadyCancelled',
       daysRemaining: days,
       hoursRemaining: hours,
     };
@@ -124,9 +135,9 @@ export function previewCancellation(booking: Booking, requestAt: Date): RefundPr
       refundPercent: 0,
       refundAmount: 0,
       forfeitedAmount: booking.price.total,
-      tierLabel: 'الحجز منتهي',
+      tier: null,
       isAllowed: false,
-      notAllowedReasonAr: 'لا يمكن إلغاء حجز منتهي.',
+      notAllowedReason: 'completed',
       daysRemaining: days,
       hoursRemaining: hours,
     };
@@ -136,9 +147,9 @@ export function previewCancellation(booking: Booking, requestAt: Date): RefundPr
       refundPercent: 0,
       refundAmount: 0,
       forfeitedAmount: booking.price.total,
-      tierLabel: 'بعد تاريخ الدخول',
+      tier: null,
       isAllowed: false,
-      notAllowedReasonAr: 'لا يمكن إلغاء الحجز بعد تاريخ الدخول.',
+      notAllowedReason: 'afterCheckIn',
       daysRemaining: days,
       hoursRemaining: hours,
     };
@@ -152,7 +163,7 @@ export function previewCancellation(booking: Booking, requestAt: Date): RefundPr
     refundPercent: tier.refundPercent,
     refundAmount,
     forfeitedAmount,
-    tierLabel: tier.labelAr,
+    tier,
     isAllowed: true,
     daysRemaining: days,
     hoursRemaining: hours,
@@ -171,7 +182,7 @@ export function buildRefundRecord(
   return {
     amount: preview.refundAmount,
     percent: preview.refundPercent,
-    tierLabel: preview.tierLabel,
+    tierLabel: preview.tier ? `${preview.tier.refundPercent}%` : '',
     refundedAt: new Date().toISOString(),
     cancelledBy,
     reason,

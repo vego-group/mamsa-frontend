@@ -1,13 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { X, Send, Check, MessageCircle } from 'lucide-react';
-
-const QUICK_MESSAGES = [
-  'مرحباً، هل الوحدة متاحة في موعد حجزي؟',
-  'ما هي تعليمات الوصول وتسجيل الدخول؟',
-  'هل يتوفّر موقف سيارات خاص؟',
-];
 
 export function ContactHostDialog({
   open,
@@ -18,8 +13,11 @@ export function ContactHostDialog({
   onClose: () => void;
   hostName: string;
 }) {
+  const t = useTranslations('contactHost');
   const [message, setMessage] = useState('');
   const [sent, setSent] = useState(false);
+
+  const QUICK_MESSAGES = [t('quick.available'), t('quick.checkin'), t('quick.parking')];
 
   if (!open) return null;
 
@@ -48,13 +46,13 @@ export function ContactHostDialog({
             </div>
             <div>
               <div className="font-bold text-brand-ink">{hostName}</div>
-              <div className="text-xs text-brand-muted">المضيف · يردّ عادةً خلال ساعات</div>
+              <div className="text-xs text-brand-muted">{t('hostRespondsIn')}</div>
             </div>
           </div>
           <button
             onClick={close}
             className="inline-flex h-9 w-9 items-center justify-center rounded-full text-brand-muted transition hover:bg-brand-cream"
-            aria-label="إغلاق"
+            aria-label={t('close')}
           >
             <X className="h-5 w-5" />
           </button>
@@ -65,13 +63,13 @@ export function ContactHostDialog({
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 text-status-success">
               <Check className="h-6 w-6" />
             </div>
-            <div className="font-bold text-brand-ink">تم إرسال رسالتك</div>
-            <p className="text-sm text-brand-muted">سيتواصل معك {hostName} في أقرب وقت عبر محادثة الحجز.</p>
+            <div className="font-bold text-brand-ink">{t('sentTitle')}</div>
+            <p className="text-sm text-brand-muted">{t('sentBody', { hostName })}</p>
             <button
               onClick={close}
               className="mt-2 rounded-full bg-brand-primary px-6 py-2 text-sm font-medium text-white transition hover:bg-brand-primaryDark"
             >
-              تم
+              {t('done')}
             </button>
           </div>
         ) : (
@@ -92,7 +90,7 @@ export function ContactHostDialog({
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               rows={4}
-              placeholder="اكتب رسالتك للمضيف..."
+              placeholder={t('placeholder')}
               className="w-full resize-none rounded-xl border border-brand-border bg-white p-3 text-sm text-brand-ink focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
             />
 
@@ -101,12 +99,12 @@ export function ContactHostDialog({
               disabled={!message.trim()}
               className="mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-brand-primary py-2.5 text-sm font-medium text-white transition hover:bg-brand-primaryDark disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <Send className="h-4 w-4" /> إرسال الرسالة
+              <Send className="h-4 w-4" /> {t('sendMessage')}
             </button>
 
             <p className="mt-3 flex items-center justify-center gap-1.5 text-center text-[11px] text-brand-muted">
               <MessageCircle className="h-3.5 w-3.5" />
-              تتم المحادثة بأمان داخل منصة مَمسَى.
+              {t('secureNote')}
             </p>
           </>
         )}

@@ -13,6 +13,14 @@ export const BRAND = {
   licenseAuthority: 'وزارة السياحة',
 } as const;
 
+/**
+ * قاعدة رابط لوحة تحكّم الشركاء (تطبيق منفصل). تُضبط لكل بيئة عبر
+ * NEXT_PUBLIC_DASHBOARD_URL — لا تُكتب hardcoded هنا.
+ */
+export const DASHBOARD_URL = process.env.NEXT_PUBLIC_DASHBOARD_URL ?? '';
+/** رابط تسجيل دخول الشريك في الداشبورد (فارغ لو لم يُضبط بعد). */
+export const DASHBOARD_LOGIN_URL = DASHBOARD_URL ? `${DASHBOARD_URL.replace(/\/+$/, '')}/login` : '';
+
 export const SOCIAL_LINKS = {
   linkedin: 'https://linkedin.com/company/mamsa',
   instagram: 'https://instagram.com/mamsa',

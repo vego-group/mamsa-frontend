@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
 import {
   ArrowLeft,
   BadgeDollarSign,
@@ -14,53 +15,36 @@ import {
   TrendingUp,
   UserPlus,
   Users,
+  type LucideIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { BRAND } from '@/lib/constants/brand';
 
-export const metadata: Metadata = {
-  title: `سجّل عقارك — ${BRAND.nameAr}`,
-  description: 'اعرض عقارك على منصة مَمسَى واستقبل الحجوزات بثقة، مع دفعات مضمونة وحماية وتحكّم كامل.',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('host');
+  const tc = await getTranslations('common');
+  return { title: t('metaTitle', { name: tc('brandName') }), description: t('metaDescription') };
+}
 
 const SIGNUP = '/partner-onboarding';
 
-const HERO_BULLETS = [
-  'دفعات مضمونة وسريعة بعد كل إقامة',
-  'حماية ضد الأضرار حتى تستضيف باطمئنان',
-  'تحكّم كامل في الأسعار والتقويم والقواعد',
-];
+const BENEFIT_ICONS: LucideIcon[] = [BadgeDollarSign, ShieldCheck, Users, SlidersHorizontal, TrendingUp, Headphones];
+const STEP_ICONS: LucideIcon[] = [UserPlus, ImagePlus, CalendarCheck];
 
-const BENEFITS = [
-  { icon: BadgeDollarSign, title: 'دفعات مضمونة', body: 'استلم أرباحك بشكل آمن وسريع بعد مغادرة كل ضيف، عبر وسائل دفع موثوقة.' },
-  { icon: ShieldCheck, title: 'حماية للمضيف', body: 'تغطية ضد الأضرار التي قد يسبّبها الضيوف، حتى تستضيف بثقة وراحة بال.' },
-  { icon: Users, title: 'جمهور واسع', body: 'اعرض عقارك أمام آلاف الباحثين عن إقامة داخل المملكة كل شهر.' },
-  { icon: SlidersHorizontal, title: 'تحكّم كامل', body: 'أنت صاحب القرار — حدّد الأسعار والتوافر وقواعد الإقامة كما يناسبك.' },
-  { icon: TrendingUp, title: 'تسعير ذكي', body: 'اقتراحات أسعار مبنية على الطلب والموسم لزيادة دخلك وإشغال عقارك.' },
-  { icon: Headphones, title: 'دعم على مدار الساعة', body: 'فريق مَمسَى جاهز لمساعدتك في أي وقت، قبل وأثناء وبعد الحجز.' },
-];
+export default async function HostLandingPage() {
+  const t = await getTranslations('host');
+  const tc = await getTranslations('common');
+  const brandName = tc('brandName');
 
-const STEPS = [
-  { icon: UserPlus, title: 'سجّل عقارك', body: 'أنشئ حسابك كمضيف خلال دقائق ببيانات بسيطة ورقم جوالك.' },
-  { icon: ImagePlus, title: 'أضف التفاصيل والصور', body: 'اكتب وصف عقارك، أضف صوره ومرافقه، وحدّد سعره وقواعده.' },
-  { icon: CalendarCheck, title: 'استقبل الحجوزات واربح', body: 'انشر عقارك واستقبل طلبات الحجز وابدأ بتحقيق دخل إضافي.' },
-];
+  const HERO_BULLETS = [t('heroBullets.0'), t('heroBullets.1'), t('heroBullets.2')];
+  const BENEFITS = BENEFIT_ICONS.map((icon, i) => ({ icon, title: t(`benefits.${i}.title`), body: t(`benefits.${i}.body`) }));
+  const STEPS = STEP_ICONS.map((icon, i) => ({ icon, title: t(`steps.${i}.title`), body: t(`steps.${i}.body`) }));
+  const TESTIMONIALS = [0, 1, 2].map((i) => ({
+    quote: t(`testimonials.${i}.quote`),
+    name: t(`testimonials.${i}.name`),
+    role: t(`testimonials.${i}.role`),
+  }));
+  const FAQS = [0, 1, 2, 3, 4].map((i) => ({ q: t(`faqs.${i}.q`), a: t(`faqs.${i}.a`) }));
 
-const TESTIMONIALS = [
-  { quote: 'سجّلت استراحتي في أقل من ربع ساعة، وأول حجز جاني خلال يومين. المنصة سهلة جداً.', name: 'فهد العتيبي', role: 'مضيف في الرياض' },
-  { quote: 'أكثر ما أعجبني الدفعات السريعة والحماية. أصبحت أستضيف وأنا مطمئن على عقاري.', name: 'نورة الشهري', role: 'مضيفة في أبها' },
-  { quote: 'إشغال شاليهي ارتفع بشكل واضح بعد ما عرضته على مَمسَى، والدعم متعاون في أي وقت.', name: 'سلطان القحطاني', role: 'مضيف في جدة' },
-];
-
-const FAQS = [
-  { q: 'هل التسجيل مجاني؟', a: 'نعم، إنشاء حساب المضيف وعرض عقارك على مَمسَى مجاني تماماً. لا توجد رسوم اشتراك مقدمة.' },
-  { q: 'متى سيظهر عقاري للنزلاء؟', a: 'بمجرد إكمال بيانات عقاره وصوره، يخضع لمراجعة سريعة من فريقنا ثم يُنشر ويصبح متاحاً للحجز.' },
-  { q: 'متى أستلم أرباحي؟', a: 'تُحوّل مدفوعاتك بشكل آمن بعد تسجيل مغادرة الضيف، عبر وسيلة الدفع التي تختارها.' },
-  { q: 'هل أتحكم في الأسعار والتوافر؟', a: 'بالكامل. أنت من يحدّد السعر والتقويم وقواعد الإقامة، ويمكنك تعديلها في أي وقت من لوحة التحكم.' },
-  { q: 'ماذا لو تسبّب ضيف بأضرار؟', a: 'نوفّر حماية للمضيف ضد الأضرار، ويمكنك الإبلاغ عن أي مشكلة وسيتابعها فريقنا معك.' },
-];
-
-export default function HostLandingPage() {
   return (
     <div>
       {/* Hero */}
@@ -76,27 +60,23 @@ export default function HostLandingPage() {
           {/* copy */}
           <div className="text-white">
             <span className="mb-4 inline-block rounded-full bg-white/15 px-4 py-1 text-sm font-medium backdrop-blur">
-              كن مضيفاً في مَمسَى
+              {t('eyebrow')}
             </span>
-            <h1 className="mb-4 text-3xl font-bold leading-tight md:text-5xl">
-              اعرض عقارك واربح مع مَمسَى
-            </h1>
-            <p className="mb-6 max-w-md text-sm leading-relaxed text-white/85 md:text-base">
-              حوّل عقارك إلى مصدر دخل. سجّله على منصة مَمسَى واستقبل الحجوزات بثقة، مع دفعات مضمونة وحماية ودعم في كل خطوة.
-            </p>
+            <h1 className="mb-4 text-3xl font-bold leading-tight md:text-5xl">{t('heroTitle')}</h1>
+            <p className="mb-6 max-w-md text-sm leading-relaxed text-white/85 md:text-base">{t('heroSubtitle')}</p>
             <div className="flex flex-wrap items-center gap-3">
               <Button asChild size="lg">
-                <Link href={SIGNUP}>سجّل عقارك مجاناً <ArrowLeft className="h-4 w-4" /></Link>
+                <Link href={SIGNUP}>{t('registerFree')} <ArrowLeft className="h-4 w-4 ltr:rotate-180" /></Link>
               </Button>
               <a href="#how" className="text-sm font-medium text-white/90 underline-offset-4 hover:underline">
-                كيف يعمل؟
+                {t('howItWorksLink')}
               </a>
             </div>
           </div>
 
           {/* signup teaser card */}
           <div className="mx-auto w-full max-w-md rounded-2xl border border-white/20 bg-white p-6 shadow-xl">
-            <h2 className="mb-4 text-xl font-bold text-brand-ink">سجّل عقارك مجاناً</h2>
+            <h2 className="mb-4 text-xl font-bold text-brand-ink">{t('registerFree')}</h2>
             <ul className="space-y-3">
               {HERO_BULLETS.map((b) => (
                 <li key={b} className="flex items-start gap-2 text-sm text-brand-ink">
@@ -108,12 +88,12 @@ export default function HostLandingPage() {
               ))}
             </ul>
             <Button asChild className="mt-6 w-full" size="lg">
-              <Link href={SIGNUP}>ابدأ الآن <ArrowLeft className="h-4 w-4" /></Link>
+              <Link href={SIGNUP}>{t('startNow')} <ArrowLeft className="h-4 w-4 ltr:rotate-180" /></Link>
             </Button>
             <p className="mt-3 text-center text-xs text-brand-muted">
-              لديك حساب مضيف؟{' '}
+              {t('haveAccount')}{' '}
               <Link href={SIGNUP} className="font-medium text-brand-primary hover:underline">
-                تابع تسجيلك
+                {t('continueRegistration')}
               </Link>
             </p>
           </div>
@@ -123,8 +103,8 @@ export default function HostLandingPage() {
       {/* Benefits */}
       <section className="container mx-auto space-y-8 px-4 py-16">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-brand-ink md:text-3xl">ليه تسجّل عقارك في مَمسَى؟</h2>
-          <p className="mt-2 text-sm text-brand-muted">كل ما تحتاجه لإدارة عقارك وتحقيق دخل إضافي بثقة</p>
+          <h2 className="text-2xl font-bold text-brand-ink md:text-3xl">{t('benefitsTitle', { name: brandName })}</h2>
+          <p className="mt-2 text-sm text-brand-muted">{t('benefitsSubtitle')}</p>
         </div>
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {BENEFITS.map((f) => (
@@ -143,13 +123,13 @@ export default function HostLandingPage() {
       <section id="how" className="bg-brand-cream/50 py-16">
         <div className="container mx-auto space-y-10 px-4">
           <div className="text-center">
-            <h2 className="text-2xl font-bold text-brand-ink md:text-3xl">انضم في 3 خطوات بسيطة</h2>
-            <p className="mt-2 text-sm text-brand-muted">من التسجيل إلى أول حجز بأسرع وقت</p>
+            <h2 className="text-2xl font-bold text-brand-ink md:text-3xl">{t('stepsTitle')}</h2>
+            <p className="mt-2 text-sm text-brand-muted">{t('stepsSubtitle')}</p>
           </div>
           <div className="grid gap-6 md:grid-cols-3">
             {STEPS.map((step, i) => (
-              <div key={step.title} className="relative rounded-2xl border border-brand-border bg-white p-6 text-right">
-                <span className="absolute left-5 top-5 text-3xl font-bold text-brand-sage/60">{i + 1}</span>
+              <div key={step.title} className="relative rounded-2xl border border-brand-border bg-white p-6 text-start">
+                <span className="absolute end-5 top-5 text-3xl font-bold text-brand-sage/60">{i + 1}</span>
                 <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-brand-cream text-brand-primary">
                   <step.icon className="h-5 w-5" />
                 </div>
@@ -160,7 +140,7 @@ export default function HostLandingPage() {
           </div>
           <div className="text-center">
             <Button asChild size="lg">
-              <Link href={SIGNUP}>سجّل عقارك الآن <ArrowLeft className="h-4 w-4" /></Link>
+              <Link href={SIGNUP}>{t('registerNow')} <ArrowLeft className="h-4 w-4 ltr:rotate-180" /></Link>
             </Button>
           </div>
         </div>
@@ -169,21 +149,21 @@ export default function HostLandingPage() {
       {/* Testimonials */}
       <section className="container mx-auto space-y-8 px-4 py-16">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-brand-ink md:text-3xl">ماذا يقول مضيفونا</h2>
-          <p className="mt-2 text-sm text-brand-muted">قصص نجاح حقيقية من ملّاك عقارات على مَمسَى</p>
+          <h2 className="text-2xl font-bold text-brand-ink md:text-3xl">{t('testimonialsTitle')}</h2>
+          <p className="mt-2 text-sm text-brand-muted">{t('testimonialsSubtitle')}</p>
         </div>
         <div className="grid gap-5 md:grid-cols-3">
-          {TESTIMONIALS.map((t) => (
-            <figure key={t.name} className="flex flex-col rounded-2xl border border-brand-border bg-white p-6">
+          {TESTIMONIALS.map((tm) => (
+            <figure key={tm.name} className="flex flex-col rounded-2xl border border-brand-border bg-white p-6">
               <div className="mb-3 flex gap-0.5 text-amber-400">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <Star key={i} className="h-4 w-4 fill-amber-400" />
                 ))}
               </div>
-              <blockquote className="flex-1 text-sm leading-relaxed text-brand-ink">“{t.quote}”</blockquote>
+              <blockquote className="flex-1 text-sm leading-relaxed text-brand-ink">“{tm.quote}”</blockquote>
               <figcaption className="mt-4 border-t border-brand-border pt-4">
-                <div className="font-bold text-brand-ink">{t.name}</div>
-                <div className="text-xs text-brand-muted">{t.role}</div>
+                <div className="font-bold text-brand-ink">{tm.name}</div>
+                <div className="text-xs text-brand-muted">{tm.role}</div>
               </figcaption>
             </figure>
           ))}
@@ -194,8 +174,8 @@ export default function HostLandingPage() {
       <section className="bg-brand-cream/50 py-16">
         <div className="container mx-auto max-w-3xl space-y-8 px-4">
           <div className="text-center">
-            <h2 className="text-2xl font-bold text-brand-ink md:text-3xl">أسئلة شائعة</h2>
-            <p className="mt-2 text-sm text-brand-muted">إجابات على أكثر ما يسأل عنه المضيفون</p>
+            <h2 className="text-2xl font-bold text-brand-ink md:text-3xl">{t('faqTitle')}</h2>
+            <p className="mt-2 text-sm text-brand-muted">{t('faqSubtitle')}</p>
           </div>
           <div className="space-y-3">
             {FAQS.map((item) => (
@@ -217,14 +197,10 @@ export default function HostLandingPage() {
       {/* Final CTA */}
       <section className="bg-brand-primary py-16 text-white">
         <div className="container mx-auto flex flex-col items-center gap-6 px-4 text-center">
-          <h2 className="max-w-2xl text-2xl font-bold md:text-3xl">
-            جاهز تبدأ؟ سجّل عقارك اليوم وابدأ باستقبال الضيوف
-          </h2>
-          <p className="max-w-xl text-sm text-white/80">
-            انضم لمئات المضيفين على منصة مَمسَى وحوّل عقارك إلى مصدر دخل موثوق.
-          </p>
+          <h2 className="max-w-2xl text-2xl font-bold md:text-3xl">{t('finalCtaTitle')}</h2>
+          <p className="max-w-xl text-sm text-white/80">{t('finalCtaBody')}</p>
           <Button asChild size="lg" variant="soft">
-            <Link href={SIGNUP}>سجّل عقارك مجاناً <ArrowLeft className="h-4 w-4" /></Link>
+            <Link href={SIGNUP}>{t('registerFree')} <ArrowLeft className="h-4 w-4 ltr:rotate-180" /></Link>
           </Button>
         </div>
       </section>

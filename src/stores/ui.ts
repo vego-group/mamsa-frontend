@@ -6,12 +6,15 @@ type AuthDialog = 'login' | 'register' | null;
 
 interface UiState {
   authDialog: AuthDialog;
-  openAuth: (which: AuthDialog) => void;
+  /** Phone number to prefill when the register dialog opens (e.g. bounced over from login). */
+  prefillPhone: string;
+  openAuth: (which: AuthDialog, prefillPhone?: string) => void;
   closeAuth: () => void;
 }
 
 export const useUiStore = create<UiState>((set) => ({
   authDialog: null,
-  openAuth: (which) => set({ authDialog: which }),
+  prefillPhone: '',
+  openAuth: (which, prefillPhone = '') => set({ authDialog: which, prefillPhone }),
   closeAuth: () => set({ authDialog: null }),
 }));

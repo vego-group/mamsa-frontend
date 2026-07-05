@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
-import { MapPin, Star } from 'lucide-react';
+import { MapPin, MapPinOff, Star } from 'lucide-react';
 import type { MapUnit } from './LocationMap';
 
 export interface LocationUnit extends MapUnit {
@@ -18,17 +19,27 @@ const LocationMap = dynamic(() => import('./LocationMap'), {
   ssr: false,
   loading: () => (
     <div className="flex h-full w-full items-center justify-center bg-brand-cream/40 text-sm text-brand-muted">
-      جاري تحميل الخريطة...
+      …
     </div>
   ),
 });
 
 export function LocationExplorer({ units }: { units: LocationUnit[] }) {
+  const t = useTranslations('map');
   const [activeId, setActiveId] = useState<string | null>(units[0]?.id ?? null);
   const mapUnits = useMemo<MapUnit[]>(
     () => units.map(({ id, title, price, lat, lng }) => ({ id, title, price, lat, lng })),
     [units],
   );
+
+  if (units.length === 0) {
+    return (
+      <div className="flex min-h-[300px] flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-brand-border bg-brand-cream/30 text-center">
+        <MapPinOff className="h-8 w-8 text-brand-muted" />
+        <p className="text-sm text-brand-muted">{t('empty')}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="grid gap-4 lg:grid-cols-[340px_1fr]">
@@ -57,8 +68,8 @@ export function LocationExplorer({ units }: { units: LocationUnit[] }) {
                 </p>
                 <div className="mt-1.5 flex items-center justify-between">
                   <span className="text-sm font-bold text-brand-primary">
-                    {u.price.toLocaleString('en-US')} ر.س
-                    <span className="text-xs font-normal text-brand-muted"> / ليلة</span>
+                    {u.price.toLocaleString('en-US')} {t('sar')}
+                    <span className="text-xs font-normal text-brand-muted"> {t('perNight')}</span>
                   </span>
                   <span className="flex items-center gap-0.5 text-xs text-brand-ink">
                     <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
@@ -73,8 +84,8 @@ export function LocationExplorer({ units }: { units: LocationUnit[] }) {
 
       {/* map — `isolate z-0` keeps Leaflet's high internal z-indexes from
           painting over the sticky header (z-40). */}
-      <div className="relative z-0 min-h-[460px] overflow-hidden rounded-2xl border border-brand-border isolate">
-        <LocationMap units={mapUnits} activeId={activeId} onSelect={setActiveId} />
+      <div className="relative z-0 min-h-[320px] overflow-hidden rounded-2xl border border-brand-border isolate md:min-h-[460px]">
+        <LocationMap units={mapUnits} activeId={activeId} onSelect={setActiveId} currencyLabel={t('sar')} />
       </div>
     </div>
   );

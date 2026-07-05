@@ -1,0 +1,949 @@
+{
+  "meta": {
+    "title": "Mamsa — Stay Booking Platform",
+    "description": "A Saudi platform for booking verified apartments, studios and villas — book your stay with confidence."
+  },
+  "common": {
+    "brandName": "Mamsa",
+    "loading": "Loading...",
+    "home": "Home",
+    "explore": "Explore",
+    "perNight": "/ night",
+    "serviceFee": "Service fee",
+    "total": "Total",
+    "viewAll": "View all",
+    "sar": "SAR",
+    "cancel": "Cancel",
+    "back": "Back",
+    "close": "Close"
+  },
+  "nav": {
+    "home": "Home",
+    "explore": "Explore",
+    "contact": "Contact us",
+    "about": "About",
+    "listProperty": "List your property",
+    "greeting": "Welcome!",
+    "favorites": "Your favorites",
+    "profile": "Profile",
+    "reservations": "Reservations",
+    "paymentMethods": "Payment methods",
+    "accountSettings": "Account settings",
+    "logout": "Log out",
+    "login": "Log in",
+    "menu": "Menu",
+    "close": "Close"
+  },
+  "footer": {
+    "brandName": "Mamsa",
+    "tagline": "A leading platform for booking unique places to stay.",
+    "quickLinks": "Quick links",
+    "support": "Support & help",
+    "social": "Contact & social",
+    "license": "Licensed by {authority}, license no. ({number})",
+    "licenseAuthority": "the Ministry of Tourism",
+    "rights": "All rights reserved",
+    "links": {
+      "home": "Home",
+      "explore": "Explore",
+      "reservations": "My reservations",
+      "about": "About",
+      "host": "List your property",
+      "contact": "Contact us",
+      "faq": "FAQ",
+      "cancellationPolicy": "Cancellation policy",
+      "safety": "Basic safety rules",
+      "houseRules": "House rules"
+    }
+  },
+  "filter": {
+    "city": "City",
+    "unitType": "Unit type",
+    "guests": "Guests",
+    "checkIn": "Check-in",
+    "checkOut": "Check-out",
+    "search": "Search"
+  },
+  "cities": {
+    "riyadh": "Riyadh",
+    "jeddah": "Jeddah",
+    "makkah": "Makkah",
+    "madinah": "Madinah",
+    "dammam": "Dammam",
+    "abha": "Abha",
+    "alula": "AlUla"
+  },
+  "types": {
+    "all": "All",
+    "apartment": "Apartment",
+    "studio": "Studio",
+    "villa": "Villa"
+  },
+  "typesPlural": {
+    "apartment": "Apartments",
+    "studio": "Studios",
+    "villa": "Villas"
+  },
+  "amenities": {
+    "wifi": "Wi-Fi",
+    "pool": "Pool",
+    "kitchen": "Kitchen",
+    "parking": "Parking",
+    "ac": "Air conditioning",
+    "garden": "Garden",
+    "tv": "Smart TV",
+    "washer": "Washing machine",
+    "security": "24h security",
+    "self_checkin": "Self check-in"
+  },
+  "card": {
+    "save": "Save to favorites",
+    "discount": "{percent}% off",
+    "featured": "Featured",
+    "guests": "{count} guests",
+    "rooms": "{count} rooms",
+    "baths": "{count} baths",
+    "bedrooms": "{count} bedrooms",
+    "bathrooms": "{count} bathrooms",
+    "perNight": "SAR / night",
+    "viewDetails": "View details"
+  },
+  "unitsPage": {
+    "stays": "Stays",
+    "headingIn": "{type} in {city}",
+    "available": "{count} units available",
+    "chipType": "Type: {type}",
+    "chipRating": "{rating}+ stars",
+    "chipPrice": "Price: {min}–{max} SAR",
+    "clearAll": "Clear all",
+    "clearFilters": "Clear filters",
+    "empty": "No units match the selected filters.",
+    "showUnits": "Show {count} units",
+    "close": "Close",
+    "sortLabel": "Sort results",
+    "sort": {
+      "recommended": "Most popular",
+      "price_asc": "Price: low to high",
+      "price_desc": "Price: high to low",
+      "rating": "Top rated"
+    },
+    "views": {
+      "list": "List",
+      "grid": "Grid",
+      "map": "Map"
+    },
+    "filters": {
+      "title": "Filters",
+      "price": "Price (SAR / night)",
+      "from": "From",
+      "to": "To",
+      "sar": "SAR",
+      "rating": "Rating",
+      "andUp": "and up",
+      "unitType": "Unit type",
+      "amenities": "Amenities"
+    }
+  },
+  "unit": {
+    "pickDates": "Pick check-in and check-out dates",
+    "featured": "Featured",
+    "discount": "{percent}% off",
+    "reviewCount": "{count} reviews",
+    "share": "Share",
+    "saved": "Saved",
+    "save": "Save",
+    "facts": {
+      "guests": "Guests",
+      "bedrooms": "Bedrooms",
+      "beds": "Beds",
+      "baths": "Baths"
+    },
+    "hostedBy": "Hosted by {name}",
+    "hostCompany": "Verified host · Company",
+    "hostIndividual": "Verified host · Individual",
+    "about": "About this place",
+    "amenitiesTitle": "What this place offers",
+    "thingsToKnow": "Things to know",
+    "houseRules": "House rules",
+    "checkInAfter": "Check-in after {time}",
+    "checkOutBefore": "Check-out before {time}",
+    "maxCapacity": "Maximum capacity {count} guests",
+    "ratingLabel": {
+      "exceptional": "Exceptional",
+      "excellent": "Excellent",
+      "veryGood": "Very good",
+      "good": "Good"
+    },
+    "basedOn": "Based on {count} guest reviews",
+    "noReviews": "No reviews yet.",
+    "checkInLabel": "Check-in",
+    "checkOutLabel": "Check-out",
+    "guestsLabel": "Guests",
+    "guestOption": "{count} guests",
+    "nightsLine": "{price} × {nights} nights",
+    "bookNow": "Book now",
+    "noChargeYet": "You won't be charged at this stage"
+  },
+  "gallery": {
+    "showAll": "Show all photos ({count})",
+    "close": "Close",
+    "prev": "Previous",
+    "next": "Next"
+  },
+  "map": {
+    "empty": "No properties with available locations right now.",
+    "sar": "SAR",
+    "perNight": "/ night"
+  },
+  "picks": {
+    "title": "Picks for you",
+    "subtitle": "Stays hand-picked just for you",
+    "viewAll": "View all",
+    "empty": "No units in this category right now."
+  },
+  "cancellationPolicy": {
+    "title": "Cancellation policy",
+    "templates": {
+      "flexible": "Flexible",
+      "moderate": "Moderate",
+      "strict": "Strict"
+    },
+    "between": "Between {from} and {to} days before check-in",
+    "moreThan": "More than {days} days before check-in",
+    "lessThan": "Less than {days} days before check-in",
+    "noRefund": "No refund",
+    "refund": "{percent}% refund",
+    "afterCheckIn": "After check-in: cancellation is not available"
+  },
+  "home": {
+    "heroTitle1": "Mamsa Stays:",
+    "heroTitle2": "Find the perfect place for your next getaway",
+    "heroSubtitle": "Browse thousands of verified stays across Saudi Arabia — book with confidence on Mamsa.",
+    "categoriesTitle": "Explore your destination",
+    "categoriesSubtitle": "Discover the best destinations and standout stays",
+    "unitCount": "{count} units",
+    "featuredTitle": "Most requested",
+    "featuredSubtitle": "Stays hand-picked for you",
+    "budgetTitle": "By budget",
+    "budgetSubtitle": "Prices that fit your needs",
+    "budgetUnder": "Under {max} SAR",
+    "budgetRange": "{min} - {max} SAR",
+    "unitsAvailable": "{count} units available",
+    "mapTitle": "Search by location",
+    "mapSubtitle": "Explore properties on the map across the Kingdom",
+    "howTitle": "How it works",
+    "howSubtitle": "Three simple steps between you and the perfect getaway",
+    "how": {
+      "0": { "title": "Discover", "body": "Search thousands of verified properties across the Kingdom by destination and need." },
+      "1": { "title": "Explore", "body": "Browse each property's details, photos, amenities and guest reviews before booking." },
+      "2": { "title": "Book", "body": "Complete your booking in a few safe steps and pay confidently through trusted methods." }
+    },
+    "trustEyebrow": "A modern Saudi platform for unique stays",
+    "trustTitle": "Building your trust from day one",
+    "trustSubtitle": "A smooth, secure booking experience with verified stays and high quality standards.",
+    "trust": {
+      "licensed": { "title": "Licensed & trusted", "body": "Accredited by the Ministry of Tourism, operating within official frameworks." },
+      "quality": { "title": "High quality", "body": "Strict standards for photos and amenities to guarantee the best stay." },
+      "coverage": { "title": "Wide coverage", "body": "Diverse stays across the Kingdom's cities." },
+      "support": { "title": "Ongoing support", "body": "A support team ready to help at every step of your journey." }
+    }
+  },
+  "testimonials": {
+    "prev": "Previous",
+    "next": "Next",
+    "goTo": "Review {num}",
+    "fallback": {
+      "0": {
+        "quote": "I booked an apartment for a family holiday and the experience was smooth and clear from the first step. The photos matched reality and the place was clean and comfortable. I highly recommend Mamsa.",
+        "name": "Sarah Almutairi",
+        "role": "Guest",
+        "meta": "Apartment booking in Riyadh · Completed stay"
+      },
+      "1": {
+        "quote": "A seamless, trustworthy booking experience from start to finish. I easily found the perfect villa for my family and support was quick and helpful. I'll definitely book again.",
+        "name": "Ahmed Alsahli",
+        "role": "Guest",
+        "meta": "Villa booking with a view · Completed stay"
+      },
+      "2": {
+        "quote": "Transparent prices and genuine guest reviews gave me full confidence in my choice. Booking was easy and support replied fast. An experience I recommend.",
+        "name": "Noura Alotaibi",
+        "role": "Guest",
+        "meta": "Studio booking · Completed stay"
+      }
+    }
+  },
+  "auth": {
+    "login": {
+      "genericError": "An error occurred",
+      "title": "Log in",
+      "subtitle": "Enter your phone number and we'll send you a verification code (OTP).",
+      "phoneLabel": "Phone number",
+      "waitCooldown": "Please wait {seconds} seconds before resending",
+      "resendIn": "Resend in {seconds} seconds",
+      "sendCode": "Send code",
+      "noAccount": "Don't have an account?",
+      "createAccount": "Create account",
+      "notRegisteredTitle": "This number isn't registered",
+      "notRegisteredBody": "We couldn't find an account with this number. Create a new account to continue.",
+      "createNewAccount": "Create new account",
+      "tryAnotherNumber": "Try another number"
+    },
+    "register": {
+      "genericError": "An error occurred",
+      "title": "Create account",
+      "subtitle": "Create your account to start booking — activated via a verification code sent to your phone.",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "email": "Email",
+      "phone": "Phone number",
+      "waitCooldown": "Please wait {seconds} seconds before resending",
+      "resendIn": "Resend in {seconds} seconds",
+      "sendCode": "Send verification code",
+      "haveAccount": "Already have an account?",
+      "login": "Log in",
+      "alreadyRegisteredTitle": "This number is already registered",
+      "alreadyRegisteredBody": "An account with this number already exists. Log in to continue.",
+      "tryAnotherNumber": "Try another number"
+    },
+    "otp": {
+      "wrongCode": "Wrong code",
+      "title": "Enter verification code",
+      "sentTo": "We sent a verification code to your phone",
+      "verifying": "Verifying...",
+      "verify": "Verify",
+      "changeNumber": "Change number",
+      "resendIn": "Resend in {seconds}s",
+      "resend": "Resend code"
+    },
+    "onboardingOtp": {
+      "wrongCode": "Incorrect verification code",
+      "title": "Verify your phone, we sent a verification code",
+      "body": "We sent a verification code to",
+      "bodyContinued": "Enter the code below to complete your registration.",
+      "verifyNow": "Verify now",
+      "didNotReceive": "Didn't receive the code?",
+      "resendWithCooldown": "Resend code ({seconds})",
+      "resend": "Resend code"
+    },
+    "debugOtp": {
+      "label": "Test code (dev environment):"
+    }
+  },
+  "validation": {
+    "phoneRequired": "Phone number is required",
+    "phoneInvalid": "Invalid Saudi phone number",
+    "otpLength": "Code must be 6 digits",
+    "otpDigitsOnly": "Code must contain digits only",
+    "firstNameShort": "First name is too short",
+    "lastNameShort": "Last name is too short",
+    "emailInvalid": "Invalid email address",
+    "nameShort": "Name is too short",
+    "messageShort": "Message is too short",
+    "ratingRequired": "Add a rating",
+    "commentShort": "Comment is too short"
+  },
+  "partnerOnboarding": {
+    "agreeTo": "By continuing, you agree to the",
+    "terms": "Terms",
+    "and": "and",
+    "privacyPolicy": "Privacy Policy",
+    "successTitle": "Your application was received!",
+    "successBody": "Your partner application is under review. You'll receive an email with the approval decision, and on approval you'll get a link to your partner dashboard.",
+    "form": {
+      "nameTooShort": "Name must be at least 3 characters",
+      "phoneInvalid": "Invalid Saudi phone number",
+      "emailInvalid": "Invalid email address",
+      "crInvalid": "Invalid commercial registration number (10 digits)",
+      "nationalIdInvalid": "Invalid national ID number (10 digits)",
+      "sendError": "Couldn't send the verification code, please try again.",
+      "title": "Create a new partner account",
+      "subtitle": "Create your account and start your journey as a Mamsa partner.",
+      "partnerType": "Partner type",
+      "individual": "Individual",
+      "company": "Company",
+      "name": "Name",
+      "namePlaceholder": "e.g. Fahad Yahya Mujarshi",
+      "phone": "Phone number",
+      "email": "Email",
+      "emailPlaceholder": "e.g. user@gmail.com",
+      "crNumber": "Commercial registration number",
+      "nationalId": "National ID number",
+      "sendCode": "Send verification code"
+    }
+  },
+  "checkout": {
+    "title": "Confirm payment",
+    "yourTrip": "Your trip",
+    "dates": "Dates",
+    "guests": "Guests",
+    "guestCount": "{count} guests",
+    "personalInfo": "Your personal information",
+    "firstName": "First name",
+    "firstNamePlaceholder": "Enter your first name",
+    "lastName": "Last name",
+    "lastNamePlaceholder": "Enter your last name",
+    "email": "Email",
+    "phone": "Phone number",
+    "paymentInfo": "Payment information",
+    "cardNumber": "Card number",
+    "expiry": "Expiry date",
+    "cardName": "Name on card",
+    "cardNamePlaceholder": "Name as printed on the card",
+    "cancellationPolicyTitle": "Cancellation policy (will be locked in with your booking)",
+    "agreeTo": "I agree to the",
+    "cancellationPolicyLink": "cancellation policy",
+    "listSeparator": ",",
+    "safetyLink": "basic safety rules",
+    "andLastSeparator": ", and",
+    "houseRulesLink": "house rules",
+    "agreeChargeNote": "I also agree that the site may charge my payment method if I'm responsible for any damages.",
+    "creatingBooking": "Creating your booking...",
+    "processingPayment": "Processing payment...",
+    "payAmount": "Pay {amount}",
+    "secureNote": "Your card is processed securely via Moyasar — we never store your full card number.",
+    "priceDetails": "Price details",
+    "priceLine": "{price} SAR × {nights} nights",
+    "cleaningFee": "Cleaning fee",
+    "serviceFee": "Service fee",
+    "taxes": "Taxes",
+    "total": "Total (SAR)",
+    "errors": {
+      "name": "Enter your first and last name",
+      "email": "Enter a valid email address",
+      "cardNumber": "Card number must be 16 digits",
+      "expiry": "Invalid card expiry date (MM/YY)",
+      "expired": "Card has expired",
+      "cvv": "Security code (CVV) must be 3 digits",
+      "cardName": "Enter the name as printed on the card",
+      "agree": "You must agree to the terms and policies",
+      "loginFirst": "Log in first to complete your booking",
+      "paymentFailed": "Couldn't complete the payment, please try again.",
+      "genericFailed": "Failed to complete the transaction"
+    }
+  },
+  "bookingConfirmation": {
+    "title": "Your booking is confirmed!",
+    "subtitle": "Thanks for choosing Mamsa. Your booking details were sent to your email.",
+    "bookingCode": "Booking code",
+    "amountPaid": "Amount paid",
+    "checkIn": "Check-in",
+    "checkOut": "Check-out",
+    "myReservations": "My reservations",
+    "viewDetails": "View details"
+  },
+  "paymentCallback": {
+    "sessionExpired": "Your payment session has expired. No amount was charged — start the booking again.",
+    "bankDeclined": "The bank declined the payment.",
+    "verifyFailed": "Couldn't verify the payment.",
+    "incompleteTitle": "Payment wasn't completed",
+    "goToReservations": "Go to my reservations",
+    "browseStays": "Browse stays",
+    "verifyingTitle": "Verifying your payment...",
+    "verifyingBody": "One moment while we confirm your booking — don't close this page."
+  },
+  "cancelBooking": {
+    "genericError": "An error occurred",
+    "cancelFailed": "Cancellation failed",
+    "title": "Cancel booking",
+    "confirmPrompt": "Are you sure you want to cancel this booking?",
+    "notAllowed": {
+      "alreadyCancelled": "This booking is already cancelled.",
+      "completed": "A completed booking can't be cancelled.",
+      "afterCheckIn": "The booking can't be cancelled after the check-in date."
+    },
+    "refundSummary": "Refund summary",
+    "applicableTier": "Applicable tier",
+    "totalAmount": "Total amount",
+    "refundPercent": "Refund percentage",
+    "refundedAmount": "Refunded amount",
+    "deductedAmount": "Deducted amount",
+    "reasonLabel": "Cancellation reason (optional)",
+    "reasonPlaceholder": "Message text",
+    "goBack": "Go back",
+    "cancelling": "Cancelling...",
+    "confirmCancel": "Confirm cancellation"
+  },
+  "bookingCard": {
+    "status": {
+      "cancelled": "Cancelled",
+      "completed": "Completed",
+      "confirmed": "Confirmed",
+      "pending": "Awaiting confirmation"
+    },
+    "host": "Host",
+    "checkIn": "Check-in",
+    "checkOut": "Check-out",
+    "guests": "Guests",
+    "guestsNights": "{guests} · {nights} nights",
+    "confirmationCode": "Confirmation code",
+    "total": "Total",
+    "viewDetails": "View details",
+    "cancelBooking": "Cancel booking",
+    "bookAgain": "Book again",
+    "cancelledBy": "Cancelled by",
+    "byCustomer": "Customer",
+    "bySystem": "System",
+    "reason": "Reason",
+    "refundedAmount": "Refunded amount"
+  },
+  "contactHost": {
+    "quick": {
+      "available": "Hi, is the unit available for my booking dates?",
+      "checkin": "What are the arrival and check-in instructions?",
+      "parking": "Is private parking available?"
+    },
+    "hostRespondsIn": "Host · usually responds within hours",
+    "close": "Close",
+    "sentTitle": "Your message was sent",
+    "sentBody": "{hostName} will get back to you soon through the booking conversation.",
+    "done": "Done",
+    "placeholder": "Write your message to the host...",
+    "sendMessage": "Send message",
+    "secureNote": "The conversation happens securely inside Mamsa."
+  },
+  "myReservations": {
+    "title": "My reservations",
+    "subtitle": "Track and manage your current and past reservations in one place.",
+    "tabs": {
+      "upcoming": "Upcoming",
+      "active": "Active",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "empty": {
+      "upcoming": "No upcoming reservations",
+      "active": "No active reservations coming up",
+      "completed": "No completed reservations",
+      "cancelled": "No cancelled reservations"
+    },
+    "browse": "Browse stays"
+  },
+  "bookingDetails": {
+    "status": {
+      "cancelled": "Cancelled",
+      "completed": "Completed",
+      "confirmed": "Confirmed",
+      "pending": "Awaiting confirmation"
+    },
+    "backToReservations": "Back to reservations",
+    "priceSummary": "Price summary",
+    "priceLine": "{price} SAR × {nights} nights",
+    "serviceFee": "Service fee",
+    "cleaningFee": "Cleaning fee",
+    "taxes": "Taxes",
+    "grandTotal": "Grand total",
+    "securePaymentTitle": "Secure, protected payment",
+    "securePaymentBody": "Payment succeeded and the booking is confirmed",
+    "contactHost": "Contact host",
+    "downloadConfirmation": "Download booking confirmation",
+    "cancelBooking": "Cancel booking",
+    "writeReview": "Write a review",
+    "reviewed": "Reviewed",
+    "bookAgain": "Book again",
+    "cancelledBy": "Cancelled by",
+    "byCustomer": "Customer",
+    "bySystem": "System",
+    "reason": "Reason",
+    "cancelledAt": "Cancelled on",
+    "refunded": "Refunded",
+    "guestsLine": "Occupancy: {count} guests",
+    "bookingDetailsTitle": "Booking details",
+    "checkInDate": "Check-in date",
+    "checkInTime": "After 3:00 PM",
+    "checkOutDate": "Check-out date",
+    "checkOutTime": "Before 11:00 AM",
+    "stayLength": "Length of stay",
+    "nightsCount": "{count} nights",
+    "guests": "Guests",
+    "adultsCount": "{count} adults",
+    "childrenCount": "{count} children",
+    "bookingNumber": "Booking number",
+    "confirmationCode": "Confirmation code",
+    "paymentMethod": "Payment method",
+    "expiresOn": "Expires {date}",
+    "houseRules": "House rules",
+    "canView": "For every booking, the guest can view:",
+    "viewList": {
+      "0": "The booking number and date",
+      "1": "The unit's details and location",
+      "2": "The total amount and taxes",
+      "3": "The current booking status"
+    },
+    "cancelNote": "The guest can cancel the booking before the stay date according to the cancellation policy set by management.",
+    "contactNote": "They can reach the service provider from within the booking page through a direct conversation (text and photos)."
+  },
+  "account": {
+    "quickLinks": {
+      "reservations": "My reservations",
+      "reservationsDesc": "Track your current and past reservations",
+      "favorites": "Favorites",
+      "favoritesDesc": "Stays you've saved",
+      "paymentMethods": "Payment methods",
+      "paymentMethodsDesc": "Your cards and transaction history"
+    },
+    "title": "Account settings",
+    "personalInfo": "Personal information",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "email": "Email",
+    "saving": "Saving...",
+    "saveChanges": "Save changes",
+    "savedSuccess": "Changes saved",
+    "phoneNumber": "Phone number",
+    "deleteAccount": "Delete account",
+    "deleteAccountWarning": "Deleting your account will permanently erase all your data — this can't be undone.",
+    "deleteAccountButton": "Permanently delete account",
+    "deleteAccountConfirm": "All your data and bookings will be permanently deleted and cannot be recovered. Are you sure?",
+    "deleting": "Deleting...",
+    "yesDelete": "Yes, delete my account",
+    "phone": {
+      "genericError": "An error occurred",
+      "backToSettings": "Back to account settings",
+      "title": "Phone number",
+      "updateSuccess": "Phone number updated successfully.",
+      "currentPhone": "Current phone number",
+      "verified": "Verified",
+      "changeTitle": "Change phone number",
+      "changeSubtitle": "A verification code will be sent to the new number to complete the change.",
+      "newPhone": "New phone number",
+      "sending": "Sending...",
+      "sendCode": "Send verification code"
+    }
+  },
+  "paymentMethods": {
+    "txnType": {
+      "payment": "Payment",
+      "refund": "Refund",
+      "topup": "Top-up",
+      "reward": "Reward"
+    },
+    "backToSettings": "Back to account settings",
+    "title": "Payment methods",
+    "subtitle": "Manage your saved cards and review your transaction history.",
+    "savedCards": "Saved cards",
+    "noCards": "No saved cards yet.",
+    "defaultCard": "Default card",
+    "setAsDefault": "Set as default",
+    "delete": "Delete",
+    "addNewCard": "Add new card",
+    "secureNote": "Your data is protected and encrypted. We never store your full card number.",
+    "transactionHistory": "Transaction history",
+    "transactionCount": "{count} transactions",
+    "noTransactions": "No transactions yet.",
+    "deleteCardTitle": "Delete card",
+    "deleteCardConfirm": "Are you sure you want to delete the {brand} card ending in {last4}? This action cannot be undone.",
+    "yesDelete": "Yes, delete",
+    "cancel": "Cancel",
+    "defaultBadge": "Default",
+    "expiresOnLabel": "Expires",
+    "saveCardError": "Couldn't save the card, please try again.",
+    "close": "Close",
+    "cardType": "Card type",
+    "cardNumber": "Card number",
+    "expiryMonth": "Expiry month",
+    "expiryYear": "Expiry year",
+    "savingCard": "Saving...",
+    "saveCard": "Save card"
+  },
+  "favorites": {
+    "title": "Your favorites",
+    "savedCount": "You have {count} saved units",
+    "savePrompt": "Save the units you like to find them quickly later",
+    "empty": "You haven't saved any units yet."
+  },
+  "contact": {
+    "cards": {
+      "phone": "Call us",
+      "email": "Email us",
+      "location": "Our location",
+      "hours": "Working hours"
+    },
+    "locationValue": "Riyadh, Saudi Arabia",
+    "hoursValue": "Sunday - Thursday · 9 AM - 6 PM",
+    "sendError": "Couldn't send your message, please try again.",
+    "eyebrow": "Contact us",
+    "heroTitle": "We're happy to hear from you and answer your questions",
+    "heroSubtitle": "The Mamsa team is ready to help with anything related to bookings or listing your property.",
+    "formTitle": "Send us a message",
+    "formSubtitle": "Fill out the form and our team will get back to you soon.",
+    "fields": {
+      "name": "Name",
+      "phone": "Phone number",
+      "email": "Email",
+      "message": "Message"
+    },
+    "placeholders": {
+      "name": "Your full name",
+      "message": "How can we help?"
+    },
+    "sending": "Sending...",
+    "send": "Send message",
+    "teamImageAlt": "Customer support team",
+    "sideTitle": "Contact information",
+    "sideSubtitle": "We're here for you anytime.",
+    "followUs": "Follow us",
+    "successTitle": "Your message was sent!",
+    "successBody": "Thank you for contacting Mamsa, our team will reply to you as soon as possible.",
+    "done": "Done"
+  },
+  "review": {
+    "submitFailed": "Failed to submit the review",
+    "title": "Write a review",
+    "subtitle": "Share your experience with this stay",
+    "rateYourStay": "Rate your stay",
+    "commentPlaceholder": "Write your comment...",
+    "submitting": "Submitting...",
+    "submit": "Submit review"
+  },
+  "about": {
+    "metaTitle": "About {name} — Real Estate Stay Platform",
+    "eyebrow": "Get to know us",
+    "heroTitle": "About {name}",
+    "stats": {
+      "0": { "value": "2026", "label": "We launched in" },
+      "1": { "value": "100%", "label": "Verified units" },
+      "2": { "value": "24/7", "label": "Customer support" },
+      "3": { "value": "Licensed", "label": "By the Ministry of Tourism" }
+    },
+    "visionTitle": "Our vision",
+    "visionBody": "To be the leading platform in Saudi Arabia for booking unique stays, contributing to the growth of the tourism and hospitality sector in support of Vision 2030's goals.",
+    "missionTitle": "Our mission",
+    "missionBody": "To deliver a smooth, secure search and booking experience that connects guests with high-quality verified stays, while giving property owners simple tools to list their units and earn a reliable income.",
+    "valuesTitle": "Our values",
+    "valuesSubtitle": "The principles behind every detail of the platform",
+    "values": {
+      "0": { "title": "Licensed", "body": "A platform accredited by the Saudi {authority}, operating within official frameworks." },
+      "1": { "title": "Verified", "body": "Every property undergoes an on-site review and audit before being listed on the platform." },
+      "2": { "title": "Wide coverage", "body": "Diverse stays across the Kingdom's cities, from major cities to quiet destinations." },
+      "3": { "title": "High quality", "body": "Strict standards for photos, amenities and service to guarantee the best stay experience." }
+    },
+    "whyTitle": "Why {name}?",
+    "whySubtitle": "What makes your experience with us different",
+    "why": {
+      "0": { "title": "Seamless experience", "body": "Search and book in a few simple steps with a clear interface designed for your comfort." },
+      "1": { "title": "Secure payment", "body": "Protected payments and trusted payment methods, with full price transparency." },
+      "2": { "title": "Ongoing support", "body": "A customer service team ready to help before, during and after your stay." },
+      "3": { "title": "Standout stays", "body": "Carefully selected units that combine comfort, privacy and refined taste." }
+    },
+    "ctaTitle": "Start your journey with {name} today",
+    "ctaBody": "Whether you're looking for your next stay or want to list your property — Mamsa is your destination.",
+    "browseStays": "Browse stays",
+    "listProperty": "List your property"
+  },
+  "host": {
+    "metaTitle": "List your property — {name}",
+    "metaDescription": "List your property on Mamsa and receive bookings with confidence, with guaranteed payouts, protection and full control.",
+    "heroBullets": {
+      "0": "Guaranteed, fast payouts after every stay",
+      "1": "Damage protection so you can host with peace of mind",
+      "2": "Full control over pricing, calendar and rules"
+    },
+    "eyebrow": "Become a Mamsa host",
+    "heroTitle": "List your property and earn with Mamsa",
+    "heroSubtitle": "Turn your property into a source of income. List it on Mamsa and receive bookings with confidence, with guaranteed payouts, protection and support every step of the way.",
+    "registerFree": "List your property for free",
+    "howItWorksLink": "How does it work?",
+    "startNow": "Start now",
+    "haveAccount": "Already have a host account?",
+    "continueRegistration": "Continue your registration",
+    "benefitsTitle": "Why list your property on {name}?",
+    "benefitsSubtitle": "Everything you need to manage your property and earn extra income with confidence",
+    "benefits": {
+      "0": { "title": "Guaranteed payouts", "body": "Receive your earnings safely and quickly after each guest checks out, via trusted payment methods." },
+      "1": { "title": "Host protection", "body": "Coverage against damage guests might cause, so you can host with confidence and peace of mind." },
+      "2": { "title": "Wide audience", "body": "Showcase your property to thousands of people searching for a stay across the Kingdom every month." },
+      "3": { "title": "Full control", "body": "You're in charge — set the price, calendar and house rules as you see fit." },
+      "4": { "title": "Smart pricing", "body": "Price suggestions based on demand and season to boost your income and occupancy." },
+      "5": { "title": "Round-the-clock support", "body": "The Mamsa team is ready to help anytime, before, during and after a booking." }
+    },
+    "stepsTitle": "Join in 3 simple steps",
+    "stepsSubtitle": "From registration to your first booking in no time",
+    "steps": {
+      "0": { "title": "List your property", "body": "Create your host account in minutes with simple details and your phone number." },
+      "1": { "title": "Add details and photos", "body": "Write your property's description, add photos and amenities, and set its price and rules." },
+      "2": { "title": "Receive bookings and earn", "body": "Publish your property, receive booking requests and start earning extra income." }
+    },
+    "registerNow": "List your property now",
+    "testimonialsTitle": "What our hosts say",
+    "testimonialsSubtitle": "Real success stories from property owners on Mamsa",
+    "testimonials": {
+      "0": { "quote": "I listed my chalet in under fifteen minutes, and my first booking came within two days. The platform is so easy.", "name": "Fahad Alotaibi", "role": "Host in Riyadh" },
+      "1": { "quote": "What I liked most was the fast payouts and protection. I now host with total peace of mind about my property.", "name": "Noura Alshahri", "role": "Host in Abha" },
+      "2": { "quote": "My chalet's occupancy rose noticeably after listing it on Mamsa, and support is helpful anytime.", "name": "Sultan Alqahtani", "role": "Host in Jeddah" }
+    },
+    "faqTitle": "Frequently asked questions",
+    "faqSubtitle": "Answers to what hosts ask most",
+    "faqs": {
+      "0": { "q": "Is registration free?", "a": "Yes, creating a host account and listing your property on Mamsa is completely free. There are no upfront subscription fees." },
+      "1": { "q": "When will my property appear to guests?", "a": "Once you complete your property's details and photos, it goes through a quick review by our team and is then published and available for booking." },
+      "2": { "q": "When do I receive my earnings?", "a": "Your payments are transferred securely after the guest checks out, via the payment method you choose." },
+      "3": { "q": "Do I control the pricing and availability?", "a": "Completely. You set the price, calendar and house rules, and can adjust them anytime from your dashboard." },
+      "4": { "q": "What if a guest causes damage?", "a": "We provide host protection against damage, and you can report any issue for our team to follow up with you." }
+    },
+    "finalCtaTitle": "Ready to start? List your property today and start welcoming guests",
+    "finalCtaBody": "Join hundreds of hosts on Mamsa and turn your property into a reliable source of income."
+  },
+  "faq": {
+    "metaTitle": "FAQ — {name}",
+    "metaDescription": "Answers to the most common questions about booking, payment, cancellation and your account on Mamsa.",
+    "title": "Frequently asked questions",
+    "subtitle": "Quick answers to what Mamsa guests ask most — and if you don't find your question, our team is ready to help.",
+    "groups": {
+      "booking": {
+        "title": "Booking",
+        "items": {
+          "0": { "q": "How do I book a unit?", "a": "Search for your destination, choose your dates and number of guests, then complete payment securely — you'll get instant confirmation with a booking code, and find all your bookings on the \"My reservations\" page." },
+          "1": { "q": "Do I need an account to complete a booking?", "a": "Yes — registration is done with your Saudi phone number and a verification code (OTP) sent by text, with no passwords at all." },
+          "2": { "q": "How do I know a unit is trustworthy?", "a": "Every unit on Mamsa goes through review and approval before publishing, and you'll find genuine reviews from guests who completed their stay there." },
+          "3": { "q": "Can I contact the host before arrival?", "a": "Yes — from the booking details page you can message the host directly within the platform (to arrange arrival time, for example)." }
+        }
+      },
+      "payment": {
+        "title": "Payment",
+        "items": {
+          "0": { "q": "What payment methods are available?", "a": "Bank cards (mada, Visa, Mastercard) via the licensed Moyasar payment gateway. Your bank may request an extra verification step (3-D Secure) to complete the transaction." },
+          "1": { "q": "Is my card data safe?", "a": "Completely — card data is processed directly by the payment gateway and never touches our servers, and we never store your full card number." },
+          "2": { "q": "When is the amount charged?", "a": "Once the payment is completed, and your booking is confirmed as soon as it succeeds. If the transaction fails for any reason, nothing is charged." }
+        }
+      },
+      "cancellation": {
+        "title": "Cancellation & refunds",
+        "items": {
+          "0": { "q": "How do I cancel my booking?", "a": "From \"My reservations\" → booking details → cancel booking. Before confirming, you'll see an exact summary of the amount that will be refunded according to the cancellation policy locked in on your booking." },
+          "1": { "q": "When will I receive my refund?", "a": "The amount is automatically returned to the same card within 5 to 14 business days depending on the bank. Full details in the <cancellationLink>cancellation policy</cancellationLink>." },
+          "2": { "q": "What if the host cancels the booking?", "a": "You get a 100% refund of the amount paid, regardless of the cancellation policy applied to the unit." }
+        }
+      },
+      "account": {
+        "title": "Account",
+        "items": {
+          "0": { "q": "How do I change my phone number?", "a": "From account settings → phone number — you'll receive a verification code on the new number to confirm it before switching." },
+          "1": { "q": "How do I delete my account?", "a": "From account settings → delete account. Deletion is permanent and your data is completely erased, so a confirmation message will appear before it's carried out." }
+        }
+      },
+      "hosts": {
+        "title": "For hosts",
+        "items": {
+          "0": { "q": "How do I list my property on Mamsa?", "a": "Submit an application from the <hostLink>list your property</hostLink> page — after your application is reviewed and approved, you'll receive an email with a link to the partner dashboard to manage your units and bookings." }
+        }
+      }
+    },
+    "stillNeedHelp": "Didn't find your answer?",
+    "stillNeedHelpBody": "Message us and our support team will reply as soon as possible.",
+    "contactUs": "Contact us"
+  },
+  "policies": {
+    "cancellation": {
+      "metaTitle": "Cancellation Policy — {name}",
+      "metaDescription": "Rules for cancelling bookings and refunding amounts on Mamsa.",
+      "title": "Cancellation Policy",
+      "subtitle": "We clearly explain when you can cancel your booking and what amount is refunded — before you pay, not after.",
+      "lastUpdated": "Last updated: {date}",
+      "lastUpdatedDate": "July 2026",
+      "howItWorksTitle": "How does the cancellation policy work?",
+      "howItWorksBody": "Each host chooses one of three platform-approved cancellation policies for their unit (flexible, moderate, strict). The applied policy is shown clearly on the unit page and on the checkout page before payment, and the refund percentage is calculated based on the number of days remaining until check-in at the time the cancellation is requested.",
+      "freezeNote": "<strong>Policy freeze:</strong> the policy you see at checkout is locked in on your booking — any later change the host makes to it does not apply to existing bookings.",
+      "templatesTitle": "The three approved policies",
+      "templateDescriptions": {
+        "flexible": "Full refund up to 7 days before arrival, 50% up to 3 days, and no refund after that.",
+        "moderate": "Full refund up to 7 days before arrival, 25% up to 3 days, and no refund after that.",
+        "strict": "50% refund up to 7 days before arrival, and no refund after that."
+      },
+      "generalTermsTitle": "General terms",
+      "generalTerms": {
+        "0": "Durations are calculated in full days remaining before the check-in time specified on the unit page.",
+        "1": "After the check-in time, cancellation is not available through the platform.",
+        "2": "<strong>No-shows</strong> are treated the same as a cancellation after the deadline — with no refund.",
+        "3": "The refund percentage applies to the total amount paid, including fees and taxes.",
+        "4": "If the booking is cancelled by the host or the platform for any reason, you get a <strong>100% refund</strong> regardless of the applied policy."
+      },
+      "refundMechanismTitle": "Refund mechanism",
+      "refundMechanism": {
+        "0": "Before confirming the cancellation, the platform shows you an exact summary of the amount to be refunded and the amount forfeited.",
+        "1": "The amount is automatically returned to the same payment method used for the booking, via the payment gateway.",
+        "2": "The amount appears in your bank account within <strong>5 to 14 business days</strong> depending on the card-issuing bank.",
+        "3": "You can track the refund status from the booking details page and the transaction history in your account."
+      },
+      "needHelpTitle": "Need help?",
+      "needHelpBody": "If you're facing an emergency or have a question about cancelling a specific booking, reach us via the <contactLink>contact us</contactLink> page and our support team will help you as soon as possible."
+    },
+    "safety": {
+      "metaTitle": "Basic Safety Rules — {name}",
+      "metaDescription": "Safety guidelines to protect your account, payments and stay on Mamsa.",
+      "title": "Basic Safety Rules",
+      "subtitle": "Your safety is our priority — from the moment you book until you check out. These rules protect you and the Mamsa community.",
+      "lastUpdated": "Last updated: {date}",
+      "lastUpdatedDate": "July 2026",
+      "bookingPaymentTitle": "Booking & payment safety",
+      "bookingPayment": {
+        "0": "<strong>Book and pay only within the platform.</strong> Any booking or transfer outside Mamsa is not covered by our guarantee or refund policy, and we won't be able to help you in case of a dispute.",
+        "1": "Your card data is processed securely through the licensed payment gateway (Moyasar) — <strong>we never store your full card number</strong>.",
+        "2": "Never send any extra amounts directly to the host (a deposit, a security payment...) outside the platform."
+      },
+      "accountProtectionTitle": "Protecting your account",
+      "accountProtection": {
+        "0": "Logging into Mamsa uses a verification code (OTP) sent to your phone — <strong>never share this code with anyone</strong>.",
+        "1": "The Mamsa team will never ask you for your verification code or card details over the phone or by message, ever.",
+        "2": "If you receive a verification code you didn't request, ignore it and report it to us immediately."
+      },
+      "goldenRule": "<strong>Golden rule:</strong> anyone who asks you for your verification code is a scammer — the code is entered on the site only, never spoken or sent to anyone.",
+      "beforeBookingTitle": "Before booking",
+      "beforeBooking": {
+        "0": "Read the unit's description and previous guest reviews carefully — every unit on Mamsa is verified and reviewed before being published.",
+        "1": "Check the unit's cancellation policy and house rules before completing payment.",
+        "2": "Contact the host through the platform if you have any questions — the conversation stays documented to protect you."
+      },
+      "duringStayTitle": "During your stay",
+      "duringStay": {
+        "0": "On arrival, familiarize yourself with the emergency exits and the fire extinguisher's location in the unit.",
+        "1": "Don't tamper with smoke detectors or safety equipment.",
+        "2": "In emergencies within the Kingdom, call the unified number <strongLtr>911</strongLtr>.",
+        "3": "If you find the unit substantially different from what was advertised, don't check in and contact support immediately to document the situation."
+      },
+      "damageResponsibilityTitle": "Responsibility for damages",
+      "damageResponsibilityBody": "The guest is responsible for any damage to the unit or its contents during their stay resulting from misuse. In such cases, the platform — after verification — has the right to charge compensation fees to the payment method used for the booking, as agreed upon at the time of booking.",
+      "reportIssueTitle": "Reporting an issue",
+      "reportIssueBody": "Noticed suspicious behavior, a misleading listing, or a suspicious contact attempt? Report it to us immediately via the <contactLink>contact us</contactLink> page — we handle reports with complete confidentiality."
+    },
+    "houseRules": {
+      "metaTitle": "House Rules — {name}",
+      "metaDescription": "General rules for staying in units on the Mamsa platform.",
+      "title": "House Rules",
+      "subtitle": "General rules that ensure a comfortable stay for you, and preserve the unit's condition and the neighbors' peace.",
+      "lastUpdated": "Last updated: {date}",
+      "lastUpdatedDate": "July 2026",
+      "intro": "These general rules apply to all stays through Mamsa. Each host may add rules specific to their unit, shown on the unit page — <strong>unit-specific rules complement these rules and take priority in case of conflict</strong>.",
+      "checkInOutTitle": "Check-in & check-out",
+      "checkInOut": {
+        "0": "Follow the check-in and check-out times shown on the unit page and booking confirmation (typically arrival after <strongLtr>15:00</strongLtr> and departure before <strongLtr>12:00</strongLtr>).",
+        "1": "If you'll arrive late, let the host know in advance through the platform to arrange the handover.",
+        "2": "Late check-out without coordination may incur extra fees."
+      },
+      "guestCountTitle": "Number of guests",
+      "guestCount": {
+        "0": "The number of guests must not exceed the number specified in the booking, up to the unit's advertised maximum capacity.",
+        "1": "Hosting additional people without the host's knowledge is a violation that may lead to the stay being terminated without a refund."
+      },
+      "quietHoursTitle": "Quiet hours & respecting neighbors",
+      "quietHours": {
+        "0": "Respect the neighbors' peace — quiet hours from <strongLtr>22:00</strongLtr> to <strongLtr>08:00</strongLtr>.",
+        "1": "<strong>Parties and events are not allowed</strong> except with the host's prior, explicit approval (some units are designated for events, noted on their page)."
+      },
+      "smokingPetsTitle": "Smoking & pets",
+      "smokingPets": {
+        "0": "Smoking is prohibited indoors in all units, unless the unit page states otherwise.",
+        "1": "Bringing pets is subject to each unit's policy as shown on its page — ask the host if it isn't mentioned."
+      },
+      "cleanlinessTitle": "Cleanliness & property",
+      "cleanliness": {
+        "0": "Take care of the unit and its contents, and leave it in reasonable condition upon departure.",
+        "1": "Don't move furniture or appliances out of the unit.",
+        "2": "Report any fault or damage to the host <strong>immediately</strong> when it occurs during your stay — early reporting protects you and speeds up the resolution.",
+        "3": "Damage resulting from misuse is the guest's responsibility and its cost may be charged to the payment method as agreed upon at booking."
+      },
+      "complianceTitle": "Compliance with regulations",
+      "complianceBody": "Guests must comply with the laws and regulations in effect in Saudi Arabia throughout the stay. Any unlawful activity inside the unit exposes the booking to immediate termination without a refund, along with any necessary legal action."
+    }
+  }
+}

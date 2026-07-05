@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Star } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
-import { AMENITIES_CATALOG, UNIT_TYPE_LABELS_AR } from '@/lib/constants/brand';
+import { AMENITIES_CATALOG } from '@/lib/constants/brand';
 import { formatNumber } from '@/lib/utils/format';
 
 const TYPES = ['all', 'apartment', 'studio', 'villa'] as const;
@@ -25,6 +25,9 @@ interface SidebarFiltersProps {
 }
 
 export function SidebarFilters({ value, onChange }: SidebarFiltersProps) {
+  const t = useTranslations('unitsPage.filters');
+  const tTypes = useTranslations('types');
+  const tAmenities = useTranslations('amenities');
   const update = (patch: Partial<SidebarFiltersValue>) => onChange({ ...value, ...patch });
 
   const toggleAmenity = (key: string) => {
@@ -36,11 +39,11 @@ export function SidebarFilters({ value, onChange }: SidebarFiltersProps) {
 
   return (
     <Card className="space-y-6 p-5">
-      <h2 className="text-lg font-bold text-brand-ink">الفلاتر</h2>
+      <h2 className="text-lg font-bold text-brand-ink">{t('title')}</h2>
 
       {/* Price */}
       <section className="space-y-3">
-        <Label className="text-sm font-semibold">السعر (ر.س / ليلة)</Label>
+        <Label className="text-sm font-semibold">{t('price')}</Label>
         <Slider
           min={0}
           max={5000}
@@ -50,19 +53,19 @@ export function SidebarFilters({ value, onChange }: SidebarFiltersProps) {
         />
         <div className="grid grid-cols-2 gap-2 text-center text-xs">
           <div className="rounded-lg bg-brand-cream/60 py-1.5">
-            <div className="text-brand-muted">من</div>
-            <div className="font-bold">{formatNumber(value.priceRange[0])} ر.س</div>
+            <div className="text-brand-muted">{t('from')}</div>
+            <div className="font-bold">{formatNumber(value.priceRange[0])} {t('sar')}</div>
           </div>
           <div className="rounded-lg bg-brand-cream/60 py-1.5">
-            <div className="text-brand-muted">إلى</div>
-            <div className="font-bold">{formatNumber(value.priceRange[1])} ر.س</div>
+            <div className="text-brand-muted">{t('to')}</div>
+            <div className="font-bold">{formatNumber(value.priceRange[1])} {t('sar')}</div>
           </div>
         </div>
       </section>
 
       {/* Rating */}
       <section className="space-y-2">
-        <Label className="text-sm font-semibold">التقييم</Label>
+        <Label className="text-sm font-semibold">{t('rating')}</Label>
         <div className="space-y-1.5">
           {RATINGS.map((r) => (
             <label key={r} className="flex cursor-pointer items-center gap-2 text-sm">
@@ -77,7 +80,7 @@ export function SidebarFilters({ value, onChange }: SidebarFiltersProps) {
                 {Array.from({ length: r }).map((_, i) => (
                   <Star key={i} className="h-3.5 w-3.5 fill-yellow-500 text-yellow-500" />
                 ))}
-                <span className="text-brand-muted">فأكثر</span>
+                <span className="text-brand-muted">{t('andUp')}</span>
               </span>
             </label>
           ))}
@@ -86,18 +89,18 @@ export function SidebarFilters({ value, onChange }: SidebarFiltersProps) {
 
       {/* Type */}
       <section className="space-y-2">
-        <Label className="text-sm font-semibold">نوع الوحدة</Label>
+        <Label className="text-sm font-semibold">{t('unitType')}</Label>
         <div className="space-y-1.5">
-          {TYPES.map((t) => (
-            <label key={t} className="flex cursor-pointer items-center gap-2 text-sm">
+          {TYPES.map((ty) => (
+            <label key={ty} className="flex cursor-pointer items-center gap-2 text-sm">
               <input
                 type="radio"
                 name="type"
-                checked={value.type === t}
-                onChange={() => update({ type: t })}
+                checked={value.type === ty}
+                onChange={() => update({ type: ty })}
                 className="accent-brand-primary"
               />
-              <span>{UNIT_TYPE_LABELS_AR[t]}</span>
+              <span>{tTypes(ty)}</span>
             </label>
           ))}
         </div>
@@ -105,7 +108,7 @@ export function SidebarFilters({ value, onChange }: SidebarFiltersProps) {
 
       {/* Amenities */}
       <section className="space-y-2">
-        <Label className="text-sm font-semibold">المرافق</Label>
+        <Label className="text-sm font-semibold">{t('amenities')}</Label>
         <div className="space-y-2">
           {AMENITIES_CATALOG.slice(0, 6).map((a) => (
             <label key={a.key} className="flex cursor-pointer items-center gap-2 text-sm">
@@ -113,7 +116,7 @@ export function SidebarFilters({ value, onChange }: SidebarFiltersProps) {
                 checked={value.amenities.includes(a.key)}
                 onCheckedChange={() => toggleAmenity(a.key)}
               />
-              <span>{a.labelAr}</span>
+              <span>{tAmenities(a.key)}</span>
             </label>
           ))}
         </div>

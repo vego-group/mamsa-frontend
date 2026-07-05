@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, Grid3x3, X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils/cn';
 
 interface UnitGalleryProps {
@@ -10,6 +11,7 @@ interface UnitGalleryProps {
 }
 
 export function UnitGallery({ images, title }: UnitGalleryProps) {
+  const t = useTranslations('gallery');
   const [lightbox, setLightbox] = useState<number | null>(null);
   const count = images.length;
 
@@ -87,7 +89,7 @@ export function UnitGallery({ images, title }: UnitGalleryProps) {
             className="absolute bottom-4 left-4 hidden items-center gap-2 rounded-full border border-brand-border bg-white/95 px-4 py-2 text-sm font-medium text-brand-ink shadow-sm backdrop-blur transition hover:bg-white md:inline-flex"
           >
             <Grid3x3 className="h-4 w-4" />
-            عرض كل الصور ({count})
+            {t('showAll', { count })}
           </button>
         )}
       </div>
@@ -101,7 +103,7 @@ export function UnitGallery({ images, title }: UnitGalleryProps) {
             <button
               onClick={close}
               className="inline-flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-white/15"
-              aria-label="إغلاق"
+              aria-label={t('close')}
             >
               <X className="h-5 w-5" />
             </button>
@@ -113,7 +115,7 @@ export function UnitGallery({ images, title }: UnitGalleryProps) {
               <button
                 onClick={(e) => { e.stopPropagation(); go(-1); }}
                 className="absolute right-3 z-10 inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/25"
-                aria-label="السابق"
+                aria-label={t('prev')}
               >
                 <ChevronRight className="h-6 w-6" />
               </button>
@@ -128,7 +130,7 @@ export function UnitGallery({ images, title }: UnitGalleryProps) {
               <button
                 onClick={(e) => { e.stopPropagation(); go(1); }}
                 className="absolute left-3 z-10 inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/25"
-                aria-label="التالي"
+                aria-label={t('next')}
               >
                 <ChevronLeft className="h-6 w-6" />
               </button>

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { MapPin, User, CalendarCheck, CalendarX, Users, Ticket, type LucideIcon } from 'lucide-react';
 import type { Booking } from '@/types';
 import { Card } from '@/components/ui/card';
@@ -18,16 +19,17 @@ interface BookingCardProps {
 }
 
 export function BookingCard({ booking, tabContext }: BookingCardProps) {
+  const t = useTranslations('bookingCard');
   const [cancelOpen, setCancelOpen] = useState(false);
   const canCancel = isBookingCancellable(booking, new Date());
   const nights = diffNights(booking.checkInDate, booking.checkOutDate);
   const guests = booking.guests.adults + booking.guests.children;
 
   const statusBadge = () => {
-    if (tabContext === 'cancelled') return <Badge variant="danger">ملغي</Badge>;
-    if (tabContext === 'completed') return <Badge variant="sage">مكتمل</Badge>;
-    if (tabContext === 'active') return <Badge variant="success">مؤكد</Badge>;
-    return <Badge variant="warning">في انتظار التأكيد</Badge>;
+    if (tabContext === 'cancelled') return <Badge variant="danger">{t('status.cancelled')}</Badge>;
+    if (tabContext === 'completed') return <Badge variant="sage">{t('status.completed')}</Badge>;
+    if (tabContext === 'active') return <Badge variant="success">{t('status.confirmed')}</Badge>;
+    return <Badge variant="warning">{t('status.pending')}</Badge>;
   };
 
   return (
@@ -54,7 +56,7 @@ export function BookingCard({ booking, tabContext }: BookingCardProps) {
                 </p>
                 <p className="mt-0.5 flex items-center gap-1 text-xs text-brand-muted">
                   <User className="h-3.5 w-3.5 shrink-0" />
-                  المضيف: {booking.unitSnapshot.ownerName}
+                  {t('host')}: {booking.unitSnapshot.ownerName}
                 </p>
               </div>
               {statusBadge()}
@@ -62,31 +64,31 @@ export function BookingCard({ booking, tabContext }: BookingCardProps) {
 
             {/* details */}
             <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl bg-brand-cream/40 p-3 sm:grid-cols-4">
-              <Info icon={CalendarCheck} label="الوصول" value={formatDate(booking.checkInDate)} />
-              <Info icon={CalendarX} label="المغادرة" value={formatDate(booking.checkOutDate)} />
-              <Info icon={Users} label="الضيوف" value={`${guests} · ${nights} ليالٍ`} />
-              <Info icon={Ticket} label="رمز التأكيد" value={booking.code} mono />
+              <Info icon={CalendarCheck} label={t('checkIn')} value={formatDate(booking.checkInDate)} />
+              <Info icon={CalendarX} label={t('checkOut')} value={formatDate(booking.checkOutDate)} />
+              <Info icon={Users} label={t('guests')} value={t('guestsNights', { guests, nights })} />
+              <Info icon={Ticket} label={t('confirmationCode')} value={booking.code} mono />
             </div>
 
             {/* footer */}
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-brand-border pt-4">
               <div>
-                <div className="text-xs text-brand-muted">الإجمالي</div>
+                <div className="text-xs text-brand-muted">{t('total')}</div>
                 <div className="text-xl font-bold text-brand-ink">{formatSAR(booking.price.total)}</div>
               </div>
               <div className="flex gap-2">
                 <Button asChild size="sm" variant="default">
-                  <Link href={`/my-reservations/${booking.id}`}>عرض التفاصيل</Link>
+                  <Link href={`/my-reservations/${booking.id}`}>{t('viewDetails')}</Link>
                 </Button>
                 {tabContext === 'upcoming' || tabContext === 'active' ? (
                   canCancel && (
                     <Button size="sm" variant="outline" onClick={() => setCancelOpen(true)}>
-                      إلغاء الحجز
+                      {t('cancelBooking')}
                     </Button>
                   )
                 ) : tabContext === 'completed' ? (
                   <Button size="sm" variant="sage" asChild>
-                    <Link href={`/units/${booking.unitId}`}>احجز مرة أخرى</Link>
+                    <Link href={`/units/${booking.unitId}`}>{t('bookAgain')}</Link>
                   </Button>
                 ) : null}
               </div>
@@ -98,9 +100,9 @@ export function BookingCard({ booking, tabContext }: BookingCardProps) {
         {booking.status === 'cancelled' && booking.refund && (
           <div className="border-t border-brand-border bg-red-50/50 px-5 py-3 text-xs text-status-danger">
             <div className="flex flex-wrap gap-x-4 gap-y-1">
-              <span>تم الإلغاء بواسطة: {booking.refund.cancelledBy === 'customer' ? 'العميل' : 'النظام'}</span>
-              {booking.refund.reason && <span>· السبب: {booking.refund.reason}</span>}
-              <span>· المبلغ المسترد: {formatSAR(booking.refund.amount)} ({booking.refund.percent}%)</span>
+              <span>{t('cancelledBy')}: {booking.refund.cancelledBy === 'customer' ? t('byCustomer') : t('bySystem')}</span>
+              {booking.refund.reason && <span>· {t('reason')}: {booking.refund.reason}</span>}
+              <span>· {t('refundedAmount')}: {formatSAR(booking.refund.amount)} ({booking.refund.percent}%)</span>
             </div>
           </div>
         )}
