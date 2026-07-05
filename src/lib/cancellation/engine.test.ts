@@ -35,6 +35,7 @@ function makeBooking(overrides: Partial<Booking> = {}): Booking {
       total: 4000,
     },
     policySnapshot: FLEXIBLE_POLICY,
+    isReviewed: false,
     createdAt: '2026-06-01T00:00:00Z',
     ...overrides,
   };

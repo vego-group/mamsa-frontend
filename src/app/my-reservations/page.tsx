@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { CalendarRange } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { BookingCard } from '@/components/features/booking/BookingCard';
@@ -11,6 +12,7 @@ import { Skeleton } from '@/components/ui/separator';
 import type { Booking } from '@/types';
 
 export default function MyReservationsPage() {
+  const t = useTranslations('myReservations');
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -51,16 +53,16 @@ export default function MyReservationsPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-brand-ink md:text-3xl">حجوزاتي</h1>
-        <p className="mt-1 text-sm text-brand-muted">تابع حجوزاتك الحالية والسابقة وأدِرها من مكان واحد.</p>
+        <h1 className="text-2xl font-bold text-brand-ink md:text-3xl">{t('title')}</h1>
+        <p className="mt-1 text-sm text-brand-muted">{t('subtitle')}</p>
       </div>
 
       <Tabs defaultValue="upcoming">
         <TabsList>
-          <TabsTrigger value="upcoming">جديدة ({categorized.upcoming.length})</TabsTrigger>
-          <TabsTrigger value="active">نشطة ({categorized.active.length})</TabsTrigger>
-          <TabsTrigger value="completed">منتهية ({categorized.completed.length})</TabsTrigger>
-          <TabsTrigger value="cancelled">ملغاة ({categorized.cancelled.length})</TabsTrigger>
+          <TabsTrigger value="upcoming">{t('tabs.upcoming')} ({categorized.upcoming.length})</TabsTrigger>
+          <TabsTrigger value="active">{t('tabs.active')} ({categorized.active.length})</TabsTrigger>
+          <TabsTrigger value="completed">{t('tabs.completed')} ({categorized.completed.length})</TabsTrigger>
+          <TabsTrigger value="cancelled">{t('tabs.cancelled')} ({categorized.cancelled.length})</TabsTrigger>
         </TabsList>
 
         {loading ? (
@@ -72,16 +74,16 @@ export default function MyReservationsPage() {
         ) : (
           <>
             <TabsContent value="upcoming">
-              <Section bookings={categorized.upcoming} tab="upcoming" empty="لا توجد حجوزات جديدة" />
+              <Section bookings={categorized.upcoming} tab="upcoming" empty={t('empty.upcoming')} browse={t('browse')} />
             </TabsContent>
             <TabsContent value="active">
-              <Section bookings={categorized.active} tab="active" empty="لا توجد حجوزات نشطة قريبًا" />
+              <Section bookings={categorized.active} tab="active" empty={t('empty.active')} browse={t('browse')} />
             </TabsContent>
             <TabsContent value="completed">
-              <Section bookings={categorized.completed} tab="completed" empty="لا توجد حجوزات منتهية" />
+              <Section bookings={categorized.completed} tab="completed" empty={t('empty.completed')} browse={t('browse')} />
             </TabsContent>
             <TabsContent value="cancelled">
-              <Section bookings={categorized.cancelled} tab="cancelled" empty="لا توجد حجوزات ملغاة" />
+              <Section bookings={categorized.cancelled} tab="cancelled" empty={t('empty.cancelled')} browse={t('browse')} />
             </TabsContent>
           </>
         )}
@@ -94,10 +96,12 @@ function Section({
   bookings,
   tab,
   empty,
+  browse,
 }: {
   bookings: Booking[];
   tab: 'upcoming' | 'active' | 'completed' | 'cancelled';
   empty: string;
+  browse: string;
 }) {
   if (bookings.length === 0) {
     return (
@@ -105,7 +109,7 @@ function Section({
         <CalendarRange className="h-10 w-10 text-brand-border" />
         <p className="text-sm text-brand-muted">{empty}</p>
         <Button asChild size="sm" variant="outline">
-          <Link href="/units">تصفّح الإقامات</Link>
+          <Link href="/units">{browse}</Link>
         </Button>
       </div>
     );

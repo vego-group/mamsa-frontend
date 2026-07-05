@@ -1,54 +1,77 @@
 import { z } from 'zod';
 import { isValidSaudiPhone } from '@/lib/utils/phone';
 
-export const phoneSchema = z
-  .string()
-  .min(1, 'رقم الجوال مطلوب')
-  .refine(isValidSaudiPhone, 'رقم جوال سعودي غير صحيح');
+/**
+ * Schemas are built from a translator function (`useTranslations('validation')`)
+ * so Zod error messages render in whichever locale is active — Zod itself has
+ * no access to React context, so messages can't be static strings.
+ */
+type T = (key: string) => string;
 
-export const otpSchema = z.object({
-  code: z
+export function makePhoneSchema(t: T) {
+  return z
     .string()
-    .length(6, 'الرمز يجب أن يكون 6 أرقام')
-    .regex(/^\d{6}$/, 'الرمز يجب أن يحتوي على أرقام فقط'),
-});
+    .min(1, t('phoneRequired'))
+    .refine(isValidSaudiPhone, t('phoneInvalid'));
+}
 
-export const loginSchema = z.object({
-  phone: phoneSchema,
-});
+export function makeOtpSchema(t: T) {
+  return z.object({
+    code: z
+      .string()
+      .length(6, t('otpLength'))
+      .regex(/^\d{6}$/, t('otpDigitsOnly')),
+  });
+}
 
-export const registerSchema = z.object({
-  firstName: z.string().min(2, 'الاسم الأول قصير جدًا'),
-  lastName: z.string().min(2, 'الاسم الأخير قصير جدًا'),
-  email: z.string().email('بريد إلكتروني غير صحيح'),
-  phone: phoneSchema,
-});
+export function makeLoginSchema(t: T) {
+  return z.object({
+    phone: makePhoneSchema(t),
+  });
+}
 
-export const contactSchema = z.object({
-  name: z.string().min(2, 'الاسم قصير جدًا'),
-  phone: phoneSchema,
-  email: z.string().email('بريد إلكتروني غير صحيح'),
-  message: z.string().min(10, 'الرسالة قصيرة جدًا'),
-});
+export function makeRegisterSchema(t: T) {
+  return z.object({
+    firstName: z.string().min(2, t('firstNameShort')),
+    lastName: z.string().min(2, t('lastNameShort')),
+    email: z.string().email(t('emailInvalid')),
+    phone: makePhoneSchema(t),
+  });
+}
 
-export const reviewSchema = z.object({
-  rating: z.number().min(1, 'أضف تقييمًا').max(5),
-  comment: z.string().min(10, 'التعليق قصير جدًا').max(1000),
-});
+export function makeContactSchema(t: T) {
+  return z.object({
+    name: z.string().min(2, t('nameShort')),
+    phone: makePhoneSchema(t),
+    email: z.string().email(t('emailInvalid')),
+    message: z.string().min(10, t('messageShort')),
+  });
+}
 
-export const profileUpdateSchema = z.object({
-  firstName: z.string().min(2),
-  lastName: z.string().min(2),
-  email: z.string().email(),
-});
+export function makeReviewSchema(t: T) {
+  return z.object({
+    rating: z.number().min(1, t('ratingRequired')).max(5),
+    comment: z.string().min(10, t('commentShort')).max(1000),
+  });
+}
 
-export const changePhoneSchema = z.object({
-  newPhone: phoneSchema,
-});
+export function makeProfileUpdateSchema() {
+  return z.object({
+    firstName: z.string().min(2),
+    lastName: z.string().min(2),
+    email: z.string().email(),
+  });
+}
 
-export type LoginFormValues = z.infer<typeof loginSchema>;
-export type RegisterFormValues = z.infer<typeof registerSchema>;
-export type ContactFormValues = z.infer<typeof contactSchema>;
-export type ReviewFormValues = z.infer<typeof reviewSchema>;
-export type ProfileUpdateValues = z.infer<typeof profileUpdateSchema>;
-export type ChangePhoneValues = z.infer<typeof changePhoneSchema>;
+export function makeChangePhoneSchema(t: T) {
+  return z.object({
+    newPhone: makePhoneSchema(t),
+  });
+}
+
+export type LoginFormValues = z.infer<ReturnType<typeof makeLoginSchema>>;
+export type RegisterFormValues = z.infer<ReturnType<typeof makeRegisterSchema>>;
+export type ContactFormValues = z.infer<ReturnType<typeof makeContactSchema>>;
+export type ReviewFormValues = z.infer<ReturnType<typeof makeReviewSchema>>;
+export type ProfileUpdateValues = z.infer<ReturnType<typeof makeProfileUpdateSchema>>;
+export type ChangePhoneValues = z.infer<ReturnType<typeof makeChangePhoneSchema>>;

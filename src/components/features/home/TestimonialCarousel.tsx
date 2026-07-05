@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Star, ShieldCheck, ChevronRight, ChevronLeft } from 'lucide-react';
 import type { Testimonial as ApiTestimonial } from '@/lib/api/adapters';
 
@@ -12,34 +13,8 @@ interface Testimonial {
   meta: string;
 }
 
-const FALLBACK_TESTIMONIALS: Testimonial[] = [
-  {
-    quote:
-      'حجزت شقة لقضاء إجازة العائلة، والتجربة كانت سهلة وواضحة من أول خطوة. الصور مطابقة للواقع والمكان نظيف ومريح. أنصح بمنصة مَمسَى بقوة.',
-    name: 'سارة المطيري',
-    role: 'نزيلة',
-    initial: 'س',
-    meta: 'حجز شقة في الرياض · إقامة مكتملة',
-  },
-  {
-    quote:
-      'تجربة حجز سلسة وموثوقة من البداية للنهاية. وجدت الفيلا المثالية لعائلتي بسهولة، والدعم كان سريعًا ومتعاونًا. سأعود للحجز مرة أخرى بالتأكيد.',
-    name: 'أحمد السهلي',
-    role: 'نزيل',
-    initial: 'أ',
-    meta: 'حجز فيلا بإطلالة · إقامة مكتملة',
-  },
-  {
-    quote:
-      'الشفافية في الأسعار والتقييمات الحقيقية للنزلاء أعطتني ثقة كاملة في اختياري. أكملت الحجز بسهولة والدعم رد بسرعة. تجربة أنصح بها.',
-    name: 'نورة العتيبي',
-    role: 'نزيلة',
-    initial: 'ن',
-    meta: 'حجز استديو · إقامة مكتملة',
-  },
-];
-
 const AUTOPLAY_MS = 6000;
+const FALLBACK_COUNT = 3;
 
 function fromApi(items: ApiTestimonial[]): Testimonial[] {
   return items.map((t) => ({
@@ -52,7 +27,17 @@ function fromApi(items: ApiTestimonial[]): Testimonial[] {
 }
 
 export function TestimonialCarousel({ items }: { items?: ApiTestimonial[] }) {
-  const TESTIMONIALS = items && items.length > 0 ? fromApi(items) : FALLBACK_TESTIMONIALS;
+  const tr = useTranslations('testimonials');
+  // Fallback quotes live in the message files so both locales have real copy.
+  const fallback: Testimonial[] = Array.from({ length: FALLBACK_COUNT }, (_, i) => ({
+    quote: tr(`fallback.${i}.quote`),
+    name: tr(`fallback.${i}.name`),
+    role: tr(`fallback.${i}.role`),
+    initial: tr(`fallback.${i}.name`).trim().charAt(0) || '—',
+    meta: tr(`fallback.${i}.meta`),
+  }));
+
+  const TESTIMONIALS = items && items.length > 0 ? fromApi(items) : fallback;
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
   const count = TESTIMONIALS.length;
@@ -80,14 +65,14 @@ export function TestimonialCarousel({ items }: { items?: ApiTestimonial[] }) {
         <div className="flex gap-2">
           <button
             onClick={prev}
-            aria-label="السابق"
+            aria-label={tr('prev')}
             className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
           >
             <ChevronRight className="h-5 w-5" />
           </button>
           <button
             onClick={next}
-            aria-label="التالي"
+            aria-label={tr('next')}
             className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
           >
             <ChevronLeft className="h-5 w-5" />
@@ -123,7 +108,7 @@ export function TestimonialCarousel({ items }: { items?: ApiTestimonial[] }) {
           <button
             key={i}
             onClick={() => go(i)}
-            aria-label={`الرأي ${i + 1}`}
+            aria-label={tr('goTo', { num: i + 1 })}
             className={
               i === active
                 ? 'h-1.5 w-6 rounded-full bg-brand-sage transition-all'

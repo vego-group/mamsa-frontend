@@ -2,28 +2,35 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils/cn';
+import { DebugOtpHint } from './DebugOtpHint';
 
 interface OnboardingOtpProps {
   length: number;
   /** Local phone digits shown in the prompt. */
   displayPhone: string;
   resendCooldown: number;
+  /** Test code from the last dispatch (request/resend), shown via DebugOtpHint. */
+  debugOtp?: string;
   onVerify: (code: string) => Promise<void>;
-  onResend: () => Promise<unknown>;
+  onResend: () => Promise<{ debugOtp?: string } | void>;
 }
 
 export function OnboardingOtp({
   length,
   displayPhone,
   resendCooldown,
+  debugOtp,
   onVerify,
   onResend,
 }: OnboardingOtpProps) {
+  const t = useTranslations('auth.onboardingOtp');
   const [digits, setDigits] = useState<string[]>(() => Array(length).fill(''));
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(resendCooldown);
+  const [liveDebugOtp, setLiveDebugOtp] = useState(debugOtp);
   const inputsRef = useRef<Array<HTMLInputElement | null>>([]);
 
   useEffect(() => {
@@ -42,7 +49,7 @@ export function OnboardingOtp({
     try {
       await onVerify(code);
     } catch {
-      setError('رمز التحقق غير صحيح');
+      setError(t('wrongCode'));
       setDigits(Array(length).fill(''));
       inputsRef.current[0]?.focus();
     } finally {
@@ -76,7 +83,8 @@ export function OnboardingOtp({
 
   const handleResend = async () => {
     if (cooldown > 0) return;
-    await onResend();
+    const result = await onResend();
+    if (result?.debugOtp) setLiveDebugOtp(result.debugOtp);
     setCooldown(resendCooldown);
     setError(null);
   };
@@ -86,10 +94,9 @@ export function OnboardingOtp({
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h1 className="text-xl font-bold text-brand-ink">تحقق من هاتفك ، ارسلنا رمز التحقق</h1>
+        <h1 className="text-xl font-bold text-brand-ink">{t('title')}</h1>
         <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-brand-muted">
-          تحقق من هاتفك أرسلنا رمز التحقق إلى <span dir="ltr">{displayPhone}</span>. أدخل الرمز
-          بالأسفل لإكمال عملية التسجيل.
+          {t('body')} <span dir="ltr">{displayPhone}</span>. {t('bodyContinued')}
         </p>
       </div>
 
@@ -130,20 +137,22 @@ export function OnboardingOtp({
             : 'cursor-not-allowed bg-brand-border/70 text-white',
         )}
       >
-        {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : 'التحقق الان'}
+        {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : t('verifyNow')}
       </button>
 
       <p className="text-center text-sm text-brand-ink">
-        لم تستلم الرمز ؟{' '}
+        {t('didNotReceive')}{' '}
         <button
           type="button"
           onClick={handleResend}
           disabled={cooldown > 0}
           className="font-bold text-brand-primary hover:underline disabled:cursor-not-allowed disabled:text-brand-muted disabled:no-underline"
         >
-          {cooldown > 0 ? `اعاده ارسال الرمز (${cooldown})` : 'اعاده ارسال الرمز'}
+          {cooldown > 0 ? t('resendWithCooldown', { seconds: cooldown }) : t('resend')}
         </button>
       </p>
+
+      <DebugOtpHint code={liveDebugOtp} />
     </div>
   );
 }

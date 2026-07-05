@@ -32,6 +32,7 @@ export const MOCK_BOOKINGS: Booking[] = [
     },
     payment: { method: 'visa', last4: '4242', cardholderName: 'Mohamed Ahmed' },
     policySnapshot: FLEXIBLE_POLICY,
+    isReviewed: false,
     createdAt: addDays(-5),
   },
   {
@@ -62,6 +63,7 @@ export const MOCK_BOOKINGS: Booking[] = [
     },
     payment: { method: 'mada', last4: '8888' },
     policySnapshot: MODERATE_POLICY,
+    isReviewed: false,
     createdAt: addDays(-2),
   },
   // === نشطة (قريبة جدًا) ===
@@ -93,6 +95,7 @@ export const MOCK_BOOKINGS: Booking[] = [
     },
     payment: { method: 'visa', last4: '4242' },
     policySnapshot: FLEXIBLE_POLICY,
+    isReviewed: false,
     createdAt: addDays(-10),
   },
   {
@@ -123,6 +126,7 @@ export const MOCK_BOOKINGS: Booking[] = [
     },
     payment: { method: 'mada', last4: '8888' },
     policySnapshot: MODERATE_POLICY,
+    isReviewed: false,
     createdAt: addDays(-15),
   },
   // === منتهية ===
@@ -154,6 +158,7 @@ export const MOCK_BOOKINGS: Booking[] = [
     },
     payment: { method: 'visa', last4: '4242' },
     policySnapshot: FLEXIBLE_POLICY,
+    isReviewed: false,
     createdAt: addDays(-60),
   },
   {
@@ -184,6 +189,7 @@ export const MOCK_BOOKINGS: Booking[] = [
     },
     payment: { method: 'mada', last4: '8888' },
     policySnapshot: FLEXIBLE_POLICY,
+    isReviewed: false,
     createdAt: addDays(-90),
   },
   // === ملغاة ===
@@ -215,6 +221,7 @@ export const MOCK_BOOKINGS: Booking[] = [
     },
     payment: { method: 'visa', last4: '4242' },
     policySnapshot: MODERATE_POLICY,
+    isReviewed: false,
     refund: {
       amount: 2700,
       percent: 50,

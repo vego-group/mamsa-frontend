@@ -20,7 +20,9 @@ import type {
 } from '@/types';
 import { diffNights } from '@/lib/utils/format';
 
-const MOCK_OTP = process.env.NEXT_PUBLIC_MOCK_OTP ?? '123456';
+// Matches the backend's OTP_FIXED_CODE convention for staging, so the same code
+// works whether you're pointed at the local mock or a staging backend.
+const MOCK_OTP = process.env.NEXT_PUBLIC_MOCK_OTP ?? '111222';
 
 // ============ In-memory state ============
 let units: Unit[] = [...MOCK_UNITS];
@@ -44,7 +46,7 @@ function genCode(): string {
 
 export const mockApi = {
   auth: {
-    requestOtp: async (_phone: string) => ok({ sent: true as const }),
+    requestOtp: async (_phone: string) => ok({ sent: true as const, debugOtp: MOCK_OTP }),
 
     verifyOtp: async (phone: string, code: string) => {
       if (code !== MOCK_OTP) return fail('رمز التحقق غير صحيح');
@@ -64,7 +66,7 @@ export const mockApi = {
         email: data.email,
         phone: data.phone,
       };
-      return ok({ sent: true as const });
+      return ok({ sent: true as const, debugOtp: MOCK_OTP });
     },
 
     logout: async () => {
@@ -171,6 +173,7 @@ export const mockApi = {
         },
         payment: { method: input.paymentMethod, last4: input.paymentMethod === 'mada' ? '8888' : '4242' },
         policySnapshot: getPolicyByTemplate(unit.cancellationPolicy), // frozen at booking time
+        isReviewed: false,
         createdAt: new Date().toISOString(),
       };
       bookings = [booking, ...bookings];
@@ -188,7 +191,7 @@ export const mockApi = {
       if (idx === -1) return fail('الحجز غير موجود') as Promise<never>;
       const b = bookings[idx]!;
       const preview = previewCancellation(b, new Date());
-      if (!preview.isAllowed) return fail(preview.notAllowedReasonAr ?? 'الإلغاء غير مسموح');
+      if (!preview.isAllowed) return fail('الإلغاء غير مسموح');
       const refund = buildRefundRecord(preview, 'customer', reason);
       const updated: Booking = {
         ...b,
@@ -236,7 +239,7 @@ export const mockApi = {
       return ok(currentUser);
     },
 
-    changePhone: async (_newPhone: string) => ok({ sent: true as const }),
+    changePhone: async (_newPhone: string) => ok({ sent: true as const, debugOtp: MOCK_OTP }),
 
     getCards: async () => ok(MOCK_SAVED_CARDS),
 

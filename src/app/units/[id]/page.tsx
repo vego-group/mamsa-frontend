@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import {
   Heart, Share2, Star, ChevronLeft, MapPin, Users, BedDouble, Bath, DoorOpen,
   Home as HomeIcon, Wifi, Snowflake, Car, Waves, UtensilsCrossed, Tv, Trees,
@@ -18,7 +19,6 @@ import { Badge } from '@/components/ui/badge';
 import { UnitGallery } from '@/components/features/units/UnitGallery';
 import { CancellationPolicyDisplay } from '@/components/features/booking/CancellationPolicyDisplay';
 import { getPolicyByTemplate } from '@/lib/constants/cancellation-policies';
-import { UNIT_TYPE_LABELS_AR } from '@/lib/constants/brand';
 import { formatSAR, formatDate } from '@/lib/utils/format';
 import { cn } from '@/lib/utils/cn';
 import type { Unit, Review } from '@/types';
@@ -28,14 +28,18 @@ const AMENITY_ICONS: Record<string, LucideIcon> = {
   garden: Trees, tv: Tv, washer: WashingMachine, security: ShieldCheck, self_checkin: KeyRound,
 };
 
-function ratingLabel(r: number): string {
-  if (r >= 4.8) return 'استثنائي';
-  if (r >= 4.5) return 'ممتاز';
-  if (r >= 4) return 'جيد جداً';
-  return 'جيد';
+function ratingKey(r: number): 'exceptional' | 'excellent' | 'veryGood' | 'good' {
+  if (r >= 4.8) return 'exceptional';
+  if (r >= 4.5) return 'excellent';
+  if (r >= 4) return 'veryGood';
+  return 'good';
 }
 
 export default function UnitDetailsPage() {
+  const t = useTranslations('unit');
+  const tCommon = useTranslations('common');
+  const tTypes = useTranslations('types');
+  const tAmenities = useTranslations('amenities');
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const [unit, setUnit] = useState<Unit | null>(null);
@@ -71,26 +75,27 @@ export default function UnitDetailsPage() {
   const handleBook = () => {
     if (!unit) return;
     if (!isAuth) { openAuth('login'); return; }
-    if (!checkIn || !checkOut || nights < 1) { alert('اختر تاريخ الوصول والمغادرة'); return; }
+    if (!checkIn || !checkOut || nights < 1) { alert(t('pickDates')); return; }
     const q = new URLSearchParams({ checkIn, checkOut, guests: String(guests) });
     router.push(`/booking/${unit.id}?${q.toString()}`);
   };
 
   if (loading || !unit) {
-    return <div className="container mx-auto p-10 text-center text-brand-muted">جاري التحميل...</div>;
+    return <div className="container mx-auto p-10 text-center text-brand-muted">{tCommon('loading')}</div>;
   }
 
   const isFav = has(unit.id);
   const initials = unit.ownerName.trim().charAt(0) || '؟';
 
   return (
-    <div className="container mx-auto px-4 py-6">
+    // Extra bottom padding on mobile keeps content clear of the fixed book bar.
+    <div className="container mx-auto px-4 py-6 pb-24 md:pb-6">
       {/* Breadcrumbs */}
       <nav className="mb-4 flex items-center gap-2 text-xs text-brand-muted">
-        <Link href="/" className="hover:text-brand-primary">الرئيسية</Link>
-        <ChevronLeft className="h-3 w-3 rotate-180" />
-        <Link href="/units" className="hover:text-brand-primary">إكتشف وجهتك</Link>
-        <ChevronLeft className="h-3 w-3 rotate-180" />
+        <Link href="/" className="hover:text-brand-primary">{tCommon('home')}</Link>
+        <ChevronLeft className="h-3 w-3 rotate-180 rtl:rotate-180 ltr:rotate-0" />
+        <Link href="/units" className="hover:text-brand-primary">{tCommon('explore')}</Link>
+        <ChevronLeft className="h-3 w-3 rotate-180 rtl:rotate-180 ltr:rotate-0" />
         <span className="text-brand-ink">{unit.title}</span>
       </nav>
 
@@ -98,12 +103,12 @@ export default function UnitDetailsPage() {
       <div className="mb-4 flex flex-col items-start justify-between gap-3 md:flex-row md:items-end">
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="sage">{UNIT_TYPE_LABELS_AR[unit.type]}</Badge>
+            <Badge variant="sage">{tTypes(unit.type)}</Badge>
             {unit.isFeatured && (
-              <Badge variant="cream" className="gap-1"><BadgeCheck className="h-3 w-3" /> مميز</Badge>
+              <Badge variant="cream" className="gap-1"><BadgeCheck className="h-3 w-3" /> {t('featured')}</Badge>
             )}
             {unit.hasDiscount && unit.discountPercent && (
-              <Badge variant="danger">خصم {unit.discountPercent}%</Badge>
+              <Badge variant="danger">{t('discount', { percent: unit.discountPercent })}</Badge>
             )}
           </div>
           <h1 className="text-2xl font-bold text-brand-ink md:text-3xl">{unit.title}</h1>
@@ -112,18 +117,18 @@ export default function UnitDetailsPage() {
               <Star className="h-3.5 w-3.5 fill-yellow-500 text-yellow-500" />
               {unit.rating}
             </span>
-            <Link href="#reviews" className="underline-offset-2 hover:underline">{unit.reviewCount} تقييمًا</Link>
+            <Link href="#reviews" className="underline-offset-2 hover:underline">{t('reviewCount', { count: unit.reviewCount })}</Link>
             <span>·</span>
             <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{unit.district}، {unit.city}</span>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm">
-            <Share2 className="h-4 w-4" /> مشاركة
+            <Share2 className="h-4 w-4" /> {t('share')}
           </Button>
           <Button variant="ghost" size="sm" onClick={() => toggle(unit.id)}>
             <Heart className={cn('h-4 w-4', isFav && 'fill-status-danger text-status-danger')} />
-            {isFav ? 'محفوظ' : 'حفظ'}
+            {isFav ? t('saved') : t('save')}
           </Button>
         </div>
       </div>
@@ -132,14 +137,14 @@ export default function UnitDetailsPage() {
       <UnitGallery images={unit.imageUrls} title={unit.title} />
 
       <div className="grid gap-8 md:grid-cols-[1fr_380px]">
-        {/* Left content */}
+        {/* Main content */}
         <div className="space-y-8">
           {/* quick facts */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Stat icon={Users} value={unit.capacity} label="ضيوف" />
-            <Stat icon={BedDouble} value={unit.bedrooms} label="غرف نوم" />
-            <Stat icon={DoorOpen} value={unit.beds} label="أسرّة" />
-            <Stat icon={Bath} value={unit.bathrooms} label="حمامات" />
+            <Stat icon={Users} value={unit.capacity} label={t('facts.guests')} />
+            <Stat icon={BedDouble} value={unit.bedrooms} label={t('facts.bedrooms')} />
+            <Stat icon={DoorOpen} value={unit.beds} label={t('facts.beds')} />
+            <Stat icon={Bath} value={unit.bathrooms} label={t('facts.baths')} />
           </div>
 
           {/* host */}
@@ -148,9 +153,9 @@ export default function UnitDetailsPage() {
               {initials}
             </div>
             <div className="min-w-0">
-              <div className="font-bold text-brand-ink">يستضيفك {unit.ownerName}</div>
+              <div className="font-bold text-brand-ink">{t('hostedBy', { name: unit.ownerName })}</div>
               <div className="text-sm text-brand-muted">
-                {unit.ownerType === 'company' ? 'مضيف موثّق · شركة' : 'مضيف موثّق · مالك فردي'}
+                {unit.ownerType === 'company' ? t('hostCompany') : t('hostIndividual')}
               </div>
             </div>
             <BadgeCheck className="ms-auto h-6 w-6 shrink-0 text-brand-primary" />
@@ -160,7 +165,7 @@ export default function UnitDetailsPage() {
 
           {/* about */}
           <section>
-            <h2 className="mb-3 text-xl font-bold text-brand-ink">حول هذا المسكن</h2>
+            <h2 className="mb-3 text-xl font-bold text-brand-ink">{t('about')}</h2>
             <p className="leading-relaxed text-brand-muted">{unit.description}</p>
           </section>
 
@@ -168,7 +173,7 @@ export default function UnitDetailsPage() {
 
           {/* amenities */}
           <section>
-            <h2 className="mb-4 text-xl font-bold text-brand-ink">ما يقدمه هذا المسكن</h2>
+            <h2 className="mb-4 text-xl font-bold text-brand-ink">{t('amenitiesTitle')}</h2>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {unit.amenities.map((a) => {
                 const Icon = AMENITY_ICONS[a.key] ?? HomeIcon;
@@ -177,7 +182,7 @@ export default function UnitDetailsPage() {
                     <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-cream text-brand-primary">
                       <Icon className="h-4 w-4" />
                     </span>
-                    <span className="text-sm text-brand-ink">{a.labelAr}</span>
+                    <span className="text-sm text-brand-ink">{tAmenities.has(a.key) ? tAmenities(a.key) : a.labelAr}</span>
                   </div>
                 );
               })}
@@ -188,15 +193,15 @@ export default function UnitDetailsPage() {
 
           {/* things to know */}
           <section>
-            <h2 className="mb-4 text-xl font-bold text-brand-ink">أشياء يجب معرفتها</h2>
+            <h2 className="mb-4 text-xl font-bold text-brand-ink">{t('thingsToKnow')}</h2>
             <div className="grid gap-3 sm:grid-cols-2">
               <Card className="space-y-2 p-4">
                 <div className="flex items-center gap-2 font-semibold text-brand-ink">
-                  <Clock className="h-4 w-4 text-brand-primary" /> قواعد البيت
+                  <Clock className="h-4 w-4 text-brand-primary" /> {t('houseRules')}
                 </div>
-                <p className="text-sm text-brand-muted">تسجيل الوصول بعد {unit.checkInTime}</p>
-                <p className="text-sm text-brand-muted">تسجيل المغادرة قبل {unit.checkOutTime}</p>
-                <p className="text-sm text-brand-muted">السعة القصوى {unit.capacity} ضيوف</p>
+                <p className="text-sm text-brand-muted">{t('checkInAfter', { time: unit.checkInTime })}</p>
+                <p className="text-sm text-brand-muted">{t('checkOutBefore', { time: unit.checkOutTime })}</p>
+                <p className="text-sm text-brand-muted">{t('maxCapacity', { count: unit.capacity })}</p>
               </Card>
               <CancellationPolicyDisplay policy={getPolicyByTemplate(unit.cancellationPolicy)} />
             </div>
@@ -216,13 +221,13 @@ export default function UnitDetailsPage() {
                 </div>
               </div>
               <div>
-                <div className="text-lg font-bold text-brand-ink">{ratingLabel(unit.rating)}</div>
-                <div className="text-sm text-brand-muted">بناءً على {unit.reviewCount} تقييمًا من النزلاء</div>
+                <div className="text-lg font-bold text-brand-ink">{t(`ratingLabel.${ratingKey(unit.rating)}`)}</div>
+                <div className="text-sm text-brand-muted">{t('basedOn', { count: unit.reviewCount })}</div>
               </div>
             </div>
 
             {reviews.length === 0 ? (
-              <p className="text-sm text-brand-muted">لا توجد تقييمات بعد.</p>
+              <p className="text-sm text-brand-muted">{t('noReviews')}</p>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">
                 {reviews.map((r) => (
@@ -254,12 +259,12 @@ export default function UnitDetailsPage() {
         </div>
 
         {/* Booking sidebar */}
-        <aside>
+        <aside id="booking-card">
           <Card className="sticky top-24 space-y-4 p-5 shadow-sm">
             <div className="flex items-end justify-between">
               <div>
                 <span className="text-2xl font-bold text-brand-ink">{formatSAR(unit.pricePerNight)}</span>
-                <span className="text-sm text-brand-muted"> / ليلة</span>
+                <span className="text-sm text-brand-muted"> {tCommon('perNight')}</span>
               </div>
               <span className="flex items-center gap-1 text-sm font-semibold text-brand-ink">
                 <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
@@ -270,7 +275,7 @@ export default function UnitDetailsPage() {
             <div className="overflow-hidden rounded-xl border border-brand-border">
               <div className="grid grid-cols-2 divide-x divide-x-reverse divide-brand-border">
                 <label className="cursor-pointer p-3">
-                  <span className="block text-[11px] font-medium text-brand-muted">تسجيل الوصول</span>
+                  <span className="block text-[11px] font-medium text-brand-muted">{t('checkInLabel')}</span>
                   <input
                     type="date"
                     value={checkIn}
@@ -280,7 +285,7 @@ export default function UnitDetailsPage() {
                   />
                 </label>
                 <label className="cursor-pointer p-3">
-                  <span className="block text-[11px] font-medium text-brand-muted">تسجيل المغادرة</span>
+                  <span className="block text-[11px] font-medium text-brand-muted">{t('checkOutLabel')}</span>
                   <input
                     type="date"
                     value={checkOut}
@@ -291,14 +296,14 @@ export default function UnitDetailsPage() {
                 </label>
               </div>
               <div className="border-t border-brand-border p-3">
-                <span className="block text-[11px] font-medium text-brand-muted">الضيوف</span>
+                <span className="block text-[11px] font-medium text-brand-muted">{t('guestsLabel')}</span>
                 <select
                   value={guests}
                   onChange={(e) => setGuests(Number(e.target.value))}
                   className="w-full bg-transparent text-sm text-brand-ink focus:outline-none"
                 >
                   {Array.from({ length: unit.capacity }).map((_, i) => (
-                    <option key={i + 1} value={i + 1}>{i + 1} ضيف</option>
+                    <option key={i + 1} value={i + 1}>{t('guestOption', { count: i + 1 })}</option>
                   ))}
                 </select>
               </div>
@@ -306,20 +311,33 @@ export default function UnitDetailsPage() {
 
             {nights > 0 && (
               <div className="space-y-1.5 text-sm">
-                <Row label={`${formatSAR(unit.pricePerNight)} × ${nights} ليالي`} value={formatSAR(subtotal)} />
-                <Row label="رسوم الخدمة" value={formatSAR(serviceFee)} />
+                <Row label={t('nightsLine', { price: formatSAR(unit.pricePerNight), nights })} value={formatSAR(subtotal)} />
+                <Row label={tCommon('serviceFee')} value={formatSAR(serviceFee)} />
                 <hr className="border-brand-border" />
-                <Row label="المجموع" value={formatSAR(total)} bold />
+                <Row label={tCommon('total')} value={formatSAR(total)} bold />
               </div>
             )}
 
-            <Button size="lg" className="w-full" onClick={handleBook}>احجز الآن</Button>
+            <Button size="lg" className="w-full" onClick={handleBook}>{t('bookNow')}</Button>
             <p className="flex items-center justify-center gap-1.5 text-center text-xs text-brand-muted">
               <ShieldCheck className="h-3.5 w-3.5 text-brand-primary" />
-              لن يتم خصم أي مبلغ في هذه المرحلة
+              {t('noChargeYet')}
             </p>
           </Card>
         </aside>
+      </div>
+
+      {/* Mobile: fixed book bar — jumps to the booking card where dates/guests live */}
+      <div className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-between gap-3 border-t border-brand-border bg-white/95 px-4 py-3 backdrop-blur md:hidden">
+        <div>
+          <div className="text-lg font-bold text-brand-ink">{formatSAR(unit.pricePerNight)}</div>
+          <div className="text-xs text-brand-muted">{tCommon('perNight')}</div>
+        </div>
+        <Button size="lg" className="max-w-[220px] flex-1" onClick={() => {
+          document.getElementById('booking-card')?.scrollIntoView({ behavior: 'smooth' });
+        }}>
+          {t('bookNow')}
+        </Button>
       </div>
     </div>
   );

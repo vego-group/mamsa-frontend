@@ -151,6 +151,8 @@ export interface Booking {
    */
   policySnapshot: CancellationPolicy;
   refund?: RefundRecord;
+  /** Whether the guest has already reviewed this booking (embedded by the backend on the booking resource). */
+  isReviewed: boolean;
   createdAt: string;
   cancelledAt?: string;
 }

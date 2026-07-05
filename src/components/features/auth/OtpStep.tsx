@@ -1,22 +1,29 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { OTP_CONFIG } from '@/lib/constants/brand';
+import { DebugOtpHint } from './DebugOtpHint';
 
 interface OtpStepProps {
   phone: string;
   displayPhone: string;
+  /** Test code from the last dispatch (request/resend), shown via DebugOtpHint. */
+  debugOtp?: string;
   onVerify: (code: string) => Promise<void>;
-  onResend: () => Promise<unknown>;
+  onResend: () => Promise<{ debugOtp?: string } | void>;
   onBack: () => void;
 }
 
-export function OtpStep({ phone, displayPhone, onVerify, onResend, onBack }: OtpStepProps) {
+export function OtpStep({ phone, displayPhone, debugOtp, onVerify, onResend, onBack }: OtpStepProps) {
+  const t = useTranslations('auth.otp');
   const [digits, setDigits] = useState<string[]>(Array(OTP_CONFIG.length).fill(''));
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState<number>(OTP_CONFIG.resendCooldownSeconds);
+  // Seeded from the initial dispatch; refreshed locally whenever the user hits resend.
+  const [liveDebugOtp, setLiveDebugOtp] = useState(debugOtp);
   const inputsRef = useRef<Array<HTMLInputElement | null>>([]);
 
   // cooldown ticker
@@ -59,7 +66,7 @@ export function OtpStep({ phone, displayPhone, onVerify, onResend, onBack }: Otp
     try {
       await onVerify(code);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'رمز خاطئ');
+      setError(e instanceof Error ? e.message : t('wrongCode'));
       setDigits(Array(OTP_CONFIG.length).fill(''));
       inputsRef.current[0]?.focus();
     } finally {
@@ -69,7 +76,8 @@ export function OtpStep({ phone, displayPhone, onVerify, onResend, onBack }: Otp
 
   const handleResend = async () => {
     if (cooldown > 0) return;
-    await onResend();
+    const result = await onResend();
+    if (result?.debugOtp) setLiveDebugOtp(result.debugOtp);
     setCooldown(OTP_CONFIG.resendCooldownSeconds);
     setError(null);
   };
@@ -77,9 +85,9 @@ export function OtpStep({ phone, displayPhone, onVerify, onResend, onBack }: Otp
   return (
     <div className="space-y-4">
       <div className="space-y-1.5 text-center">
-        <h2 className="text-xl font-semibold text-brand-ink">أدخل رمز التحقق</h2>
+        <h2 className="text-xl font-semibold text-brand-ink">{t('title')}</h2>
         <p className="text-sm text-brand-muted">
-          تم إرسال رمز التحقق إلى جوالك <span dir="ltr">{displayPhone}</span>
+          {t('sentTo')} <span dir="ltr">{displayPhone}</span>
         </p>
       </div>
 
@@ -109,7 +117,7 @@ export function OtpStep({ phone, displayPhone, onVerify, onResend, onBack }: Otp
         disabled={submitting || digits.some((d) => !d)}
         onClick={() => submit(digits.join(''))}
       >
-        {submitting ? 'جاري التحقق...' : 'تحقق'}
+        {submitting ? t('verifying') : t('verify')}
       </Button>
 
       <div className="flex items-center justify-between text-xs">
@@ -118,7 +126,7 @@ export function OtpStep({ phone, displayPhone, onVerify, onResend, onBack }: Otp
           onClick={onBack}
           className="text-brand-muted underline-offset-2 hover:underline"
         >
-          تغيير الرقم
+          {t('changeNumber')}
         </button>
         <button
           type="button"
@@ -126,13 +134,11 @@ export function OtpStep({ phone, displayPhone, onVerify, onResend, onBack }: Otp
           disabled={cooldown > 0}
           className="text-brand-primary disabled:cursor-not-allowed disabled:text-brand-muted"
         >
-          {cooldown > 0 ? `إعادة الإرسال خلال ${cooldown}s` : 'إعادة إرسال الرمز'}
+          {cooldown > 0 ? t('resendIn', { seconds: cooldown }) : t('resend')}
         </button>
       </div>
 
-      <p className="text-center text-[11px] text-brand-muted">
-        وضع التطوير: استخدم <span dir="ltr" className="font-mono">123456</span> للاختبار
-      </p>
+      <DebugOtpHint code={liveDebugOtp} />
     </div>
   );
 }

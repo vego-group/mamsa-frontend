@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { ArrowLeft } from 'lucide-react';
 import { UnitCard } from '@/components/features/units/UnitCard';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,8 @@ function categoryToFilter(key: string): UnitsFilter {
 }
 
 export function PicksSection({ initialCategory, limit = 8, showViewAll = false }: PicksSectionProps) {
+  const t = useTranslations('picks');
+  const tTypes = useTranslations('types');
   const [active, setActive] = useState(
     isValidPickCategory(initialCategory) ? initialCategory! : DEFAULT_PICK_CATEGORY,
   );
@@ -54,13 +57,13 @@ export function PicksSection({ initialCategory, limit = 8, showViewAll = false }
     <section className="container mx-auto space-y-6 px-4 py-10">
       <header className="flex items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-brand-ink">مختارات لك</h2>
-          <p className="text-sm text-brand-muted">وحدات مختارة بعناية خصيصًا لك</p>
+          <h2 className="text-2xl font-bold text-brand-ink">{t('title')}</h2>
+          <p className="text-sm text-brand-muted">{t('subtitle')}</p>
         </div>
         {showViewAll && (
           <Button asChild variant="ghost" size="sm">
             <Link href="/picks">
-              عرض الكل <ArrowLeft className="h-4 w-4" />
+              {t('viewAll')} <ArrowLeft className="h-4 w-4 rtl:rotate-0 ltr:rotate-180" />
             </Link>
           </Button>
         )}
@@ -68,7 +71,7 @@ export function PicksSection({ initialCategory, limit = 8, showViewAll = false }
 
       {/* Category filter chips */}
       <div className="flex flex-wrap gap-2">
-        {PICK_CATEGORIES.map(({ key, label, Icon }) => {
+        {PICK_CATEGORIES.map(({ key, Icon }) => {
           const selected = key === active;
           return (
             <button
@@ -84,7 +87,7 @@ export function PicksSection({ initialCategory, limit = 8, showViewAll = false }
               )}
             >
               <Icon className="h-4 w-4" />
-              {label}
+              {tTypes(key)}
             </button>
           );
         })}
@@ -98,7 +101,7 @@ export function PicksSection({ initialCategory, limit = 8, showViewAll = false }
           ))}
         </div>
       ) : units.length === 0 ? (
-        <p className="py-10 text-center text-sm text-brand-muted">لا توجد وحدات في هذا التصنيف حاليًا.</p>
+        <p className="py-10 text-center text-sm text-brand-muted">{t('empty')}</p>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {units.map((u) => (

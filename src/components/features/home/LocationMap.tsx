@@ -19,11 +19,11 @@ const SAUDI_BOUNDS: L.LatLngBoundsLiteral = [
   [32.5, 56.0], // north-east
 ];
 
-function priceIcon(price: number, active: boolean) {
+function priceIcon(price: number, active: boolean, currencyLabel: string) {
   const formatted = price.toLocaleString('en-US');
   return L.divIcon({
     className: 'mamsa-pin-wrap',
-    html: `<span class="mamsa-pin${active ? ' mamsa-pin--active' : ''}">${formatted} ر.س</span>`,
+    html: `<span class="mamsa-pin${active ? ' mamsa-pin--active' : ''}">${formatted} ${currencyLabel}</span>`,
     iconSize: [0, 0],
     iconAnchor: [0, 0],
   });
@@ -53,10 +53,12 @@ export default function LocationMap({
   units,
   activeId,
   onSelect,
+  currencyLabel = 'SAR',
 }: {
   units: MapUnit[];
   activeId: string | null;
   onSelect: (id: string) => void;
+  currencyLabel?: string;
 }) {
   const active = units.find((u) => u.id === activeId);
 
@@ -80,7 +82,7 @@ export default function LocationMap({
         <Marker
           key={u.id}
           position={[u.lat, u.lng]}
-          icon={priceIcon(u.price, u.id === activeId)}
+          icon={priceIcon(u.price, u.id === activeId, currencyLabel)}
           zIndexOffset={u.id === activeId ? 1000 : 0}
           eventHandlers={{ click: () => onSelect(u.id) }}
         />

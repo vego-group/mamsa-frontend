@@ -14,6 +14,8 @@ import type {
   Review,
   User,
   CancellationTemplate,
+  SavedCard,
+  Transaction,
 } from '@/types';
 import type { RefundPreview } from '@/lib/cancellation/engine';
 import { getPolicyByTemplate } from '@/lib/constants/cancellation-policies';
@@ -84,6 +86,8 @@ export interface RawBooking {
     tier_label?: string;
   } | null;
   payment?: { method?: string; last4?: string } | null;
+  /** Present (non-null) once the guest has reviewed this booking. Exact shape TBD — we only check presence. */
+  review?: unknown;
   created_at?: string;
 }
 
@@ -223,6 +227,7 @@ export function mapBooking(b: RawBooking): Booking {
       total: Number(p.total ?? b.total_amount ?? 0),
     },
     policySnapshot: getPolicyByTemplate(mapTemplate(unit?.cancellation_policy)),
+    isReviewed: Boolean(b.review),
     refund: b.cancellation
       ? {
           amount: Number(b.cancellation.refunded_amount ?? 0),
@@ -249,9 +254,11 @@ export function mapCancellationPreview(c: RawCancellationPreview): RefundPreview
     refundPercent,
     refundAmount,
     forfeitedAmount: Math.max(0, Math.round((total - refundAmount) * 100) / 100),
-    tierLabel: c.tier_label ?? '',
+    // The live backend only returns pre-rendered text, not structured tier data.
+    tier: null,
+    rawTierLabel: c.tier_label ?? '',
     isAllowed: Boolean(c.cancellable),
-    notAllowedReasonAr: c.cancellable ? undefined : c.reason ?? 'الإلغاء غير متاح لهذا الحجز.',
+    rawNotAllowedReason: c.cancellable ? undefined : c.reason ?? undefined,
     daysRemaining: Math.floor(hours / 24),
     hoursRemaining: hours,
   };
@@ -270,6 +277,29 @@ export function mapReview(r: Record<string, unknown>): Review {
   };
 }
 
+export function mapCard(c: Record<string, unknown>): SavedCard {
+  return {
+    id: String(c.id ?? ''),
+    brand: (c.brand as SavedCard['brand']) ?? 'visa',
+    last4: String(c.last4 ?? ''),
+    expMonth: Number(c.exp_month ?? 0),
+    expYear: Number(c.exp_year ?? 0),
+    isDefault: Boolean(c.is_default),
+  };
+}
+
+export function mapTransaction(t: Record<string, unknown>): Transaction {
+  return {
+    id: String(t.id ?? ''),
+    refCode: String(t.ref_code ?? ''),
+    type: (t.type as Transaction['type']) ?? 'payment',
+    amount: Number(t.amount ?? 0),
+    description: String(t.description ?? ''),
+    date: String(t.date ?? ''),
+    status: (t.status as Transaction['status']) ?? 'completed',
+  };
+}
+
 export function mapUser(u: RawUser): User {
   const parts = (u.name ?? '').trim().split(/\s+/).filter(Boolean);
   return {
@@ -281,6 +311,17 @@ export function mapUser(u: RawUser): User {
     phone: u.phone ?? '',
     createdAt: u.created_at ?? new Date().toISOString(),
   };
+}
+
+/**
+ * For endpoints that echo basic profile fields but never carry role info
+ * (e.g. `PUT /user/profile`) — omits `role` so callers doing a shallow merge
+ * into the stored user (`updateUser(patch)`) can't accidentally downgrade an
+ * admin/partner back to a plain "user" just because they edited their name.
+ */
+export function mapUserProfile(u: RawUser): Omit<User, 'role'> {
+  const { role: _role, ...rest } = mapUser(u);
+  return rest;
 }
 
 // ============ Homepage content types ============
@@ -310,6 +351,7 @@ export interface UnitCategory {
   label: string;
   icon: string;
   count: number;
+  imageUrl: string;
 }
 
 export interface CityCount {
@@ -323,6 +365,28 @@ export interface BudgetRange {
   min: number | null;
   max: number | null;
   count: number;
+  imageUrl: string;
+}
+
+export function mapCategory(c: Record<string, unknown>): UnitCategory {
+  return {
+    key: String(c.key ?? ''),
+    label: String(c.label ?? ''),
+    icon: String(c.icon ?? ''),
+    count: Number(c.count ?? 0),
+    imageUrl: String(c.image_url ?? ''),
+  };
+}
+
+export function mapBudget(b: Record<string, unknown>): BudgetRange {
+  return {
+    key: String(b.key ?? ''),
+    label: String(b.label ?? ''),
+    min: b.min == null ? null : Number(b.min),
+    max: b.max == null ? null : Number(b.max),
+    count: Number(b.count ?? 0),
+    imageUrl: String(b.image_url ?? ''),
+  };
 }
 
 export function mapOffer(o: Record<string, unknown>): Offer {

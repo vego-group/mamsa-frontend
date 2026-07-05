@@ -1,40 +1,47 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
 import {
   Shield, Users, MapPin, Award, Target, Eye, Heart, Sparkles,
-  ArrowLeft, BadgeCheck, Headphones, Wallet,
+  ArrowLeft, BadgeCheck, Headphones, Wallet, type LucideIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { BRAND } from '@/lib/constants/brand';
 
-export const metadata: Metadata = {
-  title: `عن ${BRAND.nameAr} — منصة الإقامات العقارية`,
-  description: BRAND.tagline,
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('about');
+  const tc = await getTranslations('common');
+  return { title: t('metaTitle', { name: tc('brandName') }), description: BRAND.tagline };
+}
 
-const STATS = [
-  { value: '2026', label: 'انطلقنا في' },
-  { value: '%100', label: 'وحدات موثّقة' },
-  { value: '24/7', label: 'دعم العملاء' },
-  { value: 'مرخّصة', label: 'من وزارة السياحة' },
-];
+const VALUE_ICONS: LucideIcon[] = [Shield, BadgeCheck, MapPin, Award];
+const WHY_ICONS: LucideIcon[] = [Sparkles, Wallet, Headphones, Heart];
 
-const VALUES = [
-  { icon: Shield, title: 'مرخّصون', body: `منصة معتمدة من ${BRAND.licenseAuthority} السعودية، نعمل ضمن الأطر النظامية.` },
-  { icon: BadgeCheck, title: 'موثّقون', body: 'كل عقار يخضع لمراجعة ميدانية وتدقيق قبل نشره على المنصة.' },
-  { icon: MapPin, title: 'تغطية واسعة', body: 'إقامات متنوّعة في مختلف مدن المملكة، من المدن الكبرى إلى الوجهات الهادئة.' },
-  { icon: Award, title: 'جودة عالية', body: 'معايير دقيقة للصور والمرافق والخدمة لضمان أفضل تجربة إقامة.' },
-];
+export default async function AboutPage() {
+  const t = await getTranslations('about');
+  const tc = await getTranslations('common');
+  const brandName = tc('brandName');
 
-const WHY = [
-  { icon: Sparkles, title: 'تجربة سلسة', body: 'بحث وحجز بخطوات بسيطة وواجهة عربية واضحة مصمّمة لراحتك.' },
-  { icon: Wallet, title: 'دفع آمن', body: 'مدفوعات محمية ووسائل دفع موثوقة، مع شفافية كاملة في الأسعار.' },
-  { icon: Headphones, title: 'دعم متواصل', body: 'فريق خدمة عملاء جاهز لمساعدتك قبل وأثناء وبعد إقامتك.' },
-  { icon: Heart, title: 'إقامات مميّزة', body: 'وحدات مختارة بعناية تجمع بين الراحة والخصوصية والذوق الرفيع.' },
-];
+  const STATS = [
+    { value: t('stats.0.value'), label: t('stats.0.label') },
+    { value: t('stats.1.value'), label: t('stats.1.label') },
+    { value: t('stats.2.value'), label: t('stats.2.label') },
+    { value: t('stats.3.value'), label: t('stats.3.label') },
+  ];
 
-export default function AboutPage() {
+  const VALUES = VALUE_ICONS.map((icon, i) => ({
+    icon,
+    title: t(`values.${i}.title`),
+    body: i === 0 ? t('values.0.body', { authority: BRAND.licenseAuthority }) : t(`values.${i}.body`),
+  }));
+
+  const WHY = WHY_ICONS.map((icon, i) => ({
+    icon,
+    title: t(`why.${i}.title`),
+    body: t(`why.${i}.body`),
+  }));
+
   return (
     <div>
       {/* Hero */}
@@ -48,9 +55,9 @@ export default function AboutPage() {
         />
         <div className="container mx-auto px-4 py-24 text-center text-white">
           <span className="mb-4 inline-block rounded-full bg-white/15 px-4 py-1 text-sm font-medium backdrop-blur">
-            تعرّف علينا
+            {t('eyebrow')}
           </span>
-          <h1 className="mb-4 text-3xl font-bold md:text-5xl">عن منصة {BRAND.nameAr}</h1>
+          <h1 className="mb-4 text-3xl font-bold md:text-5xl">{t('heroTitle', { name: brandName })}</h1>
           <p className="mx-auto max-w-2xl leading-relaxed text-white/85">{BRAND.tagline}</p>
         </div>
       </section>
@@ -73,21 +80,15 @@ export default function AboutPage() {
           <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-brand-cream text-brand-primary">
             <Eye className="h-6 w-6" />
           </div>
-          <h2 className="text-xl font-bold text-brand-ink">رؤيتنا</h2>
-          <p className="leading-relaxed text-brand-muted">
-            أن نكون المنصة الأولى في المملكة العربية السعودية لحجز الإقامات الفريدة، ونُسهم في
-            ازدهار قطاع السياحة والضيافة دعماً لمستهدفات رؤية 2030.
-          </p>
+          <h2 className="text-xl font-bold text-brand-ink">{t('visionTitle')}</h2>
+          <p className="leading-relaxed text-brand-muted">{t('visionBody')}</p>
         </Card>
         <Card className="space-y-3 p-7">
           <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-brand-cream text-brand-primary">
             <Target className="h-6 w-6" />
           </div>
-          <h2 className="text-xl font-bold text-brand-ink">رسالتنا</h2>
-          <p className="leading-relaxed text-brand-muted">
-            تقديم تجربة بحث وحجز سلسة وآمنة، تربط النزلاء بإقامات موثّقة عالية الجودة، وتمنح
-            أصحاب العقارات أدوات بسيطة لعرض وحداتهم وتحقيق دخل موثوق.
-          </p>
+          <h2 className="text-xl font-bold text-brand-ink">{t('missionTitle')}</h2>
+          <p className="leading-relaxed text-brand-muted">{t('missionBody')}</p>
         </Card>
       </section>
 
@@ -95,8 +96,8 @@ export default function AboutPage() {
       <section className="bg-brand-cream/40 py-16">
         <div className="container mx-auto space-y-10 px-4">
           <div className="text-center">
-            <h2 className="text-2xl font-bold text-brand-ink md:text-3xl">قيمنا</h2>
-            <p className="mt-2 text-sm text-brand-muted">المبادئ التي نبني عليها كل تفصيلة في المنصة</p>
+            <h2 className="text-2xl font-bold text-brand-ink md:text-3xl">{t('valuesTitle')}</h2>
+            <p className="mt-2 text-sm text-brand-muted">{t('valuesSubtitle')}</p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {VALUES.map((v) => (
@@ -115,8 +116,8 @@ export default function AboutPage() {
       {/* Why Mamsa */}
       <section className="container mx-auto space-y-10 px-4 py-16">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-brand-ink md:text-3xl">لماذا {BRAND.nameAr}؟</h2>
-          <p className="mt-2 text-sm text-brand-muted">ما الذي يجعل تجربتك معنا مختلفة</p>
+          <h2 className="text-2xl font-bold text-brand-ink md:text-3xl">{t('whyTitle', { name: brandName })}</h2>
+          <p className="mt-2 text-sm text-brand-muted">{t('whySubtitle')}</p>
         </div>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {WHY.map((w) => (
@@ -135,16 +136,14 @@ export default function AboutPage() {
       <section className="bg-brand-primary py-16 text-white">
         <div className="container mx-auto flex flex-col items-center gap-6 px-4 text-center">
           <Users className="h-10 w-10 text-brand-sage" />
-          <h2 className="max-w-2xl text-2xl font-bold md:text-3xl">ابدأ رحلتك مع {BRAND.nameAr} اليوم</h2>
-          <p className="max-w-xl text-sm text-white/80">
-            سواء كنت تبحث عن إقامتك القادمة أو تريد عرض عقارك — مَمسَى هي وجهتك.
-          </p>
+          <h2 className="max-w-2xl text-2xl font-bold md:text-3xl">{t('ctaTitle', { name: brandName })}</h2>
+          <p className="max-w-xl text-sm text-white/80">{t('ctaBody')}</p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Button asChild size="lg" variant="soft">
-              <Link href="/units">تصفّح الإقامات <ArrowLeft className="h-4 w-4" /></Link>
+              <Link href="/units">{t('browseStays')} <ArrowLeft className="h-4 w-4 ltr:rotate-180" /></Link>
             </Button>
             <Button asChild size="lg" variant="sage">
-              <Link href="/host">سجّل عقارك <ArrowLeft className="h-4 w-4" /></Link>
+              <Link href="/host">{t('listProperty')} <ArrowLeft className="h-4 w-4 ltr:rotate-180" /></Link>
             </Button>
           </div>
         </div>

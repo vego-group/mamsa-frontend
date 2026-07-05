@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,8 @@ interface CancelBookingDialogProps {
 }
 
 export function CancelBookingDialog({ booking, open, onClose }: CancelBookingDialogProps) {
+  const t = useTranslations('cancelBooking');
+  const tp = useTranslations('cancellationPolicy');
   const router = useRouter();
   const [preview, setPreview] = useState<RefundPreview | null>(null);
   const [reason, setReason] = useState('');
@@ -34,9 +37,9 @@ export function CancelBookingDialog({ booking, open, onClose }: CancelBookingDia
     bookingsApi
       .previewCancellation(booking.id)
       .then((p) => { if (!cancelled) setPreview(p as RefundPreview); })
-      .catch((e) => { if (!cancelled) setError(e instanceof Error ? e.message : 'حدث خطأ'); });
+      .catch((e) => { if (!cancelled) setError(e instanceof Error ? e.message : t('genericError')); });
     return () => { cancelled = true; };
-  }, [open, booking.id]);
+  }, [open, booking.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleConfirm = async () => {
     setSubmitting(true);
@@ -46,18 +49,26 @@ export function CancelBookingDialog({ booking, open, onClose }: CancelBookingDia
       onClose();
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'فشل الإلغاء');
+      setError(e instanceof Error ? e.message : t('cancelFailed'));
     } finally {
       setSubmitting(false);
     }
   };
 
+  const tierLabel = preview?.tier
+    ? tp('refund', { percent: preview.tier.refundPercent })
+    : preview?.rawTierLabel ?? '';
+
+  const notAllowedText = preview?.notAllowedReason
+    ? t(`notAllowed.${preview.notAllowedReason}`)
+    : preview?.rawNotAllowedReason ?? '';
+
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-center text-status-danger">إلغاء الحجز</DialogTitle>
-          <p className="text-center text-sm text-brand-muted">هل أنت متأكد من رغبتك في إلغاء هذا الحجز؟</p>
+          <DialogTitle className="text-center text-status-danger">{t('title')}</DialogTitle>
+          <p className="text-center text-sm text-brand-muted">{t('confirmPrompt')}</p>
         </DialogHeader>
 
         {!preview && !error && (
@@ -80,31 +91,31 @@ export function CancelBookingDialog({ booking, open, onClose }: CancelBookingDia
 
             {!preview.isAllowed ? (
               <div className="rounded-xl bg-red-50 p-4 text-sm text-status-danger">
-                {preview.notAllowedReasonAr}
+                {notAllowedText}
               </div>
             ) : (
               <div className="rounded-2xl border border-brand-border bg-white p-4">
-                <h4 className="mb-3 text-sm font-semibold text-brand-ink">ملخص الاسترداد</h4>
+                <h4 className="mb-3 text-sm font-semibold text-brand-ink">{t('refundSummary')}</h4>
                 <dl className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <dt className="text-brand-muted">المستوى المنطبق</dt>
-                    <dd className="font-medium">{preview.tierLabel}</dd>
+                    <dt className="text-brand-muted">{t('applicableTier')}</dt>
+                    <dd className="font-medium">{tierLabel}</dd>
                   </div>
                   <div className="flex justify-between">
-                    <dt className="text-brand-muted">المبلغ الكلي</dt>
+                    <dt className="text-brand-muted">{t('totalAmount')}</dt>
                     <dd>{formatSAR(booking.price.total)}</dd>
                   </div>
                   <div className="flex justify-between">
-                    <dt className="text-brand-muted">نسبة الاسترداد</dt>
+                    <dt className="text-brand-muted">{t('refundPercent')}</dt>
                     <dd>{preview.refundPercent}%</dd>
                   </div>
                   <div className="flex justify-between border-t border-brand-border pt-2 font-bold">
-                    <dt>المبلغ المسترد</dt>
+                    <dt>{t('refundedAmount')}</dt>
                     <dd className="text-status-success">{formatSAR(preview.refundAmount)}</dd>
                   </div>
                   {preview.forfeitedAmount > 0 && (
                     <div className="flex justify-between text-xs text-brand-muted">
-                      <dt>المبلغ المخصوم</dt>
+                      <dt>{t('deductedAmount')}</dt>
                       <dd>{formatSAR(preview.forfeitedAmount)}</dd>
                     </div>
                   )}
@@ -113,10 +124,10 @@ export function CancelBookingDialog({ booking, open, onClose }: CancelBookingDia
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="reason">سبب الإلغاء (اختياري)</Label>
+              <Label htmlFor="reason">{t('reasonLabel')}</Label>
               <Textarea
                 id="reason"
-                placeholder="نص الرسالة"
+                placeholder={t('reasonPlaceholder')}
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
               />
@@ -124,7 +135,7 @@ export function CancelBookingDialog({ booking, open, onClose }: CancelBookingDia
 
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={onClose}>
-                تراجع
+                {t('goBack')}
               </Button>
               <Button
                 variant="danger"
@@ -132,7 +143,7 @@ export function CancelBookingDialog({ booking, open, onClose }: CancelBookingDia
                 disabled={!preview.isAllowed || submitting}
                 onClick={handleConfirm}
               >
-                {submitting ? 'جارٍ الإلغاء...' : 'تأكيد الإلغاء'}
+                {submitting ? t('cancelling') : t('confirmCancel')}
               </Button>
             </div>
           </>

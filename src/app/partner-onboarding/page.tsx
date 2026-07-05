@@ -1,63 +1,60 @@
 'use client';
 
 /**
- * Partner onboarding / sign-up flow (triggered by "إدراج عقار").
+ * Partner onboarding / sign-up flow (triggered by "سجّل عقارك").
  * Full-screen split layout with three steps: profile form → OTP → success.
- * Wired to the real auth API (request-otp → verify-otp → complete-profile).
+ * Register-only: collects the partner application (type + identity), verifies the
+ * phone OTP, then submits POST /auth/partner/register. The partner does NOT get a
+ * website session — approval + dashboard link arrive by email.
  */
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Loader2, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { authApi } from '@/lib/api/client';
-import { useAuthStore } from '@/stores/auth';
-import { useUiStore } from '@/stores/ui';
 import { BRAND, OTP_CONFIG } from '@/lib/constants/brand';
 import { isValidSaudiPhone, normalizeSaudiPhone } from '@/lib/utils/phone';
-import { OnboardingForm } from '@/components/features/auth/OnboardingForm';
+import { OnboardingForm, type PartnerType } from '@/components/features/auth/OnboardingForm';
 import { OnboardingOtp } from '@/components/features/auth/OnboardingOtp';
+import { LanguageToggle } from '@/components/shared/LanguageToggle';
 
 type Step = 'form' | 'otp' | 'success';
 
 const HERO_IMAGE = '/onboarding-hero.png';
 
 export default function PartnerOnboardingPage() {
-  const router = useRouter();
-  const setSession = useAuthStore((s) => s.setSession);
-  const updateUser = useAuthStore((s) => s.updateUser);
-  const openAuth = useUiStore((s) => s.openAuth);
-
+  const t = useTranslations('partnerOnboarding');
   const [step, setStep] = useState<Step>('form');
+  const [partnerType, setPartnerType] = useState<PartnerType>('individual');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState(''); // local digits, e.g. 5XXXXXXXX
+  const [nationalId, setNationalId] = useState('');
+  const [crNumber, setCrNumber] = useState('');
+  const [debugOtp, setDebugOtp] = useState<string | undefined>();
 
   // Normalised +9665XXXXXXXX, or null when invalid.
   const e164 = normalizeSaudiPhone(phone);
   // Backend-friendly 05XXXXXXXX form.
   const phone05 = e164 ? `0${e164.slice(4)}` : '';
 
-  const goToLogin = () => {
-    router.push('/');
-    openAuth('login');
-  };
-
   const handleProfileSubmit = async () => {
-    await authApi.requestOtp(phone05);
+    const res = await authApi.requestOtp(phone05);
+    setDebugOtp(res.debugOtp);
     setStep('otp');
   };
 
   const handleVerify = async (code: string) => {
-    const { user, accessToken, refreshToken } = await authApi.verifyOtp(phone05, code);
-    setSession(user, accessToken, refreshToken);
-    try {
-      const updated = await authApi.completeProfile({ name: name.trim(), email: email.trim() });
-      updateUser(updated);
-    } catch {
-      // Profile completion is best-effort; the session is already established.
-    }
+    await authApi.partnerRegister({
+      type: partnerType,
+      name: name.trim(),
+      phone: phone05,
+      code,
+      email: email.trim(),
+      nationalId: partnerType === 'individual' ? nationalId.trim() : undefined,
+      crNumber: partnerType === 'company' ? crNumber.trim() : undefined,
+    });
     setStep('success');
-    setTimeout(() => router.push('/'), 2500);
   };
 
   return (
@@ -74,12 +71,7 @@ export default function PartnerOnboardingPage() {
         <section className="flex w-full flex-col px-6 py-8 sm:px-10 lg:w-1/2">
           {/* Top bar */}
           <div className="flex items-center justify-between">
-            <button
-              type="button"
-              className="rounded-full border border-brand-border px-4 py-1.5 text-sm font-medium text-brand-ink transition hover:bg-brand-cream/50"
-            >
-              EN
-            </button>
+            <LanguageToggle />
             <Image
               src="/Mamsa_logo.png"
               alt={BRAND.nameEn}
@@ -93,15 +85,20 @@ export default function PartnerOnboardingPage() {
           <div className="flex flex-1 flex-col justify-center py-8">
             {step === 'form' && (
               <OnboardingForm
+                partnerType={partnerType}
                 name={name}
                 email={email}
                 phone={phone}
+                nationalId={nationalId}
+                crNumber={crNumber}
+                onPartnerType={setPartnerType}
                 onName={setName}
                 onEmail={setEmail}
                 onPhone={setPhone}
+                onNationalId={setNationalId}
+                onCrNumber={setCrNumber}
                 isPhoneValid={isValidSaudiPhone(phone)}
                 onSubmit={handleProfileSubmit}
-                onLogin={goToLogin}
               />
             )}
 
@@ -110,6 +107,7 @@ export default function PartnerOnboardingPage() {
                 length={OTP_CONFIG.length}
                 displayPhone={phone}
                 resendCooldown={OTP_CONFIG.resendCooldownSeconds}
+                debugOtp={debugOtp}
                 onVerify={handleVerify}
                 onResend={() => authApi.resendOtp(phone05)}
               />
@@ -120,9 +118,9 @@ export default function PartnerOnboardingPage() {
 
           {/* Footer */}
           <p className="text-center text-xs text-brand-muted">
-            بالمتابعة، فإنك توافق على{' '}
-            <span className="font-medium text-brand-ink">الشروط</span> و{' '}
-            <span className="font-medium text-brand-ink">سياسة الخصوصية</span>.
+            {t('agreeTo')}{' '}
+            <span className="font-medium text-brand-ink">{t('terms')}</span> {t('and')}{' '}
+            <span className="font-medium text-brand-ink">{t('privacyPolicy')}</span>.
           </p>
         </section>
 
@@ -136,6 +134,7 @@ export default function PartnerOnboardingPage() {
 }
 
 function SuccessPanel() {
+  const t = useTranslations('partnerOnboarding');
   return (
     <div className="flex flex-col items-center justify-center gap-3 text-center">
       <div className="flex h-20 w-20 items-center justify-center rounded-full bg-brand-sage/20">
@@ -143,10 +142,8 @@ function SuccessPanel() {
           <Check className="h-6 w-6" />
         </div>
       </div>
-      <h2 className="text-xl font-bold text-brand-ink">تم التحقق بنجاح!</h2>
-      <p className="flex items-center gap-2 text-sm text-brand-muted">
-        تم انشاء حسابك بنجاح <Loader2 className="h-4 w-4 animate-spin" />
-      </p>
+      <h2 className="text-xl font-bold text-brand-ink">{t('successTitle')}</h2>
+      <p className="max-w-sm text-sm leading-relaxed text-brand-muted">{t('successBody')}</p>
     </div>
   );
 }
