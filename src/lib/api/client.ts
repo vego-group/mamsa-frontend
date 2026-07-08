@@ -454,16 +454,32 @@ export const bookingsApi = {
 
 // ============ Payments ============
 
+/** The frozen order summary `initiate` embeds — render as-is, never recompute. */
+export interface PaymentBookingSummary {
+  startDate: string;
+  endDate: string;
+  nights: number;
+  guests: number;
+  nightlyRate: number;
+  subtotal: number;
+  serviceFee: number;
+  cleaningFee: number;
+  taxes: number;
+  unit: { name: string; city: string; district: string; imageUrl: string };
+}
+
 export interface InitiatePaymentResult {
   paymentId: number;
   bookingId: number;
   amount: number;
+  /** SAR × 100 — this exact value goes to Moyasar.init, never computed client-side. */
   amountHalalas: number;
   currency: string;
   description: string;
   publishableKey: string;
   callbackUrl: string;
   testMode: boolean;
+  booking: PaymentBookingSummary | null;
 }
 
 export interface PayResult {
@@ -475,14 +491,52 @@ export interface PayResult {
   message?: string;
 }
 
+export interface VerifyResult {
+  status: string;
+  bookingId: number | null;
+  message?: string;
+}
+
+/**
+ * `POST /payments/pay` accepts exactly one of three shapes:
+ *  - `{}`                     → test-mode simulate (staging only)
+ *  - `{ savedCardId, cvc }`   → quick pay with a tokenised saved card
+ *  - `{ token }`              → manual moyasar.js token (unused by the hosted-form flow)
+ */
+export type PayInput = { savedCardId?: number | string; cvc?: string; token?: string };
+
+function mapBookingSummary(raw: unknown): PaymentBookingSummary | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const b = raw as Record<string, unknown>;
+  const u = (b.unit ?? {}) as Record<string, unknown>;
+  return {
+    startDate: String(b.start_date ?? ''),
+    endDate: String(b.end_date ?? ''),
+    nights: Number(b.nights ?? 0),
+    guests: Number(b.guests ?? 0),
+    nightlyRate: Number(b.nightly_rate ?? 0),
+    subtotal: Number(b.subtotal ?? 0),
+    serviceFee: Number(b.service_fee ?? 0),
+    cleaningFee: Number(b.cleaning_fee ?? 0),
+    taxes: Number(b.taxes ?? 0),
+    unit: {
+      name: String(u.name ?? ''),
+      city: String(u.city ?? ''),
+      district: String(u.district ?? ''),
+      imageUrl: String(u.image_url ?? ''),
+    },
+  };
+}
+
 export const paymentsApi = {
-  initiate: (bookingId: string, paymentMethod: 'card' | 'applepay' = 'card'): Promise<InitiatePaymentResult> =>
+  initiate: (bookingId: string): Promise<InitiatePaymentResult> =>
     USE_MOCK
-      ? // Mock mode has no gateway — an empty publishableKey tells checkout to skip payment.
+      ? // Mock mode has no gateway — testMode makes the payment page show the
+        // simulate button, whose mock `pay` always succeeds.
         withLatency(
           Promise.resolve<InitiatePaymentResult>({
             paymentId: 0,
-            bookingId: 0,
+            bookingId: Number(bookingId) || 0,
             amount: 0,
             amountHalalas: 0,
             currency: 'SAR',
@@ -490,11 +544,12 @@ export const paymentsApi = {
             publishableKey: '',
             callbackUrl: '',
             testMode: true,
+            booking: null,
           }),
         )
       : http<Record<string, unknown>>('/payments/initiate', {
           method: 'POST',
-          body: JSON.stringify({ booking_id: bookingId, payment_method: paymentMethod }),
+          body: JSON.stringify({ booking_id: Number(bookingId) }),
         }).then(
           (d): InitiatePaymentResult => ({
             paymentId: Number(d.payment_id),
@@ -506,15 +561,20 @@ export const paymentsApi = {
             publishableKey: String(d.publishable_key ?? ''),
             callbackUrl: String(d.callback_url ?? ''),
             testMode: Boolean(d.test_mode),
+            booking: mapBookingSummary(d.booking),
           }),
         ),
 
-  pay: (paymentId: number | string, token: string): Promise<PayResult> =>
+  pay: (paymentId: number | string, input: PayInput = {}): Promise<PayResult> =>
     USE_MOCK
       ? withLatency(Promise.resolve({ status: 'paid', paymentId: Number(paymentId) || 0 }))
       : http<Record<string, unknown>>('/payments/pay', {
           method: 'POST',
-          body: JSON.stringify({ payment_id: paymentId, token }),
+          body: JSON.stringify({
+            payment_id: paymentId,
+            ...(input.savedCardId != null ? { saved_card_id: input.savedCardId, cvc: input.cvc } : {}),
+            ...(input.token ? { token: input.token } : {}),
+          }),
         }).then((d) => ({
           status: String(d?.status ?? ''),
           paymentId: Number(d?.payment_id ?? paymentId),
@@ -522,14 +582,19 @@ export const paymentsApi = {
           message: d?.message ? String(d.message) : undefined,
         })),
 
-  verify: (paymentId: number | string, moyasarId: string): Promise<{ status: string; message?: string }> =>
+  /**
+   * Must run after EVERY Moyasar redirect — the backend re-fetches the charge
+   * from Moyasar and only then confirms the booking. Idempotent.
+   */
+  verify: (paymentId: number | string, moyasarId: string): Promise<VerifyResult> =>
     USE_MOCK
-      ? withLatency(Promise.resolve({ status: 'paid' }))
+      ? withLatency(Promise.resolve({ status: 'paid', bookingId: null }))
       : http<Record<string, unknown> | null>('/payments/verify', {
           method: 'POST',
-          body: JSON.stringify({ payment_id: paymentId, moyasar_id: moyasarId }),
+          body: JSON.stringify({ payment_id: Number(paymentId), moyasar_id: String(moyasarId) }),
         }).then((d) => ({
-          status: String(d?.status ?? 'paid'),
+          status: String(d?.status ?? ''),
+          bookingId: d?.booking_id != null ? Number(d.booking_id) : null,
           message: d?.message ? String(d.message) : undefined,
         })),
 

@@ -18,9 +18,15 @@ interface CancelBookingDialogProps {
   booking: Booking;
   open: boolean;
   onClose: () => void;
+  /**
+   * Fired with the updated (cancelled) booking after the API confirms.
+   * Callers keep their client-side state in sync here — `router.refresh()`
+   * only re-runs Server Components and won't touch useState-fetched lists.
+   */
+  onCancelled?: (updated: Booking) => void;
 }
 
-export function CancelBookingDialog({ booking, open, onClose }: CancelBookingDialogProps) {
+export function CancelBookingDialog({ booking, open, onClose, onCancelled }: CancelBookingDialogProps) {
   const t = useTranslations('cancelBooking');
   const tp = useTranslations('cancellationPolicy');
   const router = useRouter();
@@ -45,8 +51,9 @@ export function CancelBookingDialog({ booking, open, onClose }: CancelBookingDia
     setSubmitting(true);
     setError(null);
     try {
-      await bookingsApi.cancel(booking.id, reason || undefined);
+      const result = await bookingsApi.cancel(booking.id, reason || undefined);
       onClose();
+      onCancelled?.({ ...result.booking, refund: result.booking.refund ?? result.refund });
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : t('cancelFailed'));

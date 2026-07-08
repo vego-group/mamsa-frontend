@@ -154,7 +154,6 @@ npm start
 تأكد من ضبط متغيرات البيئة في الإنتاج:
 - `NEXT_PUBLIC_API_BASE_URL`
 - `NEXT_PUBLIC_USE_MOCK=false`
-- `NEXT_PUBLIC_MOYASAR_PUBLIC_KEY` (عند تفعيل الدفع)
 
 ---
 

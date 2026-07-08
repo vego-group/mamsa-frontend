@@ -1,89 +1,65 @@
 /**
- * Moyasar card tokenization — runs in the BROWSER only.
+ * Moyasar HOSTED payment form — runs in the BROWSER only.
  *
- * The raw card number is sent straight to Moyasar and never touches the Mamsa
- * backend (keeps PCI scope with Moyasar). The returned token is what we hand
- * to `POST /payments/pay`; the backend charges it server-side and may come
- * back with a 3-D Secure `transaction_url` we must redirect the user to.
+ * moyasar.js renders a PCI-compliant card/Apple Pay form inside `div.mysr-form`
+ * and charges Moyasar directly (card data never touches the Mamsa backend).
+ * After payment Moyasar redirects the browser to our callback URL with
+ * `?id=<moyasar_id>&status=…&message=…` appended; we add our own `pid` so the
+ * callback page knows which of OUR payments to verify server-side.
  */
+import type { InitiatePaymentResult } from '@/lib/api/client';
 
-const MOYASAR_TOKENS_URL = 'https://api.moyasar.com/v1/tokens';
+const MOYASAR_VERSION = '1.14.0';
 
-export interface CardDetails {
-  /** Cardholder name as printed on the card. */
-  name: string;
-  /** Digits only (spaces already stripped). */
-  number: string;
-  /** Two-digit month, e.g. "09". */
-  month: string;
-  /** Two-digit year, e.g. "27". */
-  year: string;
-  /** 3-digit security code. */
-  cvc: string;
-}
+/** Injects moyasar.css + moyasar.js once; resolves when the script is ready. */
+export function loadMoyasarAssets(locale: 'ar' | 'en' = 'ar'): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if ((window as unknown as { Moyasar?: unknown }).Moyasar) return resolve();
 
-/**
- * Common Moyasar error messages, translated per locale. Anything unmapped
- * falls back to the locale's generic message (Moyasar only replies in English).
- */
-const ERROR_TRANSLATIONS: Record<'ar' | 'en', Record<string, string>> = {
-  ar: {
-    'Invalid card number': 'رقم البطاقة غير صحيح',
-    'Card expired': 'البطاقة منتهية الصلاحية',
-    'Invalid month': 'شهر الانتهاء غير صحيح',
-    'Invalid year': 'سنة الانتهاء غير صحيحة',
-    'Invalid cvc': 'رمز الأمان (CVV) غير صحيح',
-  },
-  en: {
-    'Invalid card number': 'Invalid card number',
-    'Card expired': 'Card expired',
-    'Invalid month': 'Invalid expiry month',
-    'Invalid year': 'Invalid expiry year',
-    'Invalid cvc': 'Invalid security code (CVV)',
-  },
-};
+    if (!document.getElementById('moyasar-css')) {
+      const link = document.createElement('link');
+      link.id = 'moyasar-css';
+      link.rel = 'stylesheet';
+      link.href = `https://cdn.moyasar.com/mpf/${MOYASAR_VERSION}/moyasar.css`;
+      document.head.appendChild(link);
+    }
 
-const GENERIC_ERROR: Record<'ar' | 'en', string> = {
-  ar: 'تعذّر التحقق من بيانات البطاقة، تأكد منها وحاول مجددًا.',
-  en: 'Could not verify the card details, please check them and try again.',
-};
-
-function toErrorMessage(body: unknown, locale: 'ar' | 'en'): string {
-  if (body && typeof body === 'object') {
-    const { message, errors } = body as { message?: string; errors?: Record<string, string[]> };
-    const raw = message ?? (errors ? Object.values(errors).flat()[0] : undefined);
-    if (raw) return ERROR_TRANSLATIONS[locale][raw] ?? raw;
-  }
-  return GENERIC_ERROR[locale];
-}
-
-/**
- * Exchanges card details for a one-time Moyasar token.
- * `callbackUrl` is where Moyasar returns the browser after any 3-DS step.
- */
-export async function createCardToken(
-  publishableKey: string,
-  card: CardDetails,
-  callbackUrl: string,
-  locale: 'ar' | 'en' = 'ar',
-): Promise<string> {
-  const res = await fetch(MOYASAR_TOKENS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      publishable_api_key: publishableKey,
-      name: card.name,
-      number: card.number,
-      month: card.month,
-      year: card.year,
-      cvc: card.cvc,
-      save_only: true,
-      callback_url: callbackUrl,
-    }),
+    const script = document.createElement('script');
+    script.src = `https://cdn.moyasar.com/mpf/${MOYASAR_VERSION}/moyasar.js`;
+    script.onload = () => resolve();
+    script.onerror = () =>
+      reject(new Error(locale === 'ar' ? 'فشل تحميل بوابة الدفع' : 'Failed to load the payment gateway'));
+    document.body.appendChild(script);
   });
+}
 
-  const body: unknown = await res.json().catch(() => null);
-  const id = body && typeof body === 'object' ? (body as { id?: string }).id : undefined;
-  if (!res.ok || !id) throw new Error(toErrorMessage(body, locale));
-  return id;
+/**
+ * Renders the hosted form into `.mysr-form` (the div must already be mounted
+ * and must never be conditionally re-rendered afterwards).
+ */
+export function initMoyasarForm(info: InitiatePaymentResult): void {
+  // Moyasar redirects here after payment; pid ties it back to OUR payment row.
+  // Built from our own origin (not info.callbackUrl) so the user returns to
+  // the domain they started on.
+  const callbackUrl = `${window.location.origin}/payment/callback?pid=${info.paymentId}`;
+
+  (window as unknown as { Moyasar: { init: (config: unknown) => void } }).Moyasar.init({
+    element: '.mysr-form',
+    amount: info.amountHalalas, // halalas from the API — never recompute
+    currency: info.currency, // "SAR"
+    description: info.description,
+    publishable_api_key: info.publishableKey,
+    callback_url: callbackUrl,
+    save_card: true, // backend persists the token during verify
+    methods: ['creditcard', 'applepay'],
+    apple_pay: {
+      country: 'SA',
+      label: 'Mamsa',
+      validate_merchant_url: 'https://api.moyasar.com/v1/applepay/initiate',
+    },
+    metadata: {
+      payment_id: info.paymentId,
+      booking_id: info.bookingId,
+    },
+  });
 }

@@ -1,10 +1,14 @@
 'use client';
 
 /**
- * Payment return page — Moyasar lands the browser here after 3-D Secure,
- * appending `id` (pay_xxx), `status` and `message` query params.
- * We confirm the charge with our backend (`/payments/verify`) and route the
- * guest to the booking confirmation, or show a retry path on failure.
+ * Payment return page — Moyasar (or the backend's safety-net redirect) lands
+ * the browser here after the hosted form / 3-D Secure with:
+ *   ?pid=<our payment id>&id=<moyasar id>&status=…&message=…
+ *
+ * The query string is only a hint: we ALWAYS confirm with `POST /payments/verify`
+ * (the backend re-fetches the charge from Moyasar) before treating the booking
+ * as paid. The route path must stay exactly /payment/callback — the backend's
+ * FRONTEND_URL redirect depends on it.
  */
 import { Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -13,13 +17,13 @@ import { useTranslations } from 'next-intl';
 import { Loader2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { paymentsApi } from '@/lib/api/client';
-import { readPendingPayment, clearPendingPayment } from '@/lib/payments/pending';
 
 function CallbackHandler() {
   const t = useTranslations('paymentCallback');
   const router = useRouter();
   const search = useSearchParams();
   const [failure, setFailure] = useState<string | null>(null);
+  const [retryBookingId, setRetryBookingId] = useState<number | null>(null);
   // Verification must run exactly once — StrictMode double-invokes effects.
   const started = useRef(false);
 
@@ -27,24 +31,31 @@ function CallbackHandler() {
     if (started.current) return;
     started.current = true;
 
+    const pid = search.get('pid'); // OUR payment id (we appended it to callback_url)
+    const moyasarId = search.get('id'); // Moyasar's payment id
+    const moyasarStatus = search.get('status');
+
+    if (!pid || !moyasarId) {
+      setFailure(t('missingParams'));
+      return;
+    }
+
+    // Surface an obvious decline immediately, but STILL verify server-side —
+    // the query string is never trusted as the source of truth.
+    if (moyasarStatus && moyasarStatus !== 'paid') {
+      setFailure(search.get('message') || t('bankDeclined'));
+    }
+
     const run = async () => {
-      const pending = readPendingPayment();
-      if (!pending) {
-        setFailure(t('sessionExpired'));
-        return;
-      }
-
-      const moyasarStatus = search.get('status');
-      const moyasarId = search.get('id') ?? '';
-      if (moyasarStatus === 'failed') {
-        setFailure(search.get('message') || t('bankDeclined'));
-        return;
-      }
-
       try {
-        await paymentsApi.verify(pending.paymentId, moyasarId);
-        clearPendingPayment();
-        router.replace(`/booking/confirmation/${pending.bookingId}`);
+        const result = await paymentsApi.verify(Number(pid), String(moyasarId));
+        setRetryBookingId(result.bookingId);
+        if (result.status === 'paid') {
+          if (result.bookingId) router.replace(`/booking/confirmation/${result.bookingId}`);
+          else router.replace('/my-reservations');
+        } else {
+          setFailure(result.message || t('verifyFailed'));
+        }
       } catch (e) {
         setFailure(e instanceof Error ? e.message : t('verifyFailed'));
       }
@@ -62,7 +73,12 @@ function CallbackHandler() {
         <h1 className="text-xl font-bold text-brand-ink">{t('incompleteTitle')}</h1>
         <p className="text-sm leading-relaxed text-brand-muted">{failure}</p>
         <div className="flex w-full flex-col gap-2 pt-2">
-          <Button asChild size="lg">
+          {retryBookingId != null && (
+            <Button asChild size="lg">
+              <Link href={`/payment/${retryBookingId}`}>{t('retryPayment')}</Link>
+            </Button>
+          )}
+          <Button asChild size="lg" variant={retryBookingId != null ? 'outline' : 'default'}>
             <Link href="/my-reservations">{t('goToReservations')}</Link>
           </Button>
           <Button asChild variant="outline">

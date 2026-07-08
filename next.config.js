@@ -12,6 +12,17 @@ const nextConfig = {
       { protocol: 'https', hostname: 'plus.unsplash.com' },
     ],
   },
+  // Apple Pay domain verification: Apple's crawler fetches this file and
+  // rejects redirects or wrong content types. Any future middleware/rewrite
+  // must keep /.well-known/* untouched.
+  async headers() {
+    return [
+      {
+        source: '/.well-known/apple-developer-merchantid-domain-association',
+        headers: [{ key: 'Content-Type', value: 'application/octet-stream' }],
+      },
+    ];
+  },
 };
 
 module.exports = withNextIntl(nextConfig);

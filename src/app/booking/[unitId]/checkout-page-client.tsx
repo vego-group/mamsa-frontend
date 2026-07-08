@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { useLocale, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,31 +11,16 @@ import { Label } from '@/components/ui/label';
 import { PhoneInput } from '@/components/ui/phone-input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { CancellationPolicyDisplay } from '@/components/features/booking/CancellationPolicyDisplay';
-import { unitsApi, bookingsApi, paymentsApi } from '@/lib/api/client';
-import { createCardToken } from '@/lib/payments/moyasar';
-import { rememberPendingPayment } from '@/lib/payments/pending';
+import { unitsApi, bookingsApi } from '@/lib/api/client';
 import { useAuthStore } from '@/stores/auth';
 import { useUiStore } from '@/stores/ui';
 import { getPolicyByTemplate } from '@/lib/constants/cancellation-policies';
 import { formatSAR, formatDate } from '@/lib/utils/format';
-import type { Unit } from '@/types';
-
-/** Formats raw digits as "1234 5678 9012 3456", capped at 16 digits. */
-function formatCardNumber(raw: string): string {
-  const digits = raw.replace(/\D/g, '').slice(0, 16);
-  return digits.replace(/(.{4})/g, '$1 ').trim();
-}
-
-/** Formats raw digits as "MM/YY", capped at 4 digits. */
-function formatExpiry(raw: string): string {
-  const digits = raw.replace(/\D/g, '').slice(0, 4);
-  return digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
-}
+import type { Unit, Booking } from '@/types';
 
 export function CheckoutPageClient() {
   const t = useTranslations('checkout');
   const tc = useTranslations('common');
-  const locale = useLocale() as 'ar' | 'en';
   const params = useParams<{ unitId: string }>();
   const search = useSearchParams();
   const router = useRouter();
@@ -48,23 +33,17 @@ export function CheckoutPageClient() {
 
   const [unit, setUnit] = useState<Unit | null>(null);
   const [agreed, setAgreed] = useState(false);
-  const [stage, setStage] = useState<'idle' | 'booking' | 'paying'>('idle');
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Booking survives a failed payment attempt so a retry charges the SAME
-  // booking instead of creating a duplicate pending one.
-  const [bookingId, setBookingId] = useState<string | null>(null);
-  const submitting = stage !== 'idle';
+  // An earlier unpaid booking of ours that holds these dates — offer to pay or manage it.
+  const [pendingConflict, setPendingConflict] = useState<Booking | null>(null);
 
   // Guest details — prefilled from the signed-in account (still editable, in
-  // case the traveller isn't the account holder), plus card fields.
+  // case the traveller isn't the account holder).
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [cardNumber, setCardNumber] = useState('');
-  const [expiry, setExpiry] = useState('');
-  const [cvv, setCvv] = useState('');
-  const [cardName, setCardName] = useState('');
 
   useEffect(() => {
     unitsApi.getById(params.unitId).then(setUnit);
@@ -92,16 +71,6 @@ export function CheckoutPageClient() {
   const validate = (): string | null => {
     if (!firstName.trim() || !lastName.trim()) return t('errors.name');
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return t('errors.email');
-    if (cardNumber.replace(/\D/g, '').length !== 16) return t('errors.cardNumber');
-    const [mm, yy] = expiry.split('/');
-    const month = Number(mm);
-    const year = Number(yy);
-    if (!mm || !yy || month < 1 || month > 12) return t('errors.expiry');
-    const now = new Date();
-    if (year + 2000 < now.getFullYear() || (year + 2000 === now.getFullYear() && month < now.getMonth() + 1))
-      return t('errors.expired');
-    if (cvv.length !== 3) return t('errors.cvv');
-    if (!cardName.trim()) return t('errors.cardName');
     if (!agreed) return t('errors.agree');
     return null;
   };
@@ -117,67 +86,52 @@ export function CheckoutPageClient() {
     const invalid = validate();
     if (invalid) { setError(invalid); return; }
     setError(null);
+    setSubmitting(true);
 
     try {
-      // 1) Create the booking — or reuse the one from a failed payment attempt.
-      let id = bookingId;
-      if (!id) {
-        setStage('booking');
-        const booking = await bookingsApi.create({
-          unitId: unit.id,
-          checkInDate: checkIn,
-          checkOutDate: checkOut,
-          guests: { adults: guests, children: 0 },
-          paymentMethod: 'visa',
-        });
-        id = booking.id;
-        setBookingId(id);
-      }
-
-      // 2) Open a payment on the backend; it returns the Moyasar publishable key
-      //    (env var is a fallback — the backend-provided key always wins).
-      setStage('paying');
-      const init = await paymentsApi.initiate(id, 'card');
-      const publishableKey = init.publishableKey || process.env.NEXT_PUBLIC_MOYASAR_PUBLIC_KEY || '';
-      if (!init.paymentId || !publishableKey) {
-        // Mock/dev mode — no real payment opened, treat the booking as done.
-        router.push(`/booking/confirmation/${id}`);
-        return;
-      }
-
-      // 3) Tokenize the card directly with Moyasar (card data never hits our backend).
-      const [mm, yy] = expiry.split('/');
-      const token = await createCardToken(
-        publishableKey,
-        {
-          name: cardName.trim(),
-          number: cardNumber.replace(/\D/g, ''),
-          month: mm!.padStart(2, '0'),
-          year: yy!,
-          cvc: cvv,
-        },
-        `${window.location.origin}/payment/callback`,
-        locale,
-      );
-
-      // 4) Charge the token server-side. Remember context first: a 3-DS hop
-      //    leaves the app and React state won't survive it.
-      rememberPendingPayment({ paymentId: init.paymentId, bookingId: id });
-      const pay = await paymentsApi.pay(init.paymentId, token);
-
-      if (pay.transactionUrl) {
-        // Bank requires 3-D Secure — hand the browser over to it.
-        window.location.assign(pay.transactionUrl);
-        return;
-      }
-      if (pay.status === 'paid' || pay.status === 'captured') {
-        router.push(`/booking/confirmation/${id}`);
-        return;
-      }
-      throw new Error(pay.message || t('errors.paymentFailed'));
+      // Create the pending booking, then hand over to the payment page — it
+      // calls /payments/initiate and renders the Moyasar hosted form. Initiate
+      // is idempotent per booking, so retrying a failed payment reuses the
+      // same pending booking instead of creating a duplicate.
+      const booking = await bookingsApi.create({
+        unitId: unit.id,
+        checkInDate: checkIn,
+        checkOutDate: checkOut,
+        guests: { adults: guests, children: 0 },
+        paymentMethod: 'visa',
+      });
+      router.push(`/payment/${booking.id}`);
     } catch (e) {
+      // "Unit already booked" is often OUR OWN abandoned pending booking still
+      // holding the dates (created on a previous attempt, never paid). Reuse
+      // it instead of dead-ending: same dates → straight back to payment;
+      // different overlapping dates → let the user pay or manage it.
+      const mine = await findMyPendingBooking();
+      if (mine && mine.checkInDate.slice(0, 10) === checkIn && mine.checkOutDate.slice(0, 10) === checkOut) {
+        router.push(`/payment/${mine.id}`);
+        return;
+      }
+      if (mine) setPendingConflict(mine);
       setError(e instanceof Error ? e.message : t('errors.genericFailed'));
-      setStage('idle');
+      setSubmitting(false);
+    }
+  };
+
+  /** My unpaid pending booking on this unit that overlaps the requested dates, if any. */
+  const findMyPendingBooking = async (): Promise<Booking | null> => {
+    try {
+      const mine = await bookingsApi.list();
+      return (
+        mine.find(
+          (b) =>
+            b.unitId === unit.id &&
+            b.status === 'pending_payment' &&
+            b.checkInDate.slice(0, 10) < checkOut &&
+            b.checkOutDate.slice(0, 10) > checkIn,
+        ) ?? null
+      );
+    } catch {
+      return null;
     }
   };
 
@@ -221,56 +175,6 @@ export function CheckoutPageClient() {
           </div>
         </Card>
 
-        <Card className="space-y-4 p-5">
-          <h2 className="font-semibold">{t('paymentInfo')}</h2>
-          <div className="space-y-2">
-            <Label>{t('cardNumber')}</Label>
-            <Input
-              placeholder="1234 5678 9012 3456"
-              dir="ltr"
-              className="text-start font-mono"
-              inputMode="numeric"
-              maxLength={19} // 16 digits + 3 spaces
-              value={cardNumber}
-              onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label>{t('expiry')}</Label>
-              <Input
-                placeholder="MM/YY"
-                dir="ltr"
-                className="text-start"
-                inputMode="numeric"
-                maxLength={5}
-                value={expiry}
-                onChange={(e) => setExpiry(formatExpiry(e.target.value))}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>CVV</Label>
-              <Input
-                placeholder="123"
-                dir="ltr"
-                className="text-start"
-                inputMode="numeric"
-                maxLength={3}
-                value={cvv}
-                onChange={(e) => setCvv(e.target.value.replace(/\D/g, '').slice(0, 3))}
-              />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label>{t('cardName')}</Label>
-            <Input
-              placeholder={t('cardNamePlaceholder')}
-              value={cardName}
-              onChange={(e) => setCardName(e.target.value)}
-            />
-          </div>
-        </Card>
-
         <Card className="space-y-3 p-5">
           <h2 className="font-semibold">{t('cancellationPolicyTitle')}</h2>
           <CancellationPolicyDisplay policy={getPolicyByTemplate(unit.cancellationPolicy)} showHeader={false} />
@@ -300,12 +204,27 @@ export function CheckoutPageClient() {
 
         {error && <p className="text-sm text-status-danger">{error}</p>}
 
+        {pendingConflict && (
+          <Card className="space-y-3 border-amber-300 bg-amber-50 p-5 text-sm">
+            <p className="font-medium text-amber-900">
+              {t('pendingConflict', {
+                checkIn: formatDate(pendingConflict.checkInDate),
+                checkOut: formatDate(pendingConflict.checkOutDate),
+              })}
+            </p>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button asChild size="sm" className="flex-1">
+                <Link href={`/payment/${pendingConflict.id}`}>{t('payPendingBooking')}</Link>
+              </Button>
+              <Button asChild size="sm" variant="outline" className="flex-1">
+                <Link href={`/my-reservations/${pendingConflict.id}`}>{t('managePendingBooking')}</Link>
+              </Button>
+            </div>
+          </Card>
+        )}
+
         <Button size="lg" className="w-full" onClick={handleConfirm} disabled={submitting}>
-          {stage === 'booking'
-            ? t('creatingBooking')
-            : stage === 'paying'
-            ? t('processingPayment')
-            : t('payAmount', { amount: formatSAR(total) })}
+          {submitting ? t('creatingBooking') : t('continueToPayment', { amount: formatSAR(total) })}
         </Button>
         <p className="text-center text-xs text-brand-muted">
           🔒 {t('secureNote')}
