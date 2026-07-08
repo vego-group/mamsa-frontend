@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { favoritesApi } from '@/lib/api/client';
+import { favoritesApi, ApiError } from '@/lib/api/client';
 import { useAuthStore } from '@/stores/auth';
 
 interface FavoritesState {
@@ -45,11 +45,20 @@ export const useFavoritesStore = create<FavoritesState>()(
         if (!isAuthed()) return;
         const local = get().unitIds;
         const server = await favoritesApi.list().catch(() => [] as string[]);
-        // Push any guest-only favourites up to the account.
+        // Push any guest-only favourites up to the account. Ids the backend
+        // 404s are stale (e.g. persisted from mock mode or an older backend)
+        // — drop them locally so they aren't re-pushed on every login.
+        const stale = new Set<string>();
         await Promise.all(
-          local.filter((id) => !server.includes(id)).map((id) => favoritesApi.add(id).catch(() => {})),
+          local
+            .filter((id) => !server.includes(id))
+            .map((id) =>
+              favoritesApi.add(id).catch((e: unknown) => {
+                if (e instanceof ApiError && e.status === 404) stale.add(id);
+              }),
+            ),
         );
-        set({ unitIds: Array.from(new Set([...server, ...local])) });
+        set({ unitIds: Array.from(new Set([...server, ...local])).filter((id) => !stale.has(id)) });
       },
 
       reset: () => set({ unitIds: [] }),

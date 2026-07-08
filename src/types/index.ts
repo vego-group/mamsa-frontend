@@ -195,6 +195,8 @@ export interface SavedCard {
   expMonth: number;
   expYear: number;
   isDefault: boolean;
+  /** True when the card has a gateway token — only these can be charged via quick pay. */
+  chargeable?: boolean;
 }
 
 // ============ Transactions ============

@@ -7,7 +7,7 @@ export const BRAND = {
   nameAr: 'مَمسَى',
   nameEn: 'Mamsa',
   tagline: 'منصة رائدة في مجال حجز أماكن الإقامة الفريدة حول العالم.',
-  email: 'info@mamsa.sa',
+  email: 'info@mamsaa.com',
   phone: '+966 50 000 0000',
   licenseNumber: '00000',
   licenseAuthority: 'وزارة السياحة',

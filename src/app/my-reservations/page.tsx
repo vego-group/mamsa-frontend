@@ -23,6 +23,11 @@ export default function MyReservationsPage() {
     });
   }, []);
 
+  // Swap the cancelled booking in place — the useMemo re-categorization moves
+  // its card from "upcoming/active" to "cancelled" without a page reload.
+  const handleCancelled = (updated: Booking) =>
+    setBookings((prev) => prev.map((b) => (b.id === updated.id ? updated : b)));
+
   /**
    * تصنيف الحجوزات حسب 4 تبويبات (SRS FR-040):
    * - جديدة:   confirmed و تاريخ الدخول > 14 يوم
@@ -74,16 +79,16 @@ export default function MyReservationsPage() {
         ) : (
           <>
             <TabsContent value="upcoming">
-              <Section bookings={categorized.upcoming} tab="upcoming" empty={t('empty.upcoming')} browse={t('browse')} />
+              <Section bookings={categorized.upcoming} tab="upcoming" empty={t('empty.upcoming')} browse={t('browse')} onCancelled={handleCancelled} />
             </TabsContent>
             <TabsContent value="active">
-              <Section bookings={categorized.active} tab="active" empty={t('empty.active')} browse={t('browse')} />
+              <Section bookings={categorized.active} tab="active" empty={t('empty.active')} browse={t('browse')} onCancelled={handleCancelled} />
             </TabsContent>
             <TabsContent value="completed">
-              <Section bookings={categorized.completed} tab="completed" empty={t('empty.completed')} browse={t('browse')} />
+              <Section bookings={categorized.completed} tab="completed" empty={t('empty.completed')} browse={t('browse')} onCancelled={handleCancelled} />
             </TabsContent>
             <TabsContent value="cancelled">
-              <Section bookings={categorized.cancelled} tab="cancelled" empty={t('empty.cancelled')} browse={t('browse')} />
+              <Section bookings={categorized.cancelled} tab="cancelled" empty={t('empty.cancelled')} browse={t('browse')} onCancelled={handleCancelled} />
             </TabsContent>
           </>
         )}
@@ -97,11 +102,13 @@ function Section({
   tab,
   empty,
   browse,
+  onCancelled,
 }: {
   bookings: Booking[];
   tab: 'upcoming' | 'active' | 'completed' | 'cancelled';
   empty: string;
   browse: string;
+  onCancelled: (updated: Booking) => void;
 }) {
   if (bookings.length === 0) {
     return (
@@ -117,7 +124,7 @@ function Section({
   return (
     <div className="mt-6 space-y-4">
       {bookings.map((b) => (
-        <BookingCard key={b.id} booking={b} tabContext={tab} />
+        <BookingCard key={b.id} booking={b} tabContext={tab} onCancelled={onCancelled} />
       ))}
     </div>
   );

@@ -285,6 +285,7 @@ export function mapCard(c: Record<string, unknown>): SavedCard {
     expMonth: Number(c.exp_month ?? 0),
     expYear: Number(c.exp_year ?? 0),
     isDefault: Boolean(c.is_default),
+    chargeable: Boolean(c.chargeable),
   };
 }
 

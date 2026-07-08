@@ -16,9 +16,11 @@ interface BookingCardProps {
   booking: Booking;
   /** which tab this card is displayed within — controls available actions */
   tabContext: 'upcoming' | 'active' | 'completed' | 'cancelled';
+  /** Bubbles the updated booking up after a successful cancellation. */
+  onCancelled?: (updated: Booking) => void;
 }
 
-export function BookingCard({ booking, tabContext }: BookingCardProps) {
+export function BookingCard({ booking, tabContext, onCancelled }: BookingCardProps) {
   const t = useTranslations('bookingCard');
   const [cancelOpen, setCancelOpen] = useState(false);
   const canCancel = isBookingCancellable(booking, new Date());
@@ -108,7 +110,12 @@ export function BookingCard({ booking, tabContext }: BookingCardProps) {
         )}
       </Card>
 
-      <CancelBookingDialog booking={booking} open={cancelOpen} onClose={() => setCancelOpen(false)} />
+      <CancelBookingDialog
+        booking={booking}
+        open={cancelOpen}
+        onClose={() => setCancelOpen(false)}
+        onCancelled={onCancelled}
+      />
     </>
   );
 }

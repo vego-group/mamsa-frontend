@@ -83,7 +83,16 @@ export default function BookingDetailsPage() {
               <Download className="h-4 w-4" /> {t('downloadConfirmation')}
             </Button>
 
-            {booking.status === 'confirmed' && canCancel && (
+            {booking.status === 'pending_payment' && (
+              <Button asChild className="w-full" size="sm">
+                <Link href={`/payment/${booking.id}`}>
+                  <CreditCard className="h-4 w-4" /> {t('completePayment')}
+                </Link>
+              </Button>
+            )}
+
+            {/* Cancelling an unpaid pending booking frees its held dates. */}
+            {(booking.status === 'confirmed' || booking.status === 'pending_payment') && canCancel && (
               <Button variant="danger" className="w-full" size="sm" onClick={() => setCancelOpen(true)}>
                 <X className="h-4 w-4" /> {t('cancelBooking')}
               </Button>
@@ -188,7 +197,12 @@ export default function BookingDetailsPage() {
         onClose={() => setContactOpen(false)}
         hostName={booking.unitSnapshot.ownerName}
       />
-      <CancelBookingDialog booking={booking} open={cancelOpen} onClose={() => setCancelOpen(false)} />
+      <CancelBookingDialog
+        booking={booking}
+        open={cancelOpen}
+        onClose={() => setCancelOpen(false)}
+        onCancelled={setBooking}
+      />
       <ReviewDialog
         bookingId={booking.id}
         open={reviewOpen}

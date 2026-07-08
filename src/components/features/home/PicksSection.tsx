@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { ArrowLeft } from 'lucide-react';
 import { UnitCard } from '@/components/features/units/UnitCard';
-import { Button } from '@/components/ui/button';
 import { unitsApi } from '@/lib/api/client';
 import { cn } from '@/lib/utils/cn';
 import type { Unit, UnitsFilter } from '@/types';
@@ -55,17 +54,19 @@ export function PicksSection({ initialCategory, limit = 8, showViewAll = false }
 
   return (
     <section className="container mx-auto space-y-6 px-4 py-10">
-      <header className="flex items-center justify-between gap-4">
+      <header className="flex items-end justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-brand-ink">{t('title')}</h2>
           <p className="text-sm text-brand-muted">{t('subtitle')}</p>
         </div>
         {showViewAll && (
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/picks">
-              {t('viewAll')} <ArrowLeft className="h-4 w-4 rtl:rotate-0 ltr:rotate-180" />
-            </Link>
-          </Button>
+          <Link
+            href="/picks"
+            className="group inline-flex shrink-0 items-center gap-1.5 rounded-full border border-brand-border bg-white px-4 py-2 text-sm font-semibold text-brand-primary transition hover:border-brand-primary hover:bg-brand-primary hover:text-white"
+          >
+            {t('viewAll')}
+            <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1 ltr:rotate-180 ltr:group-hover:translate-x-1" />
+          </Link>
         )}
       </header>
 

@@ -43,7 +43,7 @@ export default async function HostLandingPage() {
     name: t(`testimonials.${i}.name`),
     role: t(`testimonials.${i}.role`),
   }));
-  const FAQS = [0, 1, 2, 3, 4].map((i) => ({ q: t(`faqs.${i}.q`), a: t(`faqs.${i}.a`) }));
+  const FAQS = [0, 1, 2, 3, 4, 5].map((i) => ({ q: t(`faqs.${i}.q`), a: t(`faqs.${i}.a`) }));
 
   return (
     <div>
