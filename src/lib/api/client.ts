@@ -42,8 +42,14 @@ import type {
 } from '@/types';
 import type { RefundPreview } from '@/lib/cancellation/engine';
 
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK !== 'false';
-const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
+// ⚠️ TEMPORARY — live testing phase against the STAGING backend.
+// Hard-pinned so every deployment (including mamsaa.com) hits staging
+// regardless of the hosting platform's env vars. Before the production
+// cut-over, delete these two lines and restore the env-based ones below.
+const USE_MOCK = false;
+const BASE_URL = 'https://staging.mamsaa.com/api/v1';
+// const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK !== 'false';
+// const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
 
 // ============ Simulated latency for realistic mock UX ============
 const MOCK_LATENCY_MS = 300;
