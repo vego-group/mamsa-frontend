@@ -38,6 +38,11 @@ export function loadMoyasarAssets(locale: 'ar' | 'en' = 'ar'): Promise<void> {
  * and must never be conditionally re-rendered afterwards).
  */
 export function initMoyasarForm(info: InitiatePaymentResult): void {
+  // The user may have navigated away between the script loading and this
+  // deferred call — initialising against a missing element throws inside
+  // moyasar.js, so bail out quietly instead.
+  if (!document.querySelector('.mysr-form')) return;
+
   // Moyasar redirects here after payment; pid ties it back to OUR payment row.
   // Built from our own origin (not info.callbackUrl) so the user returns to
   // the domain they started on.

@@ -26,7 +26,10 @@ export function CheckoutPageClient() {
   const router = useRouter();
   const checkIn = search.get('checkIn') ?? '';
   const checkOut = search.get('checkOut') ?? '';
-  const guests = Number(search.get('guests') ?? '1');
+  // Query params are user-editable — clamp guests to a sane positive integer.
+  const guests = Math.max(1, Math.floor(Number(search.get('guests'))) || 1);
+  const datesValid =
+    /^\d{4}-\d{2}-\d{2}$/.test(checkIn) && /^\d{4}-\d{2}-\d{2}$/.test(checkOut) && checkIn < checkOut;
   const user = useAuthStore((s) => s.user);
   const isAuth = useAuthStore((s) => s.isAuthenticated);
   const openAuth = useUiStore((s) => s.openAuth);
@@ -59,6 +62,19 @@ export function CheckoutPageClient() {
   }, [user]);
 
   if (!unit) return <div className="container mx-auto p-10">{tc('loading')}</div>;
+
+  // Missing/tampered dates would render NaN prices and send a broken booking
+  // request — send the user back to pick dates instead.
+  if (!datesValid) {
+    return (
+      <div className="container mx-auto flex flex-col items-center gap-4 px-4 py-16 text-center">
+        <p className="text-sm text-brand-muted">{t('errors.invalidDates')}</p>
+        <Button asChild>
+          <Link href={`/units/${unit.id}`}>{t('backToUnit')}</Link>
+        </Button>
+      </div>
+    );
+  }
 
   const nights = Math.max(1, Math.round((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000));
   const subtotal = unit.pricePerNight * nights;
@@ -202,7 +218,7 @@ export function CheckoutPageClient() {
           </label>
         </Card>
 
-        {error && <p className="text-sm text-status-danger">{error}</p>}
+        {error && <p dir="auto" className="text-sm text-status-danger">{error}</p>}
 
         {pendingConflict && (
           <Card className="space-y-3 border-amber-300 bg-amber-50 p-5 text-sm">

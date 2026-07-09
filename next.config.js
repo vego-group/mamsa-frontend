@@ -21,6 +21,24 @@ const nextConfig = {
         source: '/.well-known/apple-developer-merchantid-domain-association',
         headers: [{ key: 'Content-Type', value: 'application/octet-stream' }],
       },
+      {
+        // Baseline security headers for every page. A strict CSP is deliberately
+        // NOT set here: moyasar.js injects inline styles/scripts and data: images,
+        // so a CSP must be introduced in Report-Only mode first or it will break
+        // the payment form silently.
+        source: '/:path*',
+        headers: [
+          // Blocks MIME-type sniffing of responses.
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          // Clickjacking protection — nothing legitimate frames this app.
+          // (Moyasar's 3-DS return is a top-level redirect, not an iframe.)
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          // Don't leak full URLs (which may contain payment ids) cross-origin.
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          // We never use these browser capabilities.
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+        ],
+      },
     ];
   },
 };

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { ArrowRight, ArrowUpRight, ArrowDownLeft, Plus, Gift, Wifi, Trash2, X } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, ArrowDownLeft, Gift, Wifi, Trash2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { accountApi } from '@/lib/api/client';
 import { formatSAR, formatDate } from '@/lib/utils/format';
@@ -15,10 +15,6 @@ const BRAND_NAME: Record<SavedCard['brand'], string> = {
   mastercard: 'Mastercard',
   mada: 'mada',
 };
-
-const CURRENT_YEAR = new Date().getFullYear();
-const YEARS = Array.from({ length: 11 }, (_, i) => CURRENT_YEAR + i);
-const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
 
 export default function PaymentMethodsPage() {
   const t = useTranslations('paymentMethods');
@@ -34,7 +30,6 @@ export default function PaymentMethodsPage() {
   const [cards, setCards] = useState<SavedCard[]>([]);
   const [txns, setTxns] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showAdd, setShowAdd] = useState(false);
   const [confirmCard, setConfirmCard] = useState<SavedCard | null>(null);
 
   useEffect(() => {
@@ -56,12 +51,6 @@ export default function PaymentMethodsPage() {
   const setDefaultCard = async (id: string) => {
     await accountApi.setDefaultCard(id);
     await refreshCards();
-  };
-
-  const addCard = async (card: Omit<SavedCard, 'id' | 'isDefault'>) => {
-    await accountApi.addCard(card);
-    await refreshCards();
-    setShowAdd(false);
   };
 
   if (loading) return <div className="container mx-auto p-10 text-center text-brand-muted">{tc('loading')}</div>;
@@ -109,12 +98,11 @@ export default function PaymentMethodsPage() {
               </div>
             ))}
 
-            <button
-              onClick={() => setShowAdd(true)}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-brand-border bg-white p-4 text-sm font-medium text-brand-primary transition hover:border-brand-primary hover:bg-brand-cream/40"
-            >
-              <Plus className="h-4 w-4" /> {t('addNewCard')}
-            </button>
+            {/* Cards are tokenised by the Moyasar hosted form during checkout
+                ("save card" checkbox) — full card numbers never touch our pages. */}
+            <p className="rounded-2xl border border-dashed border-brand-border bg-white p-4 text-center text-xs leading-relaxed text-brand-muted">
+              {t('cardsSavedDuringPayment')}
+            </p>
           </div>
 
           <p className="flex items-start gap-2 rounded-xl bg-brand-cream/50 p-3 text-xs leading-relaxed text-brand-muted">
@@ -172,8 +160,6 @@ export default function PaymentMethodsPage() {
           )}
         </Card>
       </div>
-
-      {showAdd && <AddCardModal onClose={() => setShowAdd(false)} onAdd={addCard} t={t} />}
 
       {confirmCard && (
         <ConfirmDeleteModal
@@ -273,132 +259,3 @@ function CreditCardVisual({ card, t }: { card: SavedCard; t: T }) {
   );
 }
 
-function AddCardModal({
-  onClose,
-  onAdd,
-  t,
-}: {
-  onClose: () => void;
-  onAdd: (card: Omit<SavedCard, 'id' | 'isDefault'>) => Promise<void>;
-  t: T;
-}) {
-  const [brand, setBrand] = useState<SavedCard['brand']>('visa');
-  const [number, setNumber] = useState('');
-  const [expMonth, setExpMonth] = useState<number>(1);
-  const [expYear, setExpYear] = useState<number>(CURRENT_YEAR);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const digits = number.replace(/\D/g, '');
-  const valid = digits.length >= 4;
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!valid || submitting) return;
-    setSubmitting(true);
-    setError(null);
-    try {
-      await onAdd({ brand, last4: digits.slice(-4), expMonth, expYear });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('saveCardError'));
-      setSubmitting(false);
-    }
-  };
-
-  // Format number with spaces every 4 digits for display.
-  const formatted = digits.replace(/(.{4})/g, '$1 ').trim();
-
-  return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <form
-        onSubmit={submit}
-        className="relative w-full max-w-md space-y-4 rounded-2xl bg-white p-6 shadow-xl"
-      >
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-brand-ink">{t('addNewCard')}</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-brand-muted transition hover:bg-brand-cream"
-            aria-label={t('close')}
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium text-brand-ink">{t('cardType')}</label>
-          <select
-            value={brand}
-            onChange={(e) => setBrand(e.target.value as SavedCard['brand'])}
-            className="h-11 w-full rounded-xl border border-brand-border bg-white px-3 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
-          >
-            <option value="visa">Visa</option>
-            <option value="mastercard">Mastercard</option>
-            <option value="mada">mada</option>
-          </select>
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium text-brand-ink">{t('cardNumber')}</label>
-          <input
-            value={formatted}
-            onChange={(e) => setNumber(e.target.value)}
-            inputMode="numeric"
-            maxLength={19}
-            placeholder="0000 0000 0000 0000"
-            className="h-11 w-full rounded-xl border border-brand-border bg-white px-3 font-mono text-sm tracking-widest focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-brand-ink">{t('expiryMonth')}</label>
-            <select
-              value={expMonth}
-              onChange={(e) => setExpMonth(Number(e.target.value))}
-              className="h-11 w-full rounded-xl border border-brand-border bg-white px-3 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
-            >
-              {MONTHS.map((m) => (
-                <option key={m} value={m}>{String(m).padStart(2, '0')}</option>
-              ))}
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-brand-ink">{t('expiryYear')}</label>
-            <select
-              value={expYear}
-              onChange={(e) => setExpYear(Number(e.target.value))}
-              className="h-11 w-full rounded-xl border border-brand-border bg-white px-3 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
-            >
-              {YEARS.map((y) => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {error && <p className="text-sm text-status-danger">{error}</p>}
-
-        <div className="flex gap-2 pt-2">
-          <button
-            type="submit"
-            disabled={!valid || submitting}
-            className="flex-1 rounded-full bg-brand-primary py-2.5 text-sm font-medium text-white transition hover:bg-brand-primaryDark disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {submitting ? t('savingCard') : t('saveCard')}
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={submitting}
-            className="rounded-full border border-brand-border px-5 py-2.5 text-sm font-medium text-brand-ink transition hover:bg-brand-cream/60 disabled:opacity-60"
-          >
-            {t('cancel')}
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-}
