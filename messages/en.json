@@ -402,6 +402,7 @@
     "serviceFee": "Service fee",
     "taxes": "Taxes",
     "total": "Total (SAR)",
+    "backToUnit": "Back to the unit page",
     "pendingConflict": "You already have an unpaid booking for this unit ({checkIn} → {checkOut}) that is holding these dates. Complete its payment, or cancel it to free the dates and book again.",
     "payPendingBooking": "Complete previous booking payment",
     "managePendingBooking": "View / cancel previous booking",
@@ -410,6 +411,7 @@
       "email": "Enter a valid email address",
       "agree": "You must agree to the terms and policies",
       "loginFirst": "Log in first to complete your booking",
+      "invalidDates": "The booking dates are invalid — please pick your dates again.",
       "genericFailed": "Failed to complete the transaction"
     }
   },
@@ -648,7 +650,7 @@
     "defaultCard": "Default card",
     "setAsDefault": "Set as default",
     "delete": "Delete",
-    "addNewCard": "Add new card",
+    "cardsSavedDuringPayment": "Cards are saved securely during checkout — tick \"save card\" in the payment form and it will appear here.",
     "secureNote": "Your data is protected and encrypted. We never store your full card number.",
     "transactionHistory": "Transaction history",
     "transactionCount": "{count} transactions",
@@ -658,15 +660,7 @@
     "yesDelete": "Yes, delete",
     "cancel": "Cancel",
     "defaultBadge": "Default",
-    "expiresOnLabel": "Expires",
-    "saveCardError": "Couldn't save the card, please try again.",
-    "close": "Close",
-    "cardType": "Card type",
-    "cardNumber": "Card number",
-    "expiryMonth": "Expiry month",
-    "expiryYear": "Expiry year",
-    "savingCard": "Saving...",
-    "saveCard": "Save card"
+    "expiresOnLabel": "Expires"
   },
   "favorites": {
     "title": "Your favorites",

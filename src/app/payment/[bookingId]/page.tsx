@@ -46,6 +46,12 @@ export default function PaymentPage() {
   useEffect(() => {
     if (initiated.current || !bookingId) return;
     initiated.current = true;
+    // Route param must be a plain numeric id — anything else would become
+    // NaN in the request body; fail fast to the error card instead.
+    if (!/^\d+$/.test(bookingId)) {
+      setLoading(false);
+      return;
+    }
     paymentsApi
       .initiate(bookingId)
       .then(setInfo)
@@ -93,7 +99,7 @@ export default function PaymentPage() {
         router.replace(`/booking/confirmation/${info.bookingId || bookingId}`);
         return;
       }
-      if (result.transactionUrl) {
+      if (result.transactionUrl && /^https:\/\//i.test(result.transactionUrl)) {
         window.location.assign(result.transactionUrl); // 3-DS challenge
         return;
       }
@@ -243,7 +249,8 @@ export default function PaymentPage() {
           </>
         )}
 
-        {errorMsg && <p className="text-sm text-status-danger">{errorMsg}</p>}
+        {/* Gateway messages arrive in English; dir="auto" keeps their punctuation ordered inside the RTL layout. */}
+        {errorMsg && <p dir="auto" className="text-sm text-status-danger">{errorMsg}</p>}
         <p className="text-center text-xs text-brand-muted">🔒 {t('secureNote')}</p>
       </div>
 

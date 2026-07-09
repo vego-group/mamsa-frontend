@@ -66,13 +66,16 @@ export default function BookingDetailsPage() {
             <Row label={t('taxes')} value={formatSAR(booking.price.tax)} />
             <hr className="border-brand-border" />
             <Row label={t('grandTotal')} value={formatSAR(booking.price.total)} bold />
-            <div className="flex items-center gap-2 rounded-xl bg-green-50 p-3 text-xs text-green-800">
-              <ShieldCheck className="h-4 w-4" />
-              <div>
-                <div className="font-semibold">{t('securePaymentTitle')}</div>
-                <div>{t('securePaymentBody')}</div>
+            {/* "Paid & confirmed" reassurance — only true once the payment actually went through. */}
+            {(booking.status === 'confirmed' || booking.status === 'completed') && (
+              <div className="flex items-center gap-2 rounded-xl bg-green-50 p-3 text-xs text-green-800">
+                <ShieldCheck className="h-4 w-4" />
+                <div>
+                  <div className="font-semibold">{t('securePaymentTitle')}</div>
+                  <div>{t('securePaymentBody')}</div>
+                </div>
               </div>
-            </div>
+            )}
           </Card>
 
           <Card className="space-y-2 p-3">

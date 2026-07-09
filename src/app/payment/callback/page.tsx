@@ -35,7 +35,9 @@ function CallbackHandler() {
     const moyasarId = search.get('id'); // Moyasar's payment id
     const moyasarStatus = search.get('status');
 
-    if (!pid || !moyasarId) {
+    // pid is OUR numeric payment id — a tampered/garbled value would turn
+    // into NaN in the verify body, so treat it the same as missing.
+    if (!pid || !/^\d+$/.test(pid) || !moyasarId) {
       setFailure(t('missingParams'));
       return;
     }
@@ -71,7 +73,8 @@ function CallbackHandler() {
           <XCircle className="h-7 w-7" />
         </div>
         <h1 className="text-xl font-bold text-brand-ink">{t('incompleteTitle')}</h1>
-        <p className="text-sm leading-relaxed text-brand-muted">{failure}</p>
+        {/* Gateway messages arrive in English; dir="auto" keeps their punctuation ordered inside the RTL layout. */}
+        <p dir="auto" className="text-sm leading-relaxed text-brand-muted">{failure}</p>
         <div className="flex w-full flex-col gap-2 pt-2">
           {retryBookingId != null && (
             <Button asChild size="lg">

@@ -671,18 +671,9 @@ export const accountApi = {
       ? withLatency(mockApi.account.getCards())
       : http<Record<string, unknown>[]>('/user/cards').then((rows) => rows.map(mapCard)),
 
-  addCard: (input: { brand: SavedCard['brand']; last4: string; expMonth: number; expYear: number }) =>
-    USE_MOCK
-      ? withLatency(Promise.resolve({ ok: true as const }))
-      : http<unknown>('/user/cards', {
-          method: 'POST',
-          body: JSON.stringify({
-            brand: input.brand,
-            last4: input.last4,
-            exp_month: input.expMonth,
-            exp_year: input.expYear,
-          }),
-        }).then(() => ({ ok: true as const })),
+  // NOTE: no manual "add card" — cards are tokenised by the Moyasar hosted
+  // form during checkout (save_card) and persisted server-side at verify time.
+  // Full card numbers must never be collected by our own UI (PCI scope).
 
   deleteCard: (id: string) =>
     USE_MOCK
