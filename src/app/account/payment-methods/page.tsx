@@ -3,9 +3,10 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { ArrowRight, ArrowUpRight, ArrowDownLeft, Gift, Wifi, Trash2 } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, ArrowDownLeft, Gift, Plus, Wifi, Trash2, X } from 'lucide-react';
 import { Card } from '@/components/ui/card';
-import { accountApi } from '@/lib/api/client';
+import { accountApi, paymentsApi, type PaymentsConfig } from '@/lib/api/client';
+import { createCardToken } from '@/lib/payments/moyasar';
 import { formatSAR, formatDate } from '@/lib/utils/format';
 import type { SavedCard, Transaction, TransactionType } from '@/types';
 import { cn } from '@/lib/utils/cn';
@@ -15,6 +16,17 @@ const BRAND_NAME: Record<SavedCard['brand'], string> = {
   mastercard: 'Mastercard',
   mada: 'mada',
 };
+
+const CURRENT_YEAR = new Date().getFullYear();
+const YEARS = Array.from({ length: 11 }, (_, i) => CURRENT_YEAR + i);
+const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
+
+/** Scheme from the leading digits — visa ^4, mastercard ^5[1-5]|^2[2-7], else mada. */
+function detectBrand(digits: string): SavedCard['brand'] {
+  if (/^4/.test(digits)) return 'visa';
+  if (/^(5[1-5]|2[2-7])/.test(digits)) return 'mastercard';
+  return 'mada';
+}
 
 export default function PaymentMethodsPage() {
   const t = useTranslations('paymentMethods');
@@ -30,6 +42,7 @@ export default function PaymentMethodsPage() {
   const [cards, setCards] = useState<SavedCard[]>([]);
   const [txns, setTxns] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAdd, setShowAdd] = useState(false);
   const [confirmCard, setConfirmCard] = useState<SavedCard | null>(null);
 
   useEffect(() => {
@@ -98,9 +111,13 @@ export default function PaymentMethodsPage() {
               </div>
             ))}
 
-            {/* Cards are tokenised by the Moyasar hosted form during checkout
-                ("save card" checkbox) — full card numbers never touch our pages. */}
-            <p className="rounded-2xl border border-dashed border-brand-border bg-white p-4 text-center text-xs leading-relaxed text-brand-muted">
+            <button
+              onClick={() => setShowAdd(true)}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-brand-border bg-white p-4 text-sm font-medium text-brand-primary transition hover:border-brand-primary hover:bg-brand-cream/40"
+            >
+              <Plus className="h-4 w-4" /> {t('addNewCard')}
+            </button>
+            <p className="px-1 text-center text-xs leading-relaxed text-brand-muted">
               {t('cardsSavedDuringPayment')}
             </p>
           </div>
@@ -160,6 +177,17 @@ export default function PaymentMethodsPage() {
           )}
         </Card>
       </div>
+
+      {showAdd && (
+        <AddCardModal
+          onClose={() => setShowAdd(false)}
+          onSaved={async () => {
+            await refreshCards();
+            setShowAdd(false);
+          }}
+          t={t}
+        />
+      )}
 
       {confirmCard && (
         <ConfirmDeleteModal
@@ -255,6 +283,173 @@ function CreditCardVisual({ card, t }: { card: SavedCard; t: T }) {
         </div>
         <div className="text-lg font-bold italic tracking-tight">{BRAND_NAME[card.brand]}</div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Manual add-card — PCI-safe flow (NEXTJS-SAVED-CARDS.md §2.3):
+ * live keys → the PAN goes from the browser straight to api.moyasar.com/v1/tokens
+ * and only the token id is sent to our API; simulate mode (no gateway keys) →
+ * metadata-only save. Card fields live only in this modal's state — unmounting
+ * on close/save wipes them.
+ */
+function AddCardModal({ onClose, onSaved, t }: { onClose: () => void; onSaved: () => Promise<void>; t: T }) {
+  const [cfg, setCfg] = useState<PaymentsConfig | null>(null);
+  const [name, setName] = useState('');
+  const [number, setNumber] = useState('');
+  const [month, setMonth] = useState('12');
+  const [year, setYear] = useState(String(CURRENT_YEAR + 1));
+  const [cvc, setCvc] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Gateway flags decide the save path and whether to show the test-card hint.
+  useEffect(() => {
+    paymentsApi.config().then(setCfg).catch(() => setCfg(null));
+  }, []);
+
+  const digits = number.replace(/\D/g, '');
+  const valid = name.trim().length > 0 && digits.length === 16 && /^\d{3,4}$/.test(cvc);
+  const showTestHint = Boolean(cfg && (cfg.testMode || cfg.publishableKey.startsWith('pk_test')));
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!valid || submitting) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const config = cfg ?? (await paymentsApi.config());
+      if (config.testMode) {
+        // Simulate mode — no gateway; the backend accepts metadata only.
+        await accountApi.saveCardFromToken({
+          brand: detectBrand(digits),
+          last4: digits.slice(-4),
+          expMonth: Number(month),
+          expYear: Number(year),
+        });
+      } else {
+        const tok = await createCardToken(
+          config.publishableKey,
+          { name: name.trim(), number: digits, cvc, month, year },
+          `${window.location.origin}/account/payment-methods`,
+        );
+        await accountApi.saveCardFromToken({ token: tok.id });
+      }
+      await onSaved();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('saveCardError'));
+      setSubmitting(false);
+    }
+  };
+
+  const inputCls =
+    'h-11 w-full rounded-xl border border-brand-border bg-white px-3 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20';
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <form onSubmit={submit} className="relative w-full max-w-md space-y-4 rounded-2xl bg-white p-6 shadow-xl">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold text-brand-ink">{t('addNewCard')}</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-brand-muted transition hover:bg-brand-cream"
+            aria-label={t('close')}
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {showTestHint && (
+          <p dir="ltr" className="rounded-xl bg-amber-50 p-2.5 text-center text-xs text-amber-800">
+            {t('testCardHint')}: 4111 1111 1111 1111
+          </p>
+        )}
+
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-brand-ink">{t('cardholderName')}</label>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={t('cardholderPlaceholder')}
+            autoComplete="cc-name"
+            className={inputCls}
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-brand-ink">{t('cardNumber')}</label>
+          <input
+            value={digits.replace(/(.{4})/g, '$1 ').trim()}
+            onChange={(e) => setNumber(e.target.value)}
+            inputMode="numeric"
+            autoComplete="cc-number"
+            maxLength={19}
+            dir="ltr"
+            placeholder="0000 0000 0000 0000"
+            className={cn(inputCls, 'text-start font-mono tracking-widest')}
+          />
+        </div>
+
+        <div className="grid grid-cols-3 gap-3">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-brand-ink">{t('expiryMonth')}</label>
+            <select value={month} onChange={(e) => setMonth(e.target.value)} className={inputCls}>
+              {MONTHS.map((m) => (
+                <option key={m} value={String(m).padStart(2, '0')}>{String(m).padStart(2, '0')}</option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-brand-ink">{t('expiryYear')}</label>
+            <select value={year} onChange={(e) => setYear(e.target.value)} className={inputCls}>
+              {YEARS.map((y) => (
+                <option key={y} value={String(y)}>{y}</option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-brand-ink">CVC</label>
+            <input
+              value={cvc}
+              onChange={(e) => setCvc(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              inputMode="numeric"
+              autoComplete="cc-csc"
+              maxLength={4}
+              dir="ltr"
+              placeholder="123"
+              className={cn(inputCls, 'text-start')}
+            />
+          </div>
+        </div>
+
+        {error && <p dir="auto" className="text-sm text-status-danger">{error}</p>}
+
+        <div className="flex gap-2 pt-2">
+          <button
+            type="submit"
+            disabled={!valid || submitting}
+            className="flex-1 rounded-full bg-brand-primary py-2.5 text-sm font-medium text-white transition hover:bg-brand-primaryDark disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {submitting ? t('savingCard') : t('saveCard')}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={submitting}
+            className="rounded-full border border-brand-border px-5 py-2.5 text-sm font-medium text-brand-ink transition hover:bg-brand-cream/60 disabled:opacity-60"
+          >
+            {t('cancel')}
+          </button>
+        </div>
+
+        <p className="flex items-start gap-2 text-[11px] leading-relaxed text-brand-muted">
+          <span className="mt-0.5">🔒</span>
+          {t('tokenizedNote')}
+        </p>
+      </form>
     </div>
   );
 }
