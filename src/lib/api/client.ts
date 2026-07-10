@@ -534,7 +534,24 @@ function mapBookingSummary(raw: unknown): PaymentBookingSummary | null {
   };
 }
 
+/** Gateway flags for pages that tokenise outside checkout (wallet add-card). */
+export interface PaymentsConfig {
+  publishableKey: string;
+  testMode: boolean;
+  currency: string;
+}
+
 export const paymentsApi = {
+  /** `GET /payments/config` — publishable key + test-mode flag (auth). */
+  config: (): Promise<PaymentsConfig> =>
+    USE_MOCK
+      ? withLatency(Promise.resolve<PaymentsConfig>({ publishableKey: '', testMode: true, currency: 'SAR' }))
+      : http<Record<string, unknown>>('/payments/config').then((d) => ({
+          publishableKey: String(d.publishable_key ?? ''),
+          testMode: Boolean(d.test_mode),
+          currency: String(d.currency ?? 'SAR'),
+        })),
+
   initiate: (bookingId: string): Promise<InitiatePaymentResult> =>
     USE_MOCK
       ? // Mock mode has no gateway — testMode makes the payment page show the
@@ -671,9 +688,35 @@ export const accountApi = {
       ? withLatency(mockApi.account.getCards())
       : http<Record<string, unknown>[]>('/user/cards').then((rows) => rows.map(mapCard)),
 
-  // NOTE: no manual "add card" — cards are tokenised by the Moyasar hosted
-  // form during checkout (save_card) and persisted server-side at verify time.
-  // Full card numbers must never be collected by our own UI (PCI scope).
+  /**
+   * `POST /user/cards/from-token` — register a card the browser already
+   * tokenised directly with Moyasar (live keys), or metadata-only in simulate
+   * mode. The PAN must NEVER reach the Mamsa API — only the token id does;
+   * the backend re-fetches it with the secret key, trusting nothing else.
+   */
+  saveCardFromToken: (
+    input: { token: string } | { brand: SavedCard['brand']; last4: string; expMonth: number; expYear: number },
+  ): Promise<SavedCard> =>
+    USE_MOCK
+      ? withLatency(
+          Promise.resolve<SavedCard>({
+            id: String(Date.now()),
+            brand: 'token' in input ? 'visa' : input.brand,
+            last4: 'token' in input ? '1111' : input.last4,
+            expMonth: 'token' in input ? 12 : input.expMonth,
+            expYear: 'token' in input ? new Date().getFullYear() + 2 : input.expYear,
+            isDefault: false,
+            chargeable: 'token' in input,
+          }),
+        )
+      : http<Record<string, unknown>>('/user/cards/from-token', {
+          method: 'POST',
+          body: JSON.stringify(
+            'token' in input
+              ? { token: input.token }
+              : { brand: input.brand, last4: input.last4, exp_month: input.expMonth, exp_year: input.expYear },
+          ),
+        }).then(mapCard),
 
   deleteCard: (id: string) =>
     USE_MOCK

@@ -10,6 +10,51 @@
 import type { InitiatePaymentResult } from '@/lib/api/client';
 
 const MOYASAR_VERSION = '1.14.0';
+const MOYASAR_TOKENS_URL = 'https://api.moyasar.com/v1/tokens';
+
+export interface CardTokenInput {
+  /** Cardholder name as printed on the card. */
+  name: string;
+  /** Digits only. */
+  number: string;
+  cvc: string;
+  /** e.g. "12" */
+  month: string;
+  /** 4 digits, e.g. "2028" */
+  year: string;
+}
+
+/**
+ * Exchanges card details for a Moyasar token — BROWSER → Moyasar directly.
+ * The PAN never touches the Mamsa API; only the returned token id is sent to
+ * `POST /user/cards/from-token`. `callbackUrl` is required by Moyasar.
+ * Throws Moyasar's own (already localised) message on validation failure.
+ */
+export async function createCardToken(
+  publishableKey: string,
+  card: CardTokenInput,
+  callbackUrl: string,
+): Promise<{ id: string }> {
+  const res = await fetch(MOYASAR_TOKENS_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: 'Basic ' + btoa(`${publishableKey}:`),
+    },
+    body: JSON.stringify({
+      name: card.name,
+      number: card.number,
+      cvc: card.cvc,
+      month: card.month,
+      year: card.year,
+      callback_url: callbackUrl,
+    }),
+  });
+  const tok: unknown = await res.json().catch(() => null);
+  const t = (tok ?? {}) as { id?: string; message?: string };
+  if (!res.ok || !t.id) throw new Error(t.message || 'بيانات البطاقة غير صحيحة');
+  return { id: t.id };
+}
 
 /** Injects moyasar.css + moyasar.js once; resolves when the script is ready. */
 export function loadMoyasarAssets(locale: 'ar' | 'en' = 'ar'): Promise<void> {
