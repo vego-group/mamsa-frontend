@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CancelBookingDialog } from '@/components/features/booking/CancelBookingDialog';
+import { PriceBreakdown } from '@/components/features/booking/PriceBreakdown';
 import { ContactHostDialog } from '@/components/features/booking/ContactHostDialog';
 import { ReviewDialog } from '@/components/features/reviews/ReviewDialog';
 import { bookingsApi, reviewsApi } from '@/lib/api/client';
@@ -60,12 +61,18 @@ export default function BookingDetailsPage() {
         <aside className="space-y-4">
           <Card className="space-y-3 p-5">
             <h2 className="font-semibold text-brand-ink">{t('priceSummary')}</h2>
-            <Row label={t('priceLine', { price: booking.price.pricePerNight, nights: booking.price.nights })} value={formatSAR(booking.price.subtotal)} />
-            <Row label={t('serviceFee')} value={formatSAR(booking.price.serviceFee)} />
-            <Row label={t('cleaningFee')} value={formatSAR(booking.price.cleaningFee)} />
-            <Row label={t('taxes')} value={formatSAR(booking.price.tax)} />
-            <hr className="border-brand-border" />
-            <Row label={t('grandTotal')} value={formatSAR(booking.price.total)} bold />
+            <PriceBreakdown
+              price={booking.price}
+              labels={{
+                priceLine: t('priceLine', { price: booking.price.pricePerNight, nights: booking.price.nights }),
+                cleaningFee: t('cleaningFee'),
+                serviceFee: t('serviceFee'),
+                taxes: t('taxes'),
+                total: t('grandTotal'),
+              }}
+              format={formatSAR}
+              serviceFeeFirst
+            />
             {/* "Paid & confirmed" reassurance — only true once the payment actually went through. */}
             {(booking.status === 'confirmed' || booking.status === 'completed') && (
               <div className="flex items-center gap-2 rounded-xl bg-green-50 p-3 text-xs text-green-800">
@@ -212,15 +219,6 @@ export default function BookingDetailsPage() {
         onClose={() => setReviewOpen(false)}
         onSubmitted={() => reviewsApi.getForBooking(booking.id).then(setReview)}
       />
-    </div>
-  );
-}
-
-function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
-  return (
-    <div className={`flex justify-between text-sm ${bold ? 'text-base font-bold' : ''}`}>
-      <span className={bold ? '' : 'text-brand-muted'}>{label}</span>
-      <span>{value}</span>
     </div>
   );
 }

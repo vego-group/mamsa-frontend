@@ -12,10 +12,10 @@ import Image from 'next/image';
 import { Check } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { authApi } from '@/lib/api/client';
-import { BRAND, OTP_CONFIG } from '@/lib/constants/brand';
+import { BRAND } from '@/lib/constants/brand';
 import { isValidSaudiPhone, normalizeSaudiPhone } from '@/lib/utils/phone';
 import { OnboardingForm, type PartnerType } from '@/components/features/auth/OnboardingForm';
-import { OnboardingOtp } from '@/components/features/auth/OnboardingOtp';
+import { OtpVerificationForm } from '@/components/features/auth/OtpVerificationForm';
 import { LanguageToggle } from '@/components/shared/LanguageToggle';
 
 type Step = 'form' | 'otp' | 'success';
@@ -103,12 +103,11 @@ export default function PartnerOnboardingPage() {
             )}
 
             {step === 'otp' && (
-              <OnboardingOtp
-                length={OTP_CONFIG.length}
+              <OtpVerificationForm
+                variant="onboarding"
                 displayPhone={phone}
-                resendCooldown={OTP_CONFIG.resendCooldownSeconds}
                 debugOtp={debugOtp}
-                onVerify={handleVerify}
+                onSubmit={handleVerify}
                 onResend={() => authApi.resendOtp(phone05)}
               />
             )}

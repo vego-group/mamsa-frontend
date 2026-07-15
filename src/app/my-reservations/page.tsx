@@ -8,6 +8,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { BookingCard } from '@/components/features/booking/BookingCard';
 import { Button } from '@/components/ui/button';
 import { bookingsApi } from '@/lib/api/client';
+import { daysUntilCheckIn } from '@/lib/cancellation/engine';
+import { LoadError } from '@/components/shared/LoadError';
 import { Skeleton } from '@/components/ui/separator';
 import type { Booking } from '@/types';
 
@@ -15,13 +17,19 @@ export default function MyReservationsPage() {
   const t = useTranslations('myReservations');
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  // Bumping this re-runs the fetch effect — the retry path after a failure.
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    bookingsApi.list().then((data) => {
-      setBookings(data);
-      setLoading(false);
-    });
-  }, []);
+    setLoading(true);
+    setLoadError(false);
+    bookingsApi
+      .list()
+      .then(setBookings)
+      .catch(() => setLoadError(true))
+      .finally(() => setLoading(false));
+  }, [attempt]);
 
   // Swap the cancelled booking in place — the useMemo re-categorization moves
   // its card from "upcoming/active" to "cancelled" without a page reload.
@@ -36,8 +44,7 @@ export default function MyReservationsPage() {
    * - ملغاة:   cancelled
    */
   const categorized = useMemo(() => {
-    const now = Date.now();
-    const TWO_WEEKS = 14 * 24 * 60 * 60 * 1000;
+    const now = new Date();
     const upcoming: Booking[] = [];
     const active: Booking[] = [];
     const completed: Booking[] = [];
@@ -46,11 +53,10 @@ export default function MyReservationsPage() {
     for (const b of bookings) {
       if (b.status === 'cancelled') cancelled.push(b);
       else if (b.status === 'completed') completed.push(b);
-      else {
-        const diff = new Date(b.checkInDate).getTime() - now;
-        if (diff > TWO_WEEKS) upcoming.push(b);
-        else active.push(b);
-      }
+      // Days until check-in come from the cancellation engine so the day
+      // boundary is the property's (Asia/Riyadh), same as refund cutoffs.
+      else if (daysUntilCheckIn(b.checkInDate, now) > 14) upcoming.push(b);
+      else active.push(b);
     }
     return { upcoming, active, completed, cancelled };
   }, [bookings]);
@@ -75,6 +81,10 @@ export default function MyReservationsPage() {
             {Array.from({ length: 2 }).map((_, i) => (
               <Skeleton key={i} className="h-44 rounded-2xl" />
             ))}
+          </div>
+        ) : loadError ? (
+          <div className="mt-6">
+            <LoadError onRetry={() => setAttempt((a) => a + 1)} />
           </div>
         ) : (
           <>

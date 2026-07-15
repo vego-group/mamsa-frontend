@@ -36,6 +36,10 @@ const BUDGET_FALLBACK = [
   { min: 0, max: 500 },
 ];
 
+// ⚠️ TEMPORARY (pre-launch): hides "الأكثر طلبًا" + "حسب الميزانية" +
+// "تعليقات النزلاء" until go-live. Flip to true to bring them all back.
+const SHOW_PRELAUNCH_HIDDEN_SECTIONS = false;
+
 const HOW_IT_WORKS_ICONS = [
   <Search key="s" className="h-5 w-5" />,
   <Compass key="c" className="h-5 w-5" />,
@@ -90,9 +94,7 @@ export default async function HomePage() {
         />
         <div className="container mx-auto px-4 py-20 text-center text-white md:py-32">
           <h1 className="mb-4 text-3xl font-bold leading-tight md:text-5xl">
-            {t('heroTitle1')}
-            <br />
-            {t('heroTitle2')}
+            {t('heroTitle')}
           </h1>
           <p className="mx-auto mb-8 max-w-2xl text-sm opacity-90 md:text-base">
             {t('heroSubtitle')}
@@ -132,6 +134,7 @@ export default async function HomePage() {
       </section>
 
       {/* Featured / Most requested */}
+      {SHOW_PRELAUNCH_HIDDEN_SECTIONS && (
       <section className="container mx-auto space-y-6 px-4 py-10">
         <SectionHeader
           title={t('featuredTitle')}
@@ -145,8 +148,10 @@ export default async function HomePage() {
           ))}
         </div>
       </section>
+      )}
 
       {/* By budget */}
+      {SHOW_PRELAUNCH_HIDDEN_SECTIONS && (
       <section className="container mx-auto space-y-4 px-4 py-10">
         <h2 className="text-2xl font-bold text-brand-ink">{t('budgetTitle')}</h2>
         <p className="text-sm text-brand-muted">{t('budgetSubtitle')}</p>
@@ -171,6 +176,7 @@ export default async function HomePage() {
           ))}
         </div>
       </section>
+      )}
 
       {/* Search by location */}
       <section className="container mx-auto space-y-6 px-4 py-10">
@@ -222,7 +228,11 @@ export default async function HomePage() {
 
       {/* Trust + testimonial */}
       <section className="bg-brand-ink py-16 text-white">
-        <div className="container mx-auto grid items-center gap-12 px-4 md:grid-cols-2">
+        <div
+          className={`container mx-auto grid items-center gap-12 px-4 ${
+            SHOW_PRELAUNCH_HIDDEN_SECTIONS ? 'md:grid-cols-2' : ''
+          }`}
+        >
           {/* stats */}
           <div>
             <p className="mb-2 text-sm text-brand-sage">{t('trustEyebrow')}</p>
@@ -239,7 +249,7 @@ export default async function HomePage() {
           </div>
 
           {/* testimonial */}
-          <TestimonialCarousel items={testimonials} />
+          {SHOW_PRELAUNCH_HIDDEN_SECTIONS && <TestimonialCarousel items={testimonials} />}
         </div>
       </section>
     </div>

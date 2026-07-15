@@ -14,6 +14,7 @@ import type {
   Review,
   User,
   CancellationTemplate,
+  CancellationPolicy,
   SavedCard,
   Transaction,
 } from '@/types';
@@ -26,6 +27,20 @@ const DEFAULT_COUNTRY = 'السعودية';
 
 interface RawImage { id: number; url: string; is_main: boolean }
 interface RawOwner { id: number; name: string }
+
+/**
+ * The tiered cancellation policy as the backend's refund engine sees it.
+ * Appears as `cancellation_policy_details` on unit resources (live policy)
+ * and as `policy_snapshot` on bookings (frozen at payment — FR-036); both
+ * share this exact shape, built from the same source of truth server-side.
+ */
+interface RawPolicyDetails {
+  template?: string;
+  name?: string;
+  /** Booking snapshots only. */
+  checkin_at?: string;
+  tiers?: Array<{ min_hours_before_checkin?: number; refund_percent?: number; label?: string }>;
+}
 
 export interface RawUnit {
   id: number | string;
@@ -44,7 +59,9 @@ export interface RawUnit {
   description?: string;
   checkin_time?: string;
   checkout_time?: string;
+  /** DEPRECATED legacy enum (e.g. "48_hours") — read `cancellation_policy_details` instead. */
   cancellation_policy?: string;
+  cancellation_policy_details?: RawPolicyDetails | null;
   status?: string;
   approval_status?: string;
   images?: RawImage[];
@@ -86,6 +103,12 @@ export interface RawBooking {
     tier_label?: string;
   } | null;
   payment?: { method?: string; last4?: string } | null;
+  /**
+   * FR-036: the policy version FROZEN at payment-confirmation time — the exact
+   * object the backend refund engine computes from. `null` while the booking
+   * is unpaid (no snapshot exists yet).
+   */
+  policy_snapshot?: RawPolicyDetails | null;
   /** Present (non-null) once the guest has reviewed this booking. Exact shape TBD — we only check presence. */
   review?: unknown;
   created_at?: string;
@@ -153,6 +176,36 @@ function mapTemplate(policy?: string): CancellationTemplate {
   return TEMPLATE_MAP[policy ?? ''] ?? 'moderate';
 }
 
+/**
+ * Builds a full tiered `CancellationPolicy` from the backend's shared
+ * `RawPolicyDetails` shape — `cancellation_policy_details` on units (live
+ * policy, FR-021) and `policy_snapshot` on bookings (frozen at payment,
+ * FR-036) both use it. The backend returns the EXACT tiers its refund engine
+ * computes from, so display always matches `cancellation-preview`/refunds
+ * even if the shared templates are re-tuned later. Returns null when the
+ * field is absent (mock mode, or an unpaid booking with no snapshot yet) —
+ * callers fall back to `getPolicyByTemplate(the legacy enum)`.
+ */
+function mapPolicyDetails(raw: RawPolicyDetails | null | undefined): CancellationPolicy | null {
+  if (!raw?.tiers?.length) return null;
+  const template = mapTemplate(raw.template);
+  const base = getPolicyByTemplate(template);
+  return {
+    template,
+    labelAr: raw.name || base.labelAr,
+    descriptionAr: base.descriptionAr,
+    // Backend tiers are in hours before check-in; the engine/display use days.
+    tiers: raw.tiers
+      .map((t) => ({
+        minDaysBeforeCheckIn: Number(t.min_hours_before_checkin ?? 0) / 24,
+        refundPercent: Number(t.refund_percent ?? 0),
+        labelAr: t.label || `${Number(t.refund_percent ?? 0)}%`,
+      }))
+      .sort((a, b) => b.minDaysBeforeCheckIn - a.minDaysBeforeCheckIn),
+    postCheckInBehavior: 'hidden',
+  };
+}
+
 function mapFeatures(features?: string[]): UnitAmenity[] {
   return (features ?? []).map((f) => ({ key: FEATURE_KEYS[f] ?? f, labelAr: f }));
 }
@@ -191,6 +244,7 @@ export function mapUnit(u: RawUnit): Unit {
     checkInTime: hhmm(u.checkin_time, '15:00'),
     checkOutTime: hhmm(u.checkout_time, '12:00'),
     cancellationPolicy: mapTemplate(u.cancellation_policy),
+    cancellationPolicyDetails: mapPolicyDetails(u.cancellation_policy_details),
     createdAt: u.created_at ?? new Date().toISOString(),
   };
 }
@@ -226,7 +280,10 @@ export function mapBooking(b: RawBooking): Booking {
       tax: Number(p.taxes ?? 0),
       total: Number(p.total ?? b.total_amount ?? 0),
     },
-    policySnapshot: getPolicyByTemplate(mapTemplate(unit?.cancellation_policy)),
+    // Prefer the API's frozen snapshot (FR-036); the unit's embedded policy is
+    // a deprecated legacy enum — used ONLY as the pre-payment fallback.
+    policySnapshot:
+      mapPolicyDetails(b.policy_snapshot) ?? getPolicyByTemplate(mapTemplate(unit?.cancellation_policy)),
     isReviewed: Boolean(b.review),
     refund: b.cancellation
       ? {

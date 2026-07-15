@@ -11,6 +11,8 @@ import { Label } from '@/components/ui/label';
 import { PhoneInput } from '@/components/ui/phone-input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { CancellationPolicyDisplay } from '@/components/features/booking/CancellationPolicyDisplay';
+import { PriceBreakdown } from '@/components/features/booking/PriceBreakdown';
+import { LoadError } from '@/components/shared/LoadError';
 import { unitsApi, bookingsApi } from '@/lib/api/client';
 import { useAuthStore } from '@/stores/auth';
 import { useUiStore } from '@/stores/ui';
@@ -35,6 +37,9 @@ export function CheckoutPageClient() {
   const openAuth = useUiStore((s) => s.openAuth);
 
   const [unit, setUnit] = useState<Unit | null>(null);
+  const [unitLoadError, setUnitLoadError] = useState(false);
+  // Bumping this re-runs the unit fetch — the retry path after a failure.
+  const [attempt, setAttempt] = useState(0);
   const [agreed, setAgreed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,8 +54,12 @@ export function CheckoutPageClient() {
   const [phone, setPhone] = useState('');
 
   useEffect(() => {
-    unitsApi.getById(params.unitId).then(setUnit);
-  }, [params.unitId]);
+    setUnitLoadError(false);
+    unitsApi
+      .getById(params.unitId)
+      .then(setUnit)
+      .catch(() => setUnitLoadError(true));
+  }, [params.unitId, attempt]);
 
   // Populate once the account loads, without clobbering anything the user already typed.
   useEffect(() => {
@@ -60,6 +69,14 @@ export function CheckoutPageClient() {
     setEmail((v) => v || user.email);
     setPhone((v) => v || (user.phone.startsWith('+966') ? user.phone.slice(4) : user.phone));
   }, [user]);
+
+  if (unitLoadError) {
+    return (
+      <div className="container mx-auto px-4 py-16">
+        <LoadError onRetry={() => setAttempt((a) => a + 1)} />
+      </div>
+    );
+  }
 
   if (!unit) return <div className="container mx-auto p-10">{tc('loading')}</div>;
 
@@ -193,7 +210,10 @@ export function CheckoutPageClient() {
 
         <Card className="space-y-3 p-5">
           <h2 className="font-semibold">{t('cancellationPolicyTitle')}</h2>
-          <CancellationPolicyDisplay policy={getPolicyByTemplate(unit.cancellationPolicy)} showHeader={false} />
+          <CancellationPolicyDisplay
+            policy={unit.cancellationPolicyDetails ?? getPolicyByTemplate(unit.cancellationPolicy)}
+            showHeader={false}
+          />
         </Card>
 
         <Card className="space-y-2 p-5 text-sm">
@@ -258,12 +278,25 @@ export function CheckoutPageClient() {
           </div>
           <hr className="border-brand-border" />
           <h3 className="font-semibold">{t('priceDetails')}</h3>
-          <Row label={t('priceLine', { price: unit.pricePerNight, nights })} value={formatSAR(subtotal)} />
-          <Row label={t('cleaningFee')} value={formatSAR(cleaning)} />
-          <Row label={t('serviceFee')} value={formatSAR(serviceFee)} />
-          <Row label={t('taxes')} value={formatSAR(tax)} />
-          <hr className="border-brand-border" />
-          <Row label={t('total')} value={formatSAR(total)} bold />
+          <PriceBreakdown
+            price={{
+              pricePerNight: unit.pricePerNight,
+              nights,
+              subtotal,
+              cleaningFee: cleaning,
+              serviceFee,
+              tax,
+              total,
+            }}
+            labels={{
+              priceLine: t('priceLine', { price: unit.pricePerNight, nights }),
+              cleaningFee: t('cleaningFee'),
+              serviceFee: t('serviceFee'),
+              taxes: t('taxes'),
+              total: t('total'),
+            }}
+            format={formatSAR}
+          />
         </Card>
       </aside>
     </div>

@@ -16,10 +16,43 @@ export default function ConfirmationPage() {
   const tc = useTranslations('common');
   const { bookingId } = useParams<{ bookingId: string }>();
   const [booking, setBooking] = useState<Booking | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  // Bumping this re-runs the fetch effect — the retry path after a failure.
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    if (bookingId) bookingsApi.getById(bookingId).then(setBooking);
-  }, [bookingId]);
+    if (!bookingId) return;
+    setLoadError(false);
+    bookingsApi
+      .getById(bookingId)
+      .then(setBooking)
+      .catch(() => setLoadError(true));
+  }, [bookingId, attempt]);
+
+  // The user only lands here AFTER a server-verified successful payment, so
+  // a details-fetch failure must NEVER read like a failed payment — reassure
+  // first, then offer retry / reservations.
+  if (loadError && !booking) {
+    return (
+      <div className="container mx-auto max-w-2xl px-4 py-12">
+        <Card className="space-y-5 p-8 text-center">
+          <CheckCircle2 className="mx-auto h-16 w-16 text-status-success" />
+          <div>
+            <h1 className="text-2xl font-bold text-brand-ink">{t('paidTitle')}</h1>
+            <p className="mt-2 text-sm leading-relaxed text-brand-muted">{t('paidDetailsUnavailable')}</p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" className="flex-1" onClick={() => setAttempt((a) => a + 1)}>
+              {tc('retry')}
+            </Button>
+            <Button asChild className="flex-1">
+              <Link href="/my-reservations">{t('myReservations')}</Link>
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   if (!booking) return <div className="container mx-auto p-10">{tc('loading')}</div>;
 

@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { PhoneInput } from '@/components/ui/phone-input';
 import { makeLoginSchema, type LoginFormValues } from '@/lib/validation/schemas';
 import { normalizeSaudiPhone, formatPhoneDisplay, toSaudiLocal } from '@/lib/utils/phone';
-import { OtpStep } from './OtpStep';
+import { OtpVerificationForm } from './OtpVerificationForm';
 
 export function LoginDialog() {
   const t = useTranslations('auth.login');
@@ -154,11 +154,10 @@ export function LoginDialog() {
         )}
 
         {step === 'otp' && (
-          <OtpStep
-            phone={phone}
+          <OtpVerificationForm
             displayPhone={formatPhoneDisplay(phone)}
             debugOtp={debugOtp}
-            onVerify={onVerifyOtp}
+            onSubmit={onVerifyOtp}
             onResend={() => authApi.resendOtp(toSaudiLocal(phone)!, 'login')}
             onBack={() => setStep('phone')}
           />

@@ -41,14 +41,41 @@ function makeBooking(overrides: Partial<Booking> = {}): Booking {
   };
 }
 
-describe('daysUntilCheckIn', () => {
+describe('daysUntilCheckIn (Riyadh-midnight boundary)', () => {
   it('returns positive value when check-in is in the future', () => {
+    // Check-in day starts at 2026-07-10T00:00 Asia/Riyadh = 2026-07-09T21:00Z,
+    // i.e. exactly 8.875 days after 2026-07-01T00:00Z — on ANY machine timezone.
     const d = daysUntilCheckIn('2026-07-10', new Date('2026-07-01T00:00:00Z'));
-    expect(d).toBeCloseTo(9, 1);
+    expect(d).toBeCloseTo(8.875, 3);
   });
   it('returns 0 or less at the day of check-in', () => {
     const d = daysUntilCheckIn('2026-07-01', new Date('2026-07-01T12:00:00Z'));
     expect(d).toBeLessThanOrEqual(0);
+  });
+  it('is exactly 0 at property midnight regardless of viewer timezone', () => {
+    const d = daysUntilCheckIn('2026-07-10', new Date('2026-07-09T21:00:00Z'));
+    expect(d).toBe(0);
+  });
+});
+
+describe('Riyadh-based policy cutoffs flip at the exact boundary instant', () => {
+  // Check-in 2026-07-15 → property midnight = 2026-07-14T21:00:00Z.
+  // Flexible policy: ≥7 days → 100%, 3–7 days → 50%. The 7-day cutoff
+  // instant is therefore 2026-07-07T21:00:00Z for every user worldwide.
+  it('one minute BEFORE the 7-day cutoff → still 100% refund', () => {
+    const b = makeBooking({ checkInDate: '2026-07-15' });
+    const p = previewCancellation(b, new Date('2026-07-07T20:59:00Z'));
+    expect(p.refundPercent).toBe(100);
+  });
+  it('one minute AFTER the 7-day cutoff → drops to 50% refund', () => {
+    const b = makeBooking({ checkInDate: '2026-07-15' });
+    const p = previewCancellation(b, new Date('2026-07-07T21:01:00Z'));
+    expect(p.refundPercent).toBe(50);
+  });
+  it('cancellability flips exactly at property midnight on the check-in day', () => {
+    const b = makeBooking({ checkInDate: '2026-07-15' });
+    expect(isBookingCancellable(b, new Date('2026-07-14T20:59:00Z'))).toBe(true);
+    expect(isBookingCancellable(b, new Date('2026-07-14T21:00:00Z'))).toBe(false);
   });
 });
 

@@ -15,7 +15,7 @@ import { useAuthStore } from '@/stores/auth';
 import { accountApi } from '@/lib/api/client';
 import { makeChangePhoneSchema, type ChangePhoneValues } from '@/lib/validation/schemas';
 import { formatPhoneDisplay, normalizeSaudiPhone, toSaudiLocal } from '@/lib/utils/phone';
-import { OtpStep } from '@/components/features/auth/OtpStep';
+import { OtpVerificationForm } from '@/components/features/auth/OtpVerificationForm';
 
 export default function ChangePhonePage() {
   const t = useTranslations('account.phone');
@@ -116,11 +116,10 @@ export default function ChangePhonePage() {
             </Button>
           </form>
         ) : (
-          <OtpStep
-            phone={newPhone}
+          <OtpVerificationForm
             displayPhone={formatPhoneDisplay(newPhone)}
             debugOtp={debugOtp}
-            onVerify={onVerify}
+            onSubmit={onVerify}
             onResend={() => accountApi.changePhone(toSaudiLocal(newPhone)!)}
             onBack={() => setStep('form')}
           />

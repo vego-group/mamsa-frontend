@@ -6,6 +6,8 @@
   "common": {
     "brandName": "Mamsa",
     "loading": "Loading...",
+    "loadFailed": "Couldn't load the data — check your internet connection and try again.",
+    "retry": "Try again",
     "home": "Home",
     "explore": "Explore",
     "perNight": "/ night",
@@ -216,9 +218,8 @@
     "afterCheckIn": "After check-in: cancellation is not available"
   },
   "home": {
-    "heroTitle1": "Mamsa Stays:",
-    "heroTitle2": "Find the perfect place for your next getaway",
-    "heroSubtitle": "Browse thousands of verified stays across Saudi Arabia — book with confidence on Mamsa.",
+    "heroTitle": "Mamsa Stays",
+    "heroSubtitle": "Browse the available units and book with ease on Mamsa.",
     "categoriesTitle": "Explore your destination",
     "categoriesSubtitle": "Discover the best destinations and standout stays",
     "unitCount": "{count} units",
@@ -445,6 +446,8 @@
     "total": "Total (SAR)"
   },
   "bookingConfirmation": {
+    "paidTitle": "Payment successful ✓",
+    "paidDetailsUnavailable": "We couldn't load your booking details right now. You can check your reservations or try again.",
     "title": "Your booking is confirmed!",
     "subtitle": "Thanks for choosing Mamsa. Your booking details were sent to your email.",
     "bookingCode": "Booking code",
@@ -498,7 +501,7 @@
     "checkIn": "Check-in",
     "checkOut": "Check-out",
     "guests": "Guests",
-    "guestsNights": "{guests} · {nights} nights",
+    "guestsNights": "{guests} guests · {nights} nights",
     "confirmationCode": "Confirmation code",
     "total": "Total",
     "viewDetails": "View details",

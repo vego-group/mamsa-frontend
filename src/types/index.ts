@@ -65,6 +65,14 @@ export interface Unit {
   checkInTime: string; // "15:00"
   checkOutTime: string; // "12:00"
   cancellationPolicy: CancellationTemplate;
+  /**
+   * Full tiered policy as the backend's refund engine sees it right now
+   * (`cancellation_policy_details`) — same shape a booking's frozen
+   * `policySnapshot` will use if the guest books at this moment (FR-021).
+   * `null` when the backend hasn't returned it (e.g. mock mode) — fall back
+   * to `getPolicyByTemplate(cancellationPolicy)`.
+   */
+  cancellationPolicyDetails?: CancellationPolicy | null;
   isFeatured?: boolean;
   hasDiscount?: boolean;
   discountPercent?: number;
