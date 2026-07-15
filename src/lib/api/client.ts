@@ -8,6 +8,7 @@
  * ⭐ نقطة التبديل: NEXT_PUBLIC_USE_MOCK + NEXT_PUBLIC_API_BASE_URL في .env.local
  */
 import { mockApi } from './mock';
+import { tokenManager } from '@/lib/auth/tokens';
 import {
   mapUnit,
   mapBooking,
@@ -42,14 +43,8 @@ import type {
 } from '@/types';
 import type { RefundPreview } from '@/lib/cancellation/engine';
 
-// ⚠️ TEMPORARY — live testing phase against the STAGING backend.
-// Hard-pinned so every deployment (including mamsaa.com) hits staging
-// regardless of the hosting platform's env vars. Before the production
-// cut-over, delete these two lines and restore the env-based ones below.
-const USE_MOCK = false;
-const BASE_URL = 'https://staging.mamsaa.com/api/v1';
-// const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK !== 'false';
-// const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
+const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK !== 'false';
+const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
 
 // ============ Simulated latency for realistic mock UX ============
 const MOCK_LATENCY_MS = 300;
@@ -84,7 +79,7 @@ async function refreshAccessToken(): Promise<string | null> {
   if (typeof window === 'undefined') return null;
   refreshInFlight ??= (async () => {
     try {
-      const refreshToken = localStorage.getItem('mamsa.refreshToken');
+      const refreshToken = tokenManager.getRefreshToken();
       if (!refreshToken) return null;
       const res = await fetch(`${BASE_URL}/auth/refresh`, {
         method: 'POST',
@@ -97,8 +92,7 @@ async function refreshAccessToken(): Promise<string | null> {
         | { access_token?: string; refresh_token?: string }
         | null;
       if (!d?.access_token) return null;
-      localStorage.setItem('mamsa.accessToken', d.access_token);
-      if (d.refresh_token) localStorage.setItem('mamsa.refreshToken', d.refresh_token);
+      tokenManager.setTokens(d.access_token, d.refresh_token);
       return d.access_token;
     } catch {
       return null;
@@ -122,7 +116,7 @@ async function forceLogout(): Promise<void> {
  * and silently renews an expired session (one refresh + retry per request).
  */
 async function http<T>(path: string, init: RequestInit = {}, isRetry = false): Promise<T> {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('mamsa.accessToken') : null;
+  const token = tokenManager.getAccessToken();
   const res = await fetch(`${BASE_URL}${path}`, {
     // Prices/availability/bookings must always be fresh — Next.js's Server
     // Component fetch defaults to `force-cache` otherwise, which silently

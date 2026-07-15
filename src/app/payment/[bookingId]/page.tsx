@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { paymentsApi, accountApi, type InitiatePaymentResult } from '@/lib/api/client';
+import { PriceBreakdown } from '@/components/features/booking/PriceBreakdown';
 import { loadMoyasarAssets, initMoyasarForm } from '@/lib/payments/moyasar';
 import { formatSAR, formatDate } from '@/lib/utils/format';
 import type { SavedCard } from '@/types';
@@ -276,15 +277,25 @@ export default function PaymentPage() {
               <hr className="border-brand-border" />
               <h3 className="font-semibold">{t('priceDetails')}</h3>
               {/* Fee lines are frozen on the booking — rendered as-is, never recomputed. */}
-              <SummaryRow
-                label={t('priceLine', { price: booking.nightlyRate, nights: booking.nights })}
-                value={formatSAR(booking.subtotal)}
+              <PriceBreakdown
+                price={{
+                  pricePerNight: booking.nightlyRate,
+                  nights: booking.nights,
+                  subtotal: booking.subtotal,
+                  cleaningFee: booking.cleaningFee,
+                  serviceFee: booking.serviceFee,
+                  tax: booking.taxes,
+                  total: info.amount,
+                }}
+                labels={{
+                  priceLine: t('priceLine', { price: booking.nightlyRate, nights: booking.nights }),
+                  cleaningFee: t('cleaningFee'),
+                  serviceFee: t('serviceFee'),
+                  taxes: t('taxes'),
+                  total: t('total'),
+                }}
+                format={formatSAR}
               />
-              <SummaryRow label={t('cleaningFee')} value={formatSAR(booking.cleaningFee)} />
-              <SummaryRow label={t('serviceFee')} value={formatSAR(booking.serviceFee)} />
-              <SummaryRow label={t('taxes')} value={formatSAR(booking.taxes)} />
-              <hr className="border-brand-border" />
-              <SummaryRow label={t('total')} value={formatSAR(info.amount)} bold />
             </>
           ) : (
             <>

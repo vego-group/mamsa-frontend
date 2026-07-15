@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { UnitGallery } from '@/components/features/units/UnitGallery';
+import { LoadError } from '@/components/shared/LoadError';
 import { CancellationPolicyDisplay } from '@/components/features/booking/CancellationPolicyDisplay';
 import { getPolicyByTemplate } from '@/lib/constants/cancellation-policies';
 import { formatSAR, formatDate } from '@/lib/utils/format';
@@ -45,6 +46,9 @@ export default function UnitDetailsPage() {
   const [unit, setUnit] = useState<Unit | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  // Bumping this re-runs the fetch effect — the retry path after a failure.
+  const [attempt, setAttempt] = useState(0);
   const [checkIn, setCheckIn] = useState('');
   const [checkOut, setCheckOut] = useState('');
   const [guests, setGuests] = useState(1);
@@ -56,13 +60,16 @@ export default function UnitDetailsPage() {
   useEffect(() => {
     if (!params.id) return;
     setLoading(true);
-    Promise.all([unitsApi.getById(params.id), unitsApi.getReviews(params.id)])
+    setLoadError(false);
+    // Reviews are best-effort — only the unit fetch decides success/failure.
+    Promise.all([unitsApi.getById(params.id), unitsApi.getReviews(params.id).catch(() => [] as Review[])])
       .then(([u, r]) => {
         setUnit(u);
         setReviews(r);
       })
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
-  }, [params.id]);
+  }, [params.id, attempt]);
 
   const nights = (() => {
     if (!checkIn || !checkOut) return 0;
@@ -79,6 +86,14 @@ export default function UnitDetailsPage() {
     const q = new URLSearchParams({ checkIn, checkOut, guests: String(guests) });
     router.push(`/booking/${unit.id}?${q.toString()}`);
   };
+
+  if (loadError) {
+    return (
+      <div className="container mx-auto px-4 py-16">
+        <LoadError onRetry={() => setAttempt((a) => a + 1)} />
+      </div>
+    );
+  }
 
   if (loading || !unit) {
     return <div className="container mx-auto p-10 text-center text-brand-muted">{tCommon('loading')}</div>;
@@ -203,7 +218,9 @@ export default function UnitDetailsPage() {
                 <p className="text-sm text-brand-muted">{t('checkOutBefore', { time: unit.checkOutTime })}</p>
                 <p className="text-sm text-brand-muted">{t('maxCapacity', { count: unit.capacity })}</p>
               </Card>
-              <CancellationPolicyDisplay policy={getPolicyByTemplate(unit.cancellationPolicy)} />
+              <CancellationPolicyDisplay
+                policy={unit.cancellationPolicyDetails ?? getPolicyByTemplate(unit.cancellationPolicy)}
+              />
             </div>
           </section>
 

@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label';
 import { PhoneInput } from '@/components/ui/phone-input';
 import { makeRegisterSchema, type RegisterFormValues } from '@/lib/validation/schemas';
 import { normalizeSaudiPhone, formatPhoneDisplay, toSaudiLocal } from '@/lib/utils/phone';
-import { OtpStep } from './OtpStep';
+import { OtpVerificationForm } from './OtpVerificationForm';
 
 export function RegisterDialog() {
   const t = useTranslations('auth.register');
@@ -181,11 +181,10 @@ export function RegisterDialog() {
         )}
 
         {step === 'otp' && (
-          <OtpStep
-            phone={phone}
+          <OtpVerificationForm
             displayPhone={formatPhoneDisplay(phone)}
             debugOtp={debugOtp}
-            onVerify={onVerifyOtp}
+            onSubmit={onVerifyOtp}
             onResend={() => authApi.resendOtp(toSaudiLocal(phone)!, 'register')}
             onBack={() => setStep('form')}
           />

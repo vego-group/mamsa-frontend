@@ -22,20 +22,32 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const MS_PER_HOUR = 60 * 60 * 1000;
 
 /**
- * يعيد فرق الوقت بين تاريخ الدخول ووقت طلب الإلغاء بالأيام (قابل لأن يكون سالبًا).
+ * All properties on the platform are in Saudi Arabia, so the check-in day
+ * boundary is midnight **Asia/Riyadh** (fixed UTC+3, no DST) — NOT the
+ * viewer's local midnight. Refund eligibility must be identical for every
+ * user worldwide at the same instant and must match what the backend
+ * computes; interpreting the date in the browser's timezone made users in
+ * different timezones see different cutoffs for the same booking.
+ */
+export const PROPERTY_UTC_OFFSET_HOURS = 3;
+
+/** Instant (epoch ms) of midnight at the property on the check-in day. */
+function checkInInstant(checkInISO: string): number {
+  const offset = `+${String(PROPERTY_UTC_OFFSET_HOURS).padStart(2, '0')}:00`;
+  return new Date(`${checkInISO}T00:00:00${offset}`).getTime();
+}
+
+/**
+ * يعيد فرق الوقت بين تاريخ الدخول (منتصف الليل بتوقيت الرياض) ووقت طلب الإلغاء بالأيام (قابل لأن يكون سالبًا).
  * - موجب: الإلغاء قبل الدخول
  * - صفر أو سالب: الإلغاء بعد الدخول → الإلغاء محظور
  */
 export function daysUntilCheckIn(checkInISO: string, requestAt: Date): number {
-  const checkIn = new Date(checkInISO + 'T00:00:00').getTime();
-  const diffMs = checkIn - requestAt.getTime();
-  return diffMs / MS_PER_DAY;
+  return (checkInInstant(checkInISO) - requestAt.getTime()) / MS_PER_DAY;
 }
 
 export function hoursUntilCheckIn(checkInISO: string, requestAt: Date): number {
-  const checkIn = new Date(checkInISO + 'T00:00:00').getTime();
-  const diffMs = checkIn - requestAt.getTime();
-  return diffMs / MS_PER_HOUR;
+  return (checkInInstant(checkInISO) - requestAt.getTime()) / MS_PER_HOUR;
 }
 
 // ============ Eligibility ============
