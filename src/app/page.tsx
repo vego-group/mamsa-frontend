@@ -107,32 +107,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Categories */}
-      <section className="container mx-auto space-y-6 px-4 py-16">
-        <SectionHeader
-          title={t('categoriesTitle')}
-          subtitle={t('categoriesSubtitle')}
-          href="/units"
-          cta={tCommon('viewAll')}
-        />
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-          {categoryCards.map((c) => (
-            <Link
-              key={c.type}
-              href={`/units?type=${c.type}`}
-              className="group relative h-44 overflow-hidden rounded-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
-            >
-              <img src={c.image} alt={tPlural(c.type)} className="h-full w-full object-cover transition group-hover:scale-110" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-              <div className="absolute bottom-3 end-3 text-white">
-                <div className="text-lg font-bold">{tPlural(c.type)}</div>
-                {c.count > 0 && <div className="text-xs opacity-90">{t('unitCount', { count: c.count })}</div>}
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
-
       {/* Featured / Most requested */}
       {SHOW_PRELAUNCH_HIDDEN_SECTIONS && (
       <section className="container mx-auto space-y-6 px-4 py-10">
