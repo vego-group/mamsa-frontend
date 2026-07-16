@@ -220,6 +220,8 @@
   "home": {
     "heroTitle": "Mamsa Stays",
     "heroSubtitle": "Browse the available units and book with ease on Mamsa.",
+    "categoriesTitle": "",
+    "categoriesSubtitle": "",
     "unitCount": "{count} units",
     "featuredTitle": "Most requested",
     "featuredSubtitle": "Stays hand-picked for you",
