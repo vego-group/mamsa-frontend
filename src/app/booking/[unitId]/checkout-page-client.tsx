@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -13,16 +13,20 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { CancellationPolicyDisplay } from '@/components/features/booking/CancellationPolicyDisplay';
 import { PriceBreakdown } from '@/components/features/booking/PriceBreakdown';
 import { LoadError } from '@/components/shared/LoadError';
-import { unitsApi, bookingsApi } from '@/lib/api/client';
+import { EmailVerificationCard, type EmailVerificationCardHandle } from '@/components/account/email-verification';
+import { unitsApi, bookingsApi, type CheckAvailabilityResult } from '@/lib/api/client';
+import { ApiError, resolveErrorMessage } from '@/lib/api/errors';
+import { showToast } from '@/stores/toast';
 import { useAuthStore } from '@/stores/auth';
 import { useUiStore } from '@/stores/ui';
 import { getPolicyByTemplate } from '@/lib/constants/cancellation-policies';
 import { formatSAR, formatDate } from '@/lib/utils/format';
-import type { Unit, Booking } from '@/types';
+import type { Unit, Booking, PriceBreakdown as PriceBreakdownData } from '@/types';
 
 export function CheckoutPageClient() {
   const t = useTranslations('checkout');
   const tc = useTranslations('common');
+  const tev = useTranslations('emailVerification');
   const params = useParams<{ unitId: string }>();
   const search = useSearchParams();
   const router = useRouter();
@@ -35,11 +39,20 @@ export function CheckoutPageClient() {
   const user = useAuthStore((s) => s.user);
   const isAuth = useAuthStore((s) => s.isAuthenticated);
   const openAuth = useUiStore((s) => s.openAuth);
+  const emailVerified = user?.emailVerified === true;
+  const emailCardRef = useRef<EmailVerificationCardHandle>(null);
 
   const [unit, setUnit] = useState<Unit | null>(null);
   const [unitLoadError, setUnitLoadError] = useState(false);
-  // Bumping this re-runs the unit fetch — the retry path after a failure.
+  // Bumping this re-runs the unit + quote fetches — the retry path after a failure.
   const [attempt, setAttempt] = useState(0);
+  // Server-computed price quote for the selected dates (§1.1) — the frontend
+  // never computes money, it only ever renders what the backend returns.
+  const [quote, setQuote] = useState<CheckAvailabilityResult | null>(null);
+  const [quoteError, setQuoteError] = useState(false);
+  // Once the booking is created, its FROZEN breakdown replaces the pre-booking
+  // quote (§1.3) — the authoritative price, immune to any later rate change.
+  const [frozenPrice, setFrozenPrice] = useState<PriceBreakdownData | null>(null);
   const [agreed, setAgreed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,16 +74,25 @@ export function CheckoutPageClient() {
       .catch(() => setUnitLoadError(true));
   }, [params.unitId, attempt]);
 
+  useEffect(() => {
+    if (!datesValid) return;
+    setQuoteError(false);
+    unitsApi
+      .checkAvailability(params.unitId, checkIn, checkOut)
+      .then(setQuote)
+      .catch(() => setQuoteError(true));
+  }, [params.unitId, checkIn, checkOut, datesValid, attempt]);
+
   // Populate once the account loads, without clobbering anything the user already typed.
   useEffect(() => {
     if (!user) return;
     setFirstName((v) => v || user.firstName);
     setLastName((v) => v || user.lastName);
-    setEmail((v) => v || user.email);
+    setEmail((v) => v || (user.email ?? ''));
     setPhone((v) => v || (user.phone.startsWith('+966') ? user.phone.slice(4) : user.phone));
   }, [user]);
 
-  if (unitLoadError) {
+  if (unitLoadError || quoteError) {
     return (
       <div className="container mx-auto px-4 py-16">
         <LoadError onRetry={() => setAttempt((a) => a + 1)} />
@@ -93,12 +115,31 @@ export function CheckoutPageClient() {
     );
   }
 
-  const nights = Math.max(1, Math.round((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000));
-  const subtotal = unit.pricePerNight * nights;
-  const cleaning = unit.cleaningFee ?? 0;
-  const serviceFee = subtotal * ((unit.serviceFeePercent ?? 10) / 100);
-  const tax = (subtotal + cleaning + serviceFee) * ((unit.taxPercent ?? 15) / 100);
-  const total = subtotal + cleaning + serviceFee + tax;
+  if (!quote) return <div className="container mx-auto p-10">{tc('loading')}</div>;
+
+  if (!quote.available || !quote.pricing) {
+    return (
+      <div className="container mx-auto flex flex-col items-center gap-4 px-4 py-16 text-center">
+        <p className="text-sm text-brand-muted">{t('errors.unitUnavailable')}</p>
+        <Button asChild>
+          <Link href={`/units/${unit.id}`}>{t('backToUnit')}</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  const quotePricing = quote.pricing;
+  // Before booking: the live quote. After booking: the frozen breakdown from
+  // the booking response wins — same field names, never recomputed here.
+  const displayPrice: PriceBreakdownData = frozenPrice ?? {
+    pricePerNight: quotePricing.nightlyRate,
+    nights: quotePricing.nights,
+    subtotal: quotePricing.subtotal,
+    cleaningFee: quotePricing.cleaningFee,
+    serviceFee: quotePricing.serviceFee,
+    tax: quotePricing.taxes,
+    total: quotePricing.total,
+  };
 
   /** Localized message for the first invalid form field, or null when everything checks out. */
   const validate = (): string | null => {
@@ -133,8 +174,20 @@ export function CheckoutPageClient() {
         guests: { adults: guests, children: 0 },
         paymentMethod: 'visa',
       });
+      // The booking's breakdown is now FROZEN (§1.3) — switch the summary to
+      // it so nothing here still reflects the pre-booking quote.
+      setFrozenPrice(booking.price);
       router.push(`/payment/${booking.id}`);
     } catch (e) {
+      // Stale client state: the store said the email was verified, but the
+      // backend disagrees. Reopen the card without discarding anything the
+      // guest already typed into this form.
+      if (e instanceof ApiError && e.code === 'EMAIL_VERIFICATION_REQUIRED') {
+        emailCardRef.current?.reopen();
+        showToast(resolveErrorMessage(e, t('errors.genericFailed')));
+        setSubmitting(false);
+        return;
+      }
       // "Unit already booked" is often OUR OWN abandoned pending booking still
       // holding the dates (created on a previous attempt, never paid). Reuse
       // it instead of dead-ending: same dates → straight back to payment;
@@ -238,6 +291,8 @@ export function CheckoutPageClient() {
           </label>
         </Card>
 
+        <EmailVerificationCard ref={emailCardRef} context="checkout" />
+
         {error && <p dir="auto" className="text-sm text-status-danger">{error}</p>}
 
         {pendingConflict && (
@@ -259,9 +314,12 @@ export function CheckoutPageClient() {
           </Card>
         )}
 
-        <Button size="lg" className="w-full" onClick={handleConfirm} disabled={submitting}>
-          {submitting ? t('creatingBooking') : t('continueToPayment', { amount: formatSAR(total) })}
+        <Button size="lg" className="w-full" onClick={handleConfirm} disabled={submitting || !emailVerified}>
+          {submitting ? t('creatingBooking') : t('continueToPayment', { amount: formatSAR(displayPrice.total) })}
         </Button>
+        {!emailVerified && (
+          <p className="text-center text-xs text-status-danger">{tev('verifyToPay')}</p>
+        )}
         <p className="text-center text-xs text-brand-muted">
           🔒 {t('secureNote')}
         </p>
@@ -279,23 +337,16 @@ export function CheckoutPageClient() {
           <hr className="border-brand-border" />
           <h3 className="font-semibold">{t('priceDetails')}</h3>
           <PriceBreakdown
-            price={{
-              pricePerNight: unit.pricePerNight,
-              nights,
-              subtotal,
-              cleaningFee: cleaning,
-              serviceFee,
-              tax,
-              total,
-            }}
+            price={displayPrice}
             labels={{
-              priceLine: t('priceLine', { price: unit.pricePerNight, nights }),
+              priceLine: t('priceLine', { price: displayPrice.pricePerNight, nights: displayPrice.nights }),
               cleaningFee: t('cleaningFee'),
-              serviceFee: t('serviceFee'),
-              taxes: t('taxes'),
+              serviceFee: t('serviceFeeWithPercent', { percent: quotePricing.serviceFeePercent }),
+              taxes: t('taxesWithPercent', { percent: quotePricing.taxPercent }),
               total: t('total'),
             }}
             format={formatSAR}
+            hideZeroCleaningFee
           />
         </Card>
       </aside>

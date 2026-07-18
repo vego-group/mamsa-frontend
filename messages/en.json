@@ -373,6 +373,24 @@
       "sendCode": "Send verification code"
     }
   },
+  "emailVerification": {
+    "title": "Email address",
+    "emailLabel": "Email address",
+    "helper": "We'll send your booking confirmation and reminders to this address",
+    "sendCode": "Send verification code",
+    "sendCodeIdle": "Send verification code",
+    "saveAndSend": "Save and send code",
+    "sending": "Sending...",
+    "otpTitle": "Verify your email",
+    "otpSubtitlePrefix": "We sent a verification code to",
+    "resendIn": "Resend in {seconds}s",
+    "changeEmail": "Change email",
+    "verifiedBadge": "Verified",
+    "unverifiedBadge": "Unverified",
+    "edit": "Edit",
+    "genericError": "Something went wrong",
+    "verifyToPay": "Verify your email to complete the booking"
+  },
   "checkout": {
     "title": "Confirm payment",
     "yourTrip": "Your trip",
@@ -400,8 +418,8 @@
     "priceDetails": "Price details",
     "priceLine": "{price} SAR × {nights} nights",
     "cleaningFee": "Cleaning fee",
-    "serviceFee": "Service fee",
-    "taxes": "Taxes",
+    "serviceFeeWithPercent": "Service fee ({percent}%)",
+    "taxesWithPercent": "Taxes ({percent}%)",
     "total": "Total (SAR)",
     "backToUnit": "Back to the unit page",
     "pendingConflict": "You already have an unpaid booking for this unit ({checkIn} → {checkOut}) that is holding these dates. Complete its payment, or cancel it to free the dates and book again.",
@@ -413,6 +431,7 @@
       "agree": "You must agree to the terms and policies",
       "loginFirst": "Log in first to complete your booking",
       "invalidDates": "The booking dates are invalid — please pick your dates again.",
+      "unitUnavailable": "This unit isn't available for these dates — please choose different dates.",
       "genericFailed": "Failed to complete the transaction"
     }
   },

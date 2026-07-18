@@ -12,6 +12,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { EmailVerificationCard } from '@/components/account/email-verification';
 import { accountApi, authApi } from '@/lib/api/client';
 import { useAuthStore } from '@/stores/auth';
 import { formatPhoneDisplay } from '@/lib/utils/phone';
@@ -46,7 +47,6 @@ export default function AccountPage() {
       const updated = await accountApi.updateProfile({
         firstName: user.firstName,
         lastName: user.lastName,
-        email: user.email,
       });
       updateUser(updated);
       setSaved(true);
@@ -83,7 +83,8 @@ export default function AccountPage() {
         </div>
         <div className="min-w-0">
           <div className="truncate text-lg font-bold text-brand-ink">{user.firstName} {user.lastName}</div>
-          <div className="truncate text-sm text-brand-muted">{user.email}</div>
+          {/* Reads the store directly (not the local `user` copy) so it reflects a verification the EmailVerificationCard just completed. */}
+          {storedUser?.email && <div className="truncate text-sm text-brand-muted">{storedUser.email}</div>}
           <div className="text-sm text-brand-muted" dir="ltr">{formatPhoneDisplay(user.phone)}</div>
         </div>
       </Card>
@@ -121,10 +122,6 @@ export default function AccountPage() {
             <Input value={user.lastName} onChange={(e) => setUser({ ...user, lastName: e.target.value })} />
           </div>
         </div>
-        <div className="space-y-2">
-          <Label>{t('email')}</Label>
-          <Input dir="ltr" className="text-start" value={user.email} onChange={(e) => setUser({ ...user, email: e.target.value })} />
-        </div>
         <div className="flex items-center gap-3">
           <Button onClick={handleSave} disabled={saving}>
             {saving ? t('saving') : t('saveChanges')}
@@ -136,6 +133,9 @@ export default function AccountPage() {
           )}
         </div>
       </Card>
+
+      {/* Email — verification flow (B1) */}
+      <EmailVerificationCard context="settings" className="mb-4" />
 
       {/* Phone — link to change page */}
       <Card className="mb-4 p-0">

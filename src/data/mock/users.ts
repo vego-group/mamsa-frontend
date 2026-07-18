@@ -5,7 +5,8 @@ export const MOCK_CURRENT_USER: User = {
   role: 'user',
   firstName: 'محمد',
   lastName: 'أحمد',
-  email: 'mohammed.ahmed@example.com',
+  email: 'mohammed.ahmed@mamsaa.com',
+  emailVerified: true,
   phone: '+966501234567',
   createdAt: '2025-12-01T08:00:00Z',
 };

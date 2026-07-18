@@ -373,6 +373,24 @@
       "sendCode": "ارسال رمز التحقق"
     }
   },
+  "emailVerification": {
+    "title": "البريد الإلكتروني",
+    "emailLabel": "البريد الإلكتروني",
+    "helper": "سنرسل تأكيد الحجز والتذكيرات على بريدك",
+    "sendCode": "أرسل رمز التحقق",
+    "sendCodeIdle": "إرسال رمز التحقق",
+    "saveAndSend": "حفظ وإرسال الرمز",
+    "sending": "جاري الإرسال...",
+    "otpTitle": "تحقق من بريدك",
+    "otpSubtitlePrefix": "تم إرسال رمز التحقق إلى",
+    "resendIn": "إعادة الإرسال خلال {seconds} ث",
+    "changeEmail": "تغيير البريد",
+    "verifiedBadge": "موثّق",
+    "unverifiedBadge": "غير موثّق",
+    "edit": "تعديل",
+    "genericError": "حدث خطأ",
+    "verifyToPay": "وثّق بريدك الإلكتروني لإتمام الحجز"
+  },
   "checkout": {
     "title": "تأكيد الدفع",
     "yourTrip": "رحلتك",
@@ -400,8 +418,8 @@
     "priceDetails": "تفاصيل السعر",
     "priceLine": "{price} ر.س × {nights} ليالي",
     "cleaningFee": "رسوم النظافة",
-    "serviceFee": "رسوم الخدمة",
-    "taxes": "الضرائب",
+    "serviceFeeWithPercent": "رسوم الخدمة ({percent}٪)",
+    "taxesWithPercent": "الضرائب ({percent}٪)",
     "total": "المجموع (ر.س)",
     "backToUnit": "العودة لصفحة الوحدة",
     "pendingConflict": "لديك حجز غير مدفوع لهذه الوحدة ({checkIn} → {checkOut}) يحجز هذه الفترة. أكمل دفعه، أو ألغه لتحرير التواريخ والحجز من جديد.",
@@ -413,6 +431,7 @@
       "agree": "يجب الموافقة على الشروط والسياسات",
       "loginFirst": "سجّل الدخول أولًا لإتمام الحجز",
       "invalidDates": "تواريخ الحجز غير صالحة — اختر التواريخ من جديد.",
+      "unitUnavailable": "الوحدة غير متاحة لهذه التواريخ، يرجى اختيار تواريخ أخرى.",
       "genericFailed": "فشل إتمام العملية"
     }
   },

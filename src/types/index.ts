@@ -13,7 +13,9 @@ export interface User {
   role: UserRole;
   firstName: string;
   lastName: string;
-  email: string;
+  /** Verified contact channel only — login stays phone-OTP. Null until the user sets one. */
+  email: string | null;
+  emailVerified: boolean;
   phone: string; // E.164 format e.g. +966501234567
   avatarUrl?: string;
   createdAt: string;
