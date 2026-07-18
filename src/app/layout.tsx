@@ -8,6 +8,7 @@ import { QueryProvider } from '@/components/shared/QueryProvider';
 import { LoginDialog } from '@/components/features/auth/LoginDialog';
 import { RegisterDialog } from '@/components/features/auth/RegisterDialog';
 import { FavoritesSync } from '@/components/shared/FavoritesSync';
+import { ToastHost } from '@/components/shared/ToastHost';
 import './globals.css';
 
 const arabic = IBM_Plex_Sans_Arabic({
@@ -52,6 +53,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <RegisterDialog />
             {/* Keeps favourites in sync with the account across login/logout */}
             <FavoritesSync />
+            <ToastHost />
           </QueryProvider>
         </NextIntlClientProvider>
       </body>

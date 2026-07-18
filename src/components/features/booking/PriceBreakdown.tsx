@@ -29,18 +29,23 @@ interface PriceBreakdownProps {
   format: (amount: number) => string;
   /** Booking-details layout lists the service fee before the cleaning fee. */
   serviceFeeFirst?: boolean;
+  /** Omit the cleaning-fee row entirely when its value is 0 (checkout's quote may not have one). */
+  hideZeroCleaningFee?: boolean;
 }
 
-export function PriceBreakdown({ price, labels, format, serviceFeeFirst = false }: PriceBreakdownProps) {
+export function PriceBreakdown({
+  price,
+  labels,
+  format,
+  serviceFeeFirst = false,
+  hideZeroCleaningFee = false,
+}: PriceBreakdownProps) {
+  const cleaningRow: [string, number] = [labels.cleaningFee, price.cleaningFee];
+  const serviceRow: [string, number] = [labels.serviceFee, price.serviceFee];
+  const showCleaningFee = !hideZeroCleaningFee || price.cleaningFee !== 0;
   const fees: Array<[string, number]> = serviceFeeFirst
-    ? [
-        [labels.serviceFee, price.serviceFee],
-        [labels.cleaningFee, price.cleaningFee],
-      ]
-    : [
-        [labels.cleaningFee, price.cleaningFee],
-        [labels.serviceFee, price.serviceFee],
-      ];
+    ? [serviceRow, ...(showCleaningFee ? [cleaningRow] : [])]
+    : [...(showCleaningFee ? [cleaningRow] : []), serviceRow];
 
   return (
     <>

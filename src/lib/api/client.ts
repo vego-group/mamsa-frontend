@@ -8,6 +8,7 @@
  * ⭐ نقطة التبديل: NEXT_PUBLIC_USE_MOCK + NEXT_PUBLIC_API_BASE_URL في .env.local
  */
 import { mockApi } from './mock';
+import { ApiError } from './errors';
 import { tokenManager } from '@/lib/auth/tokens';
 import {
   mapUnit,
@@ -55,17 +56,7 @@ async function withLatency<T>(promise: Promise<T> | T): Promise<T> {
   return promise;
 }
 
-export class ApiError extends Error {
-  constructor(
-    public status: number,
-    message: string,
-    /** Machine-readable error code (e.g. "PHONE_NOT_REGISTERED") — prefer this over matching `message` text. */
-    public code?: string,
-  ) {
-    super(message);
-    this.name = 'ApiError';
-  }
-}
+export { ApiError };
 
 // ============ Silent session renewal ============
 // Access tokens expire after an hour (`expires_in: 3600`). Instead of
@@ -147,16 +138,23 @@ async function http<T>(path: string, init: RequestInit = {}, isRetry = false): P
 
     let message = res.statusText;
     let code: string | undefined;
+    let retryAfter: number | undefined;
     try {
-      const body = (await res.json()) as { message?: string; code?: string; errors?: Record<string, string[]> };
+      const body = (await res.json()) as {
+        message?: string;
+        code?: string;
+        errors?: Record<string, string[]>;
+        retry_after?: number;
+      };
       message =
         body.message ??
         (body.errors ? Object.values(body.errors).flat()[0] ?? message : message);
       code = body.code;
+      retryAfter = body.retry_after;
     } catch {
       /* non-JSON error body */
     }
-    throw new ApiError(res.status, message, code);
+    throw new ApiError(res.status, message, code, retryAfter);
   }
 
   if (res.status === 204) return undefined as T;
@@ -307,6 +305,46 @@ export const authApi = {
 
 // ============ Units ============
 
+/**
+ * The server-computed price breakdown for a date range, from
+ * `POST /units/{id}/availability`. Same shape (minus `checkinAt`) as a
+ * booking's frozen breakdown — the backend computes all money; the
+ * frontend only ever renders these numbers, never recomputes them.
+ */
+export interface QuotePricing {
+  nights: number;
+  nightlyRate: number;
+  subtotal: number;
+  serviceFee: number;
+  serviceFeePercent: number;
+  cleaningFee: number;
+  taxes: number;
+  taxPercent: number;
+  total: number;
+}
+
+export interface CheckAvailabilityResult {
+  available: boolean;
+  /** Present only when `available === true`. */
+  pricing: QuotePricing | null;
+}
+
+function mapQuotePricing(raw: unknown): QuotePricing | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const p = raw as Record<string, unknown>;
+  return {
+    nights: Number(p.nights ?? 0),
+    nightlyRate: Number(p.nightly_rate ?? 0),
+    subtotal: Number(p.subtotal ?? 0),
+    serviceFee: Number(p.service_fee ?? 0),
+    serviceFeePercent: Number(p.service_fee_percent ?? 0),
+    cleaningFee: Number(p.cleaning_fee ?? 0),
+    taxes: Number(p.taxes ?? 0),
+    taxPercent: Number(p.tax_percent ?? 0),
+    total: Number(p.total ?? 0),
+  };
+}
+
 const unitFilterToQuery = (f: UnitsFilter): string =>
   qs({
     city: f.city,
@@ -341,13 +379,20 @@ export const unitsApi = {
       ? withLatency(mockApi.units.getReviews(id))
       : http<Record<string, unknown>[]>(`/units/${id}/reviews`).then((rows) => rows.map(mapReview)),
 
-  checkAvailability: (id: string, startDate: string, endDate: string) =>
+  /** Returns availability + the server-computed price quote for the date range (§1.1). */
+  checkAvailability: (id: string, startDate: string, endDate: string): Promise<CheckAvailabilityResult> =>
     USE_MOCK
-      ? withLatency(Promise.resolve({ available: true }))
-      : http<{ available: boolean }>(`/units/${id}/availability`, {
+      ? withLatency(mockApi.units.checkAvailability(id, startDate, endDate)).then((d) => ({
+          available: Boolean(d.available),
+          pricing: mapQuotePricing(d.pricing),
+        }))
+      : http<Record<string, unknown>>(`/units/${id}/availability`, {
           method: 'POST',
           body: JSON.stringify({ start_date: startDate, end_date: endDate }),
-        }),
+        }).then((d) => ({
+          available: Boolean(d.available),
+          pricing: mapQuotePricing(d.pricing),
+        })),
 };
 
 /** features[] is repeatable, so it is appended outside URLSearchParams' set(). */
@@ -671,6 +716,39 @@ export const accountApi = {
           method: 'POST',
           body: JSON.stringify({ new_phone: newPhone, code }),
         }).then(() => ({ ok: true as const })),
+
+  /**
+   * Step 1: request a verification code for a new/unverified email.
+   * Email is a verified *contact channel* only — it never affects login.
+   */
+  requestEmailVerification: (email: string): Promise<{ email: string; verified: boolean; resendAvailableIn: number }> =>
+    USE_MOCK
+      ? withLatency(mockApi.account.requestEmailVerification(email))
+      : http<{ email?: string; verified?: boolean; resend_available_in?: number }>('/account/email', {
+          method: 'POST',
+          body: JSON.stringify({ email }),
+        }).then((d) => ({
+          email: d.email ?? email,
+          verified: Boolean(d.verified),
+          resendAvailableIn: Number(d.resend_available_in ?? 60),
+        })),
+
+  /** Step 2: confirm the code and mark the pending email verified. */
+  verifyEmail: (code: string): Promise<{ email: string; verified: true }> =>
+    USE_MOCK
+      ? withLatency(mockApi.account.verifyEmail(code))
+      : http<{ email?: string }>('/account/email/verify', {
+          method: 'POST',
+          body: JSON.stringify({ code }),
+        }).then((d) => ({ email: d.email ?? '', verified: true as const })),
+
+  /** Resends the pending email verification code. */
+  resendEmailVerification: (): Promise<{ resendAvailableIn: number }> =>
+    USE_MOCK
+      ? withLatency(mockApi.account.resendEmailVerification())
+      : http<{ resend_available_in?: number }>('/account/email/resend', { method: 'POST', body: '{}' }).then((d) => ({
+          resendAvailableIn: Number(d.resend_available_in ?? 60),
+        })),
 
   deleteAccount: () =>
     USE_MOCK

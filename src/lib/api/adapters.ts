@@ -119,6 +119,7 @@ export interface RawUser {
   name?: string | null;
   phone?: string;
   email?: string | null;
+  email_verified?: boolean;
   is_admin?: boolean;
   is_partner?: boolean;
   created_at?: string;
@@ -365,7 +366,8 @@ export function mapUser(u: RawUser): User {
     role: u.is_admin ? 'super_admin' : u.is_partner ? 'individual' : 'user',
     firstName: parts[0] ?? '',
     lastName: parts.slice(1).join(' '),
-    email: u.email ?? '',
+    email: u.email ?? null,
+    emailVerified: Boolean(u.email_verified),
     phone: u.phone ?? '',
     createdAt: u.created_at ?? new Date().toISOString(),
   };

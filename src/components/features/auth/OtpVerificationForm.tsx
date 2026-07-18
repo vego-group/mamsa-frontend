@@ -42,6 +42,10 @@ interface OtpVerificationFormProps {
   title?: string;
   /** Override the default (per-variant) description line. */
   description?: React.ReactNode;
+  /** Override the "change number" link text (dialog variant only). */
+  backLabel?: string;
+  /** Override the resend-with-cooldown text, e.g. for a non-phone subject. */
+  resendCooldownText?: (seconds: number) => string;
 }
 
 export function OtpVerificationForm({
@@ -55,6 +59,8 @@ export function OtpVerificationForm({
   cooldownSeconds = OTP_CONFIG.resendCooldownSeconds,
   title,
   description,
+  backLabel,
+  resendCooldownText,
 }: OtpVerificationFormProps) {
   const t = useTranslations(variant === 'onboarding' ? 'auth.onboardingOtp' : 'auth.otp');
   const [digits, setDigits] = useState<string[]>(() => Array(length).fill(''));
@@ -239,7 +245,7 @@ export function OtpVerificationForm({
             onClick={onBack}
             className="text-brand-muted underline-offset-2 hover:underline"
           >
-            {t('changeNumber')}
+            {backLabel ?? t('changeNumber')}
           </button>
         )}
         <button
@@ -248,7 +254,7 @@ export function OtpVerificationForm({
           disabled={cooldown > 0}
           className="text-brand-primary disabled:cursor-not-allowed disabled:text-brand-muted"
         >
-          {cooldown > 0 ? t('resendIn', { seconds: cooldown }) : t('resend')}
+          {cooldown > 0 ? (resendCooldownText ? resendCooldownText(cooldown) : t('resendIn', { seconds: cooldown })) : t('resend')}
         </button>
       </div>
 
