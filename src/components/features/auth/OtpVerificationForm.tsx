@@ -29,15 +29,22 @@ interface OtpVerificationFormProps {
   /** Test code from the last dispatch (request/resend), shown via DebugOtpHint. */
   debugOtp?: string;
   onSubmit: (code: string) => Promise<void>;
-  onResend: () => Promise<{ debugOtp?: string } | void>;
+  onResend: () => Promise<{ debugOtp?: string; cooldownSeconds?: number } | void>;
   /** Renders the "change number" link (dialog variant only). */
   onBack?: () => void;
   /** Visual skin — see file header. Defaults to "dialog". */
   variant?: 'dialog' | 'onboarding';
   /** Number of digit boxes. Defaults to OTP_CONFIG.length. */
   length?: number;
-  /** Resend cooldown in seconds. Defaults to OTP_CONFIG.resendCooldownSeconds. */
+  /** Resend cooldown in seconds, used after every future resend. Defaults to OTP_CONFIG.resendCooldownSeconds. */
   cooldownSeconds?: number;
+  /**
+   * Cooldown to start the countdown at on mount — distinct from `cooldownSeconds`
+   * when the caller already knows a shorter (or longer) time is left, e.g. seeded
+   * from a RATE_LIMITED `retry_after` when this step opens mid-cooldown. Defaults
+   * to `cooldownSeconds`.
+   */
+  initialCooldownSeconds?: number;
   /** Override the default (per-variant) heading. */
   title?: string;
   /** Override the default (per-variant) description line. */
@@ -57,6 +64,7 @@ export function OtpVerificationForm({
   variant = 'dialog',
   length = OTP_CONFIG.length,
   cooldownSeconds = OTP_CONFIG.resendCooldownSeconds,
+  initialCooldownSeconds,
   title,
   description,
   backLabel,
@@ -66,7 +74,7 @@ export function OtpVerificationForm({
   const [digits, setDigits] = useState<string[]>(() => Array(length).fill(''));
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [cooldown, setCooldown] = useState(cooldownSeconds);
+  const [cooldown, setCooldown] = useState(initialCooldownSeconds ?? cooldownSeconds);
   // Seeded from the initial dispatch; refreshed locally whenever the user hits resend.
   const [liveDebugOtp, setLiveDebugOtp] = useState(debugOtp);
   const inputsRef = useRef<Array<HTMLInputElement | null>>([]);
@@ -126,7 +134,9 @@ export function OtpVerificationForm({
     if (cooldown > 0) return;
     const result = await onResend();
     if (result?.debugOtp) setLiveDebugOtp(result.debugOtp);
-    setCooldown(cooldownSeconds);
+    // Prefer the server's authoritative cooldown (e.g. resend_available_in,
+    // or retry_after on a 429) over the fixed default when it's given.
+    setCooldown(result?.cooldownSeconds ?? cooldownSeconds);
     setError(null);
   };
 

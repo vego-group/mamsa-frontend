@@ -686,6 +686,7 @@
     "cardholderName": "Name on card",
     "cardholderPlaceholder": "Name as printed on the card",
     "cardNumber": "Card number",
+    "invalidCardNumber": "Invalid card number",
     "expiryMonth": "Expiry month",
     "expiryYear": "Expiry year",
     "testCardHint": "Test card",

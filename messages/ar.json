@@ -686,6 +686,7 @@
     "cardholderName": "الاسم على البطاقة",
     "cardholderPlaceholder": "الاسم كما هو مكتوب على البطاقة",
     "cardNumber": "رقم البطاقة",
+    "invalidCardNumber": "رقم البطاقة غير صحيح",
     "expiryMonth": "شهر الانتهاء",
     "expiryYear": "سنة الانتهاء",
     "testCardHint": "بطاقة تجريبية",

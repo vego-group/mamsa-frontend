@@ -28,6 +28,27 @@ function detectBrand(digits: string): SavedCard['brand'] {
   return 'mada';
 }
 
+/**
+ * Standard Luhn checksum — catches typos/made-up numbers before they ever
+ * reach Moyasar (which rejects them with an unhelpful raw "Data validation
+ * failed" / English field error instead of a clear inline message).
+ */
+function isValidCardNumber(digits: string): boolean {
+  if (!/^\d+$/.test(digits)) return false;
+  let sum = 0;
+  let double = false;
+  for (let i = digits.length - 1; i >= 0; i--) {
+    let d = Number(digits[i]);
+    if (double) {
+      d *= 2;
+      if (d > 9) d -= 9;
+    }
+    sum += d;
+    double = !double;
+  }
+  return sum % 10 === 0;
+}
+
 export default function PaymentMethodsPage() {
   const t = useTranslations('paymentMethods');
   const tc = useTranslations('common');
@@ -310,7 +331,9 @@ function AddCardModal({ onClose, onSaved, t }: { onClose: () => void; onSaved: (
   }, []);
 
   const digits = number.replace(/\D/g, '');
-  const valid = name.trim().length > 0 && digits.length === 16 && /^\d{3,4}$/.test(cvc);
+  const cardNumberComplete = digits.length === 16;
+  const cardNumberValid = !cardNumberComplete || isValidCardNumber(digits);
+  const valid = name.trim().length > 0 && cardNumberComplete && cardNumberValid && /^\d{3}$/.test(cvc);
   const showTestHint = Boolean(cfg && (cfg.testMode || cfg.publishableKey.startsWith('pk_test')));
 
   const submit = async (e: React.FormEvent) => {
@@ -389,8 +412,15 @@ function AddCardModal({ onClose, onSaved, t }: { onClose: () => void; onSaved: (
             maxLength={19}
             dir="ltr"
             placeholder="0000 0000 0000 0000"
-            className={cn(inputCls, 'text-start font-mono tracking-widest')}
+            className={cn(
+              inputCls,
+              'text-start font-mono tracking-widest',
+              cardNumberComplete && !cardNumberValid && 'border-status-danger focus:border-status-danger',
+            )}
           />
+          {cardNumberComplete && !cardNumberValid && (
+            <p className="text-xs text-status-danger">{t('invalidCardNumber')}</p>
+          )}
         </div>
 
         <div className="grid grid-cols-3 gap-3">
@@ -414,10 +444,10 @@ function AddCardModal({ onClose, onSaved, t }: { onClose: () => void; onSaved: (
             <label className="text-sm font-medium text-brand-ink">CVC</label>
             <input
               value={cvc}
-              onChange={(e) => setCvc(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              onChange={(e) => setCvc(e.target.value.replace(/\D/g, '').slice(0, 3))}
               inputMode="numeric"
               autoComplete="cc-csc"
-              maxLength={4}
+              maxLength={3}
               dir="ltr"
               placeholder="123"
               className={cn(inputCls, 'text-start')}

@@ -220,9 +220,9 @@ export default function PaymentPage() {
                       dir="ltr"
                       className="text-start"
                       inputMode="numeric"
-                      maxLength={4}
+                      maxLength={3}
                       value={cvc}
-                      onChange={(e) => setCvc(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                      onChange={(e) => setCvc(e.target.value.replace(/\D/g, '').slice(0, 3))}
                     />
                   </div>
                   <Button
