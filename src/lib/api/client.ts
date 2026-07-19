@@ -315,9 +315,6 @@ export interface QuotePricing {
   nights: number;
   nightlyRate: number;
   subtotal: number;
-  serviceFee: number;
-  serviceFeePercent: number;
-  cleaningFee: number;
   taxes: number;
   taxPercent: number;
   total: number;
@@ -336,9 +333,6 @@ function mapQuotePricing(raw: unknown): QuotePricing | null {
     nights: Number(p.nights ?? 0),
     nightlyRate: Number(p.nightly_rate ?? 0),
     subtotal: Number(p.subtotal ?? 0),
-    serviceFee: Number(p.service_fee ?? 0),
-    serviceFeePercent: Number(p.service_fee_percent ?? 0),
-    cleaningFee: Number(p.cleaning_fee ?? 0),
     taxes: Number(p.taxes ?? 0),
     taxPercent: Number(p.tax_percent ?? 0),
     total: Number(p.total ?? 0),
@@ -507,8 +501,6 @@ export interface PaymentBookingSummary {
   guests: number;
   nightlyRate: number;
   subtotal: number;
-  serviceFee: number;
-  cleaningFee: number;
   taxes: number;
   unit: { name: string; city: string; district: string; imageUrl: string };
 }
@@ -561,8 +553,6 @@ function mapBookingSummary(raw: unknown): PaymentBookingSummary | null {
     guests: Number(b.guests ?? 0),
     nightlyRate: Number(b.nightly_rate ?? 0),
     subtotal: Number(b.subtotal ?? 0),
-    serviceFee: Number(b.service_fee ?? 0),
-    cleaningFee: Number(b.cleaning_fee ?? 0),
     taxes: Number(b.taxes ?? 0),
     unit: {
       name: String(u.name ?? ''),

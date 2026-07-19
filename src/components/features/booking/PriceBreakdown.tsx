@@ -1,23 +1,17 @@
 /**
  * PriceBreakdown — the shared price-summary block
- * (nights × rate / cleaning fee / service fee / tax / divider / bold total).
+ * (nights × rate / tax / divider / bold total).
  *
- * Pure display: it renders whatever numbers it is given — pricing stays
- * calculated where it always was (checkout estimate client-side, payment page
- * from the frozen `initiate.booking` block, details page from the booking).
- *
- * Labels are passed in (pre-translated) rather than pulled from a namespace
- * because the existing pages intentionally differ: the details page says
- * «رسوم التنظيف» / «المجموع الكلي» and lists the service fee first, while
- * checkout/payment say «رسوم النظافة» / «المجموع (ر.س)» with cleaning first.
+ * Pure display: it renders whatever numbers it is given — the backend
+ * computes all money, this component only ever formats and lays it out.
+ * Per the final pricing decision, tax (VAT) is the only fee — no cleaning
+ * fee, no service fee.
  */
 import type { PriceBreakdown as PriceBreakdownData } from '@/types';
 
 export interface PriceBreakdownLabels {
   /** Pre-interpolated nights line, e.g. "450 ر.س × 2 ليالي". */
   priceLine: string;
-  cleaningFee: string;
-  serviceFee: string;
   taxes: string;
   total: string;
 }
@@ -27,32 +21,12 @@ interface PriceBreakdownProps {
   labels: PriceBreakdownLabels;
   /** SAR formatter — pages already share formatSAR; injected to keep this component pure. */
   format: (amount: number) => string;
-  /** Booking-details layout lists the service fee before the cleaning fee. */
-  serviceFeeFirst?: boolean;
-  /** Omit the cleaning-fee row entirely when its value is 0 (checkout's quote may not have one). */
-  hideZeroCleaningFee?: boolean;
 }
 
-export function PriceBreakdown({
-  price,
-  labels,
-  format,
-  serviceFeeFirst = false,
-  hideZeroCleaningFee = false,
-}: PriceBreakdownProps) {
-  const cleaningRow: [string, number] = [labels.cleaningFee, price.cleaningFee];
-  const serviceRow: [string, number] = [labels.serviceFee, price.serviceFee];
-  const showCleaningFee = !hideZeroCleaningFee || price.cleaningFee !== 0;
-  const fees: Array<[string, number]> = serviceFeeFirst
-    ? [serviceRow, ...(showCleaningFee ? [cleaningRow] : [])]
-    : [...(showCleaningFee ? [cleaningRow] : []), serviceRow];
-
+export function PriceBreakdown({ price, labels, format }: PriceBreakdownProps) {
   return (
     <>
       <PriceRow label={labels.priceLine} value={format(price.subtotal)} />
-      {fees.map(([label, value]) => (
-        <PriceRow key={label} label={label} value={format(value)} />
-      ))}
       <PriceRow label={labels.taxes} value={format(price.tax)} />
       <hr className="border-brand-border" />
       <PriceRow label={labels.total} value={format(price.total)} bold />

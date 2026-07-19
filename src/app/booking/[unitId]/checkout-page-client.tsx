@@ -135,8 +135,6 @@ export function CheckoutPageClient() {
     pricePerNight: quotePricing.nightlyRate,
     nights: quotePricing.nights,
     subtotal: quotePricing.subtotal,
-    cleaningFee: quotePricing.cleaningFee,
-    serviceFee: quotePricing.serviceFee,
     tax: quotePricing.taxes,
     total: quotePricing.total,
   };
@@ -340,13 +338,10 @@ export function CheckoutPageClient() {
             price={displayPrice}
             labels={{
               priceLine: t('priceLine', { price: displayPrice.pricePerNight, nights: displayPrice.nights }),
-              cleaningFee: t('cleaningFee'),
-              serviceFee: t('serviceFeeWithPercent', { percent: quotePricing.serviceFeePercent }),
               taxes: t('taxesWithPercent', { percent: quotePricing.taxPercent }),
               total: t('total'),
             }}
             format={formatSAR}
-            hideZeroCleaningFee
           />
         </Card>
       </aside>

@@ -93,41 +93,53 @@ export function CancelBookingDialog({ booking, open, onClose, onCancelled }: Can
 
         {preview && (
           <>
-            {/* Policy summary from SNAPSHOT (frozen at booking time) */}
-            <CancellationPolicyDisplay policy={booking.policySnapshot} />
-
-            {!preview.isAllowed ? (
-              <div className="rounded-xl bg-red-50 p-4 text-sm text-status-danger">
-                {notAllowedText}
+            {booking.status === 'pending_payment' ? (
+              // No payment was ever taken, so there's no policy snapshot to show
+              // and no refund to compute — the backend's policy_snapshot is null
+              // for unpaid bookings (FR-036: it only freezes at payment time).
+              // Cancelling here just releases the held dates.
+              <div className="rounded-xl bg-brand-cream/50 p-4 text-sm text-brand-ink">
+                {t('pendingPaymentNote')}
               </div>
             ) : (
-              <div className="rounded-2xl border border-brand-border bg-white p-4">
-                <h4 className="mb-3 text-sm font-semibold text-brand-ink">{t('refundSummary')}</h4>
-                <dl className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <dt className="text-brand-muted">{t('applicableTier')}</dt>
-                    <dd className="font-medium">{tierLabel}</dd>
+              <>
+                {/* Policy summary from SNAPSHOT (frozen at booking time) */}
+                <CancellationPolicyDisplay policy={booking.policySnapshot} />
+
+                {!preview.isAllowed ? (
+                  <div className="rounded-xl bg-red-50 p-4 text-sm text-status-danger">
+                    {notAllowedText}
                   </div>
-                  <div className="flex justify-between">
-                    <dt className="text-brand-muted">{t('totalAmount')}</dt>
-                    <dd>{formatSAR(booking.price.total)}</dd>
+                ) : (
+                  <div className="rounded-2xl border border-brand-border bg-white p-4">
+                    <h4 className="mb-3 text-sm font-semibold text-brand-ink">{t('refundSummary')}</h4>
+                    <dl className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <dt className="text-brand-muted">{t('applicableTier')}</dt>
+                        <dd className="font-medium">{tierLabel}</dd>
+                      </div>
+                      <div className="flex justify-between">
+                        <dt className="text-brand-muted">{t('totalAmount')}</dt>
+                        <dd>{formatSAR(booking.price.total)}</dd>
+                      </div>
+                      <div className="flex justify-between">
+                        <dt className="text-brand-muted">{t('refundPercent')}</dt>
+                        <dd>{preview.refundPercent}%</dd>
+                      </div>
+                      <div className="flex justify-between border-t border-brand-border pt-2 font-bold">
+                        <dt>{t('refundedAmount')}</dt>
+                        <dd className="text-status-success">{formatSAR(preview.refundAmount)}</dd>
+                      </div>
+                      {preview.forfeitedAmount > 0 && (
+                        <div className="flex justify-between text-xs text-brand-muted">
+                          <dt>{t('deductedAmount')}</dt>
+                          <dd>{formatSAR(preview.forfeitedAmount)}</dd>
+                        </div>
+                      )}
+                    </dl>
                   </div>
-                  <div className="flex justify-between">
-                    <dt className="text-brand-muted">{t('refundPercent')}</dt>
-                    <dd>{preview.refundPercent}%</dd>
-                  </div>
-                  <div className="flex justify-between border-t border-brand-border pt-2 font-bold">
-                    <dt>{t('refundedAmount')}</dt>
-                    <dd className="text-status-success">{formatSAR(preview.refundAmount)}</dd>
-                  </div>
-                  {preview.forfeitedAmount > 0 && (
-                    <div className="flex justify-between text-xs text-brand-muted">
-                      <dt>{t('deductedAmount')}</dt>
-                      <dd>{formatSAR(preview.forfeitedAmount)}</dd>
-                    </div>
-                  )}
-                </dl>
-              </div>
+                )}
+              </>
             )}
 
             <div className="space-y-2">

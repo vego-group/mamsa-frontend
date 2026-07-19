@@ -30,8 +30,6 @@ describe('mock pricing stays in sync between the quote and booking-creation endp
 
     expect(quote).toBeTruthy();
     expect(booking.price.subtotal).toBe(quote!.subtotal);
-    expect(booking.price.cleaningFee).toBe(quote!.cleaning_fee);
-    expect(booking.price.serviceFee).toBe(quote!.service_fee);
     expect(booking.price.tax).toBe(quote!.taxes);
     expect(booking.price.total).toBe(quote!.total);
   });

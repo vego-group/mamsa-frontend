@@ -85,8 +85,6 @@ export interface RawBooking {
     nightly_rate?: number;
     nights?: number;
     subtotal?: number;
-    service_fee?: number;
-    cleaning_fee?: number;
     taxes?: number;
     total?: number;
   };
@@ -276,8 +274,6 @@ export function mapBooking(b: RawBooking): Booking {
       pricePerNight: Number(p.nightly_rate ?? 0),
       nights: Number(p.nights ?? b.nights ?? 0),
       subtotal: Number(p.subtotal ?? 0),
-      cleaningFee: Number(p.cleaning_fee ?? 0),
-      serviceFee: Number(p.service_fee ?? 0),
       tax: Number(p.taxes ?? 0),
       total: Number(p.total ?? b.total_amount ?? 0),
     },

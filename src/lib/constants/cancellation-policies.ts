@@ -12,8 +12,8 @@ export const FLEXIBLE_POLICY: CancellationPolicy = {
   descriptionAr: 'سياسة سهلة تتيح للضيف الإلغاء قبل الوصول بمرونة.',
   tiers: [
     { minDaysBeforeCheckIn: 7, refundPercent: 100, labelAr: 'استرداد كامل' },
-    { minDaysBeforeCheckIn: 3, refundPercent: 50, labelAr: 'استرداد جزئي 50%' },
-    { minDaysBeforeCheckIn: 0, refundPercent: 0, labelAr: 'بدون استرداد' },
+    { minDaysBeforeCheckIn: 3, refundPercent: 75, labelAr: 'استرداد جزئي 75%' },
+    { minDaysBeforeCheckIn: 0, refundPercent: 50, labelAr: 'استرداد جزئي 50%' },
   ],
   postCheckInBehavior: 'hidden',
 };
@@ -24,8 +24,8 @@ export const MODERATE_POLICY: CancellationPolicy = {
   descriptionAr: 'توازن بين مرونة الإلغاء وحماية الشريك.',
   tiers: [
     { minDaysBeforeCheckIn: 7, refundPercent: 100, labelAr: 'استرداد كامل' },
-    { minDaysBeforeCheckIn: 3, refundPercent: 25, labelAr: 'استرداد جزئي 25%' },
-    { minDaysBeforeCheckIn: 0, refundPercent: 0, labelAr: 'بدون استرداد' },
+    { minDaysBeforeCheckIn: 3, refundPercent: 50, labelAr: 'استرداد جزئي 50%' },
+    { minDaysBeforeCheckIn: 0, refundPercent: 25, labelAr: 'استرداد جزئي 25%' },
   ],
   postCheckInBehavior: 'hidden',
 };
@@ -35,8 +35,8 @@ export const STRICT_POLICY: CancellationPolicy = {
   labelAr: 'صارمة',
   descriptionAr: 'إلغاء محدود — يحمي الشريك من الإلغاءات المتأخرة.',
   tiers: [
-    { minDaysBeforeCheckIn: 7, refundPercent: 50, labelAr: 'استرداد جزئي 50%' },
-    { minDaysBeforeCheckIn: 3, refundPercent: 0, labelAr: 'بدون استرداد' },
+    { minDaysBeforeCheckIn: 7, refundPercent: 75, labelAr: 'استرداد جزئي 75%' },
+    { minDaysBeforeCheckIn: 3, refundPercent: 25, labelAr: 'استرداد جزئي 25%' },
     { minDaysBeforeCheckIn: 0, refundPercent: 0, labelAr: 'بدون استرداد' },
   ],
   postCheckInBehavior: 'hidden',

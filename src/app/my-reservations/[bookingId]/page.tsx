@@ -65,13 +65,10 @@ export default function BookingDetailsPage() {
               price={booking.price}
               labels={{
                 priceLine: t('priceLine', { price: booking.price.pricePerNight, nights: booking.price.nights }),
-                cleaningFee: t('cleaningFee'),
-                serviceFee: t('serviceFee'),
                 taxes: t('taxes'),
                 total: t('grandTotal'),
               }}
               format={formatSAR}
-              serviceFeeFirst
             />
             {/* "Paid & confirmed" reassurance — only true once the payment actually went through. */}
             {(booking.status === 'confirmed' || booking.status === 'completed') && (
