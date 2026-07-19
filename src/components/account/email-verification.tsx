@@ -18,7 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { OtpVerificationForm } from '@/components/features/auth/OtpVerificationForm';
 import { accountApi } from '@/lib/api/client';
-import { ERROR_CODE_MESSAGES, resolveErrorMessage } from '@/lib/api/errors';
+import { ApiError, ERROR_CODE_MESSAGES, resolveErrorMessage } from '@/lib/api/errors';
 import { showToast } from '@/stores/toast';
 import { useAuthStore } from '@/stores/auth';
 import { isValidEmail } from '@/lib/utils/email';
@@ -54,6 +54,10 @@ export const EmailVerificationCard = forwardRef<EmailVerificationCardHandle, Ema
     const [emailInput, setEmailInput] = useState(user?.email ?? '');
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    // Normally RESEND_COOLDOWN_SECONDS; seeded from a RATE_LIMITED `retry_after`
+    // when Step 1 is submitted mid-cooldown (a code is already live) — the OTP
+    // step opens directly instead of stranding the user on the email form.
+    const [otpInitialCooldown, setOtpInitialCooldown] = useState(RESEND_COOLDOWN_SECONDS);
 
     useImperativeHandle(ref, () => ({
       reopen: () => {
@@ -73,10 +77,19 @@ export const EmailVerificationCard = forwardRef<EmailVerificationCardHandle, Ema
       setSubmitting(true);
       setError(null);
       try {
-        await accountApi.requestEmailVerification(trimmed);
+        const res = await accountApi.requestEmailVerification(trimmed);
         setEmailInput(trimmed);
+        setOtpInitialCooldown(res.resendAvailableIn);
         setStep('otp');
       } catch (e) {
+        // A code from a previous attempt is still live — join it instead of
+        // stranding the user on the email form (implementation guide §3).
+        if (e instanceof ApiError && e.code === 'RATE_LIMITED') {
+          setEmailInput(trimmed);
+          setOtpInitialCooldown(e.retryAfter ?? RESEND_COOLDOWN_SECONDS);
+          setStep('otp');
+          return;
+        }
         setError(resolveErrorMessage(e, t('genericError')));
       } finally {
         setSubmitting(false);
@@ -87,10 +100,17 @@ export const EmailVerificationCard = forwardRef<EmailVerificationCardHandle, Ema
       if (!user?.email) return;
       setSubmitting(true);
       try {
-        await accountApi.requestEmailVerification(user.email);
+        const res = await accountApi.requestEmailVerification(user.email);
         setEmailInput(user.email);
+        setOtpInitialCooldown(res.resendAvailableIn);
         setStep('otp');
       } catch (e) {
+        if (e instanceof ApiError && e.code === 'RATE_LIMITED') {
+          setEmailInput(user.email);
+          setOtpInitialCooldown(e.retryAfter ?? RESEND_COOLDOWN_SECONDS);
+          setStep('otp');
+          return;
+        }
         showToast(resolveErrorMessage(e, t('genericError')));
       } finally {
         setSubmitting(false);
@@ -109,9 +129,15 @@ export const EmailVerificationCard = forwardRef<EmailVerificationCardHandle, Ema
 
     const handleResend = async () => {
       try {
-        await accountApi.resendEmailVerification();
+        const res = await accountApi.resendEmailVerification();
+        return { cooldownSeconds: res.resendAvailableIn };
       } catch (e) {
         showToast(resolveErrorMessage(e, t('genericError')));
+        // Race with the server's own cooldown (e.g. two tabs) — reflect its
+        // authoritative retry_after instead of silently falling back to 60s.
+        if (e instanceof ApiError && e.code === 'RATE_LIMITED' && e.retryAfter != null) {
+          return { cooldownSeconds: e.retryAfter };
+        }
       }
       return {};
     };
@@ -191,6 +217,7 @@ export const EmailVerificationCard = forwardRef<EmailVerificationCardHandle, Ema
               </>
             }
             cooldownSeconds={RESEND_COOLDOWN_SECONDS}
+            initialCooldownSeconds={otpInitialCooldown}
             resendCooldownText={(seconds) => t('resendIn', { seconds })}
           />
         </Card>

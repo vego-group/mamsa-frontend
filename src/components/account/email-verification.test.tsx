@@ -110,7 +110,7 @@ describe('EmailVerificationCard — shared component across contexts', () => {
     const digitInputs = screen.getAllByRole('textbox') as HTMLInputElement[];
     expect(digitInputs).toHaveLength(6);
     for (let i = 0; i < 6; i++) {
-      fireEvent.change(digitInputs[i]!, { target: { value: '654321'[i] } });
+      fireEvent.change(digitInputs[i]!, { target: { value: '111222'[i] } });
     }
     await flushMockLatency();
 

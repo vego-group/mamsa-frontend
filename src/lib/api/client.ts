@@ -139,22 +139,31 @@ async function http<T>(path: string, init: RequestInit = {}, isRetry = false): P
     let message = res.statusText;
     let code: string | undefined;
     let retryAfter: number | undefined;
+    let remainingAttempts: number | undefined;
     try {
       const body = (await res.json()) as {
         message?: string;
         code?: string;
         errors?: Record<string, string[]>;
         retry_after?: number;
+        remaining_attempts?: number;
       };
       message =
         body.message ??
         (body.errors ? Object.values(body.errors).flat()[0] ?? message : message);
       code = body.code;
       retryAfter = body.retry_after;
+      remainingAttempts = body.remaining_attempts;
     } catch {
       /* non-JSON error body */
     }
-    throw new ApiError(res.status, message, code, retryAfter);
+    // A route-level throttle (as opposed to the business cooldown) returns a
+    // plain 429 with no `code` — treat it the same as RATE_LIMITED.
+    if (res.status === 429 && !code) {
+      code = 'RATE_LIMITED';
+      retryAfter ??= Number(res.headers.get('Retry-After')) || undefined;
+    }
+    throw new ApiError(res.status, message, code, retryAfter, remainingAttempts);
   }
 
   if (res.status === 204) return undefined as T;
@@ -714,7 +723,7 @@ export const accountApi = {
   requestEmailVerification: (email: string): Promise<{ email: string; verified: boolean; resendAvailableIn: number }> =>
     USE_MOCK
       ? withLatency(mockApi.account.requestEmailVerification(email))
-      : http<{ email?: string; verified?: boolean; resend_available_in?: number }>('/account/email', {
+      : http<{ email?: string; verified?: boolean; resend_available_in?: number }>('/user/email', {
           method: 'POST',
           body: JSON.stringify({ email }),
         }).then((d) => ({
@@ -727,7 +736,7 @@ export const accountApi = {
   verifyEmail: (code: string): Promise<{ email: string; verified: true }> =>
     USE_MOCK
       ? withLatency(mockApi.account.verifyEmail(code))
-      : http<{ email?: string }>('/account/email/verify', {
+      : http<{ email?: string }>('/user/email/verify', {
           method: 'POST',
           body: JSON.stringify({ code }),
         }).then((d) => ({ email: d.email ?? '', verified: true as const })),
@@ -736,7 +745,7 @@ export const accountApi = {
   resendEmailVerification: (): Promise<{ resendAvailableIn: number }> =>
     USE_MOCK
       ? withLatency(mockApi.account.resendEmailVerification())
-      : http<{ resend_available_in?: number }>('/account/email/resend', { method: 'POST', body: '{}' }).then((d) => ({
+      : http<{ resend_available_in?: number }>('/user/email/resend', { method: 'POST', body: '{}' }).then((d) => ({
           resendAvailableIn: Number(d.resend_available_in ?? 60),
         })),
 

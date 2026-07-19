@@ -10,6 +10,8 @@ export class ApiError extends Error {
     public code?: string,
     /** Seconds until the caller may retry — only set for RATE_LIMITED. */
     public retryAfter?: number,
+    /** Wrong-code attempts left before the code is killed — only set for OTP_INVALID. */
+    public remainingAttempts?: number,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -35,6 +37,9 @@ export const ERROR_CODE_MESSAGES: Record<string, string> = {
 export function resolveErrorMessage(e: unknown, fallback: string): string {
   if (e instanceof ApiError && e.code) {
     if (e.code === 'RATE_LIMITED') return `حاول مرة أخرى بعد ${e.retryAfter ?? 60} ثانية`;
+    if (e.code === 'OTP_INVALID' && e.remainingAttempts != null) {
+      return `الرمز غير صحيح، متبقي ${e.remainingAttempts} محاولات`;
+    }
     const known = ERROR_CODE_MESSAGES[e.code];
     if (known) return known;
   }

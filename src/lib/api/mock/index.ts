@@ -26,9 +26,10 @@ import { diffNights } from '@/lib/utils/format';
 // works whether you're pointed at the local mock or a staging backend.
 const MOCK_OTP = process.env.NEXT_PUBLIC_MOCK_OTP ?? '111222';
 
-// Deliberately different from MOCK_OTP — lets a dev exercise both flows in the
-// same session without one fixed code silently "working" for the other.
-const MOCK_EMAIL_OTP = '654321';
+// The real backend uses the SAME fixed code for phone and email OTP on
+// staging (confirmed in NEXTJS-EMAIL-VERIFICATION.md §1), so the mock
+// mirrors that instead of using a separate value.
+const MOCK_EMAIL_OTP = MOCK_OTP;
 const EMAIL_RESEND_COOLDOWN_SECONDS = 60;
 const EMAIL_MAX_ATTEMPTS = 5;
 
@@ -47,8 +48,8 @@ let emailResendAt = 0; // epoch ms; 0 = no cooldown in effect
 // ============ Helpers ============
 const ok = <T>(value: T) => Promise.resolve(value);
 const fail = (msg: string) => Promise.reject(new Error(msg));
-const failCode = (status: number, code: string, retryAfter?: number): Promise<never> =>
-  Promise.reject(new ApiError(status, ERROR_CODE_MESSAGES[code] ?? code, code, retryAfter));
+const failCode = (status: number, code: string, retryAfter?: number, remainingAttempts?: number): Promise<never> =>
+  Promise.reject(new ApiError(status, ERROR_CODE_MESSAGES[code] ?? code, code, retryAfter, remainingAttempts));
 
 function genId(prefix: string): string {
   return `${prefix}-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
@@ -311,7 +312,7 @@ export const mockApi = {
       if (code !== MOCK_EMAIL_OTP) {
         emailAttempts += 1;
         if (emailAttempts >= EMAIL_MAX_ATTEMPTS) return failCode(422, 'OTP_MAX_ATTEMPTS');
-        return failCode(422, 'OTP_INVALID');
+        return failCode(422, 'OTP_INVALID', undefined, EMAIL_MAX_ATTEMPTS - emailAttempts);
       }
       if (!currentUser) currentUser = { ...MOCK_CURRENT_USER };
       const verifiedEmail = pendingEmail;
