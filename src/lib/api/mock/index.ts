@@ -58,21 +58,18 @@ function genCode(): string {
   return Math.random().toString(36).slice(2, 12).toUpperCase();
 }
 
-// Mirrors the real backend's pricing formula (see NEXTJS-PRICING-IMPLEMENTATION.md
-// §1.1) so `POST /units/{id}/availability` and `POST /bookings` return a
-// `pricing` block matching the real API wire shape exactly. Kept LOCAL to this
-// mock layer only — the frontend proper never computes money; this function
-// exists purely to role-play what the backend would return.
-const MOCK_SERVICE_FEE_PERCENT = 10;
+// Mirrors the real backend's pricing formula so `POST /units/{id}/availability`
+// and `POST /bookings` return a `pricing` block matching the real API wire
+// shape exactly. Kept LOCAL to this mock layer only — the frontend proper
+// never computes money; this function exists purely to role-play what the
+// backend would return. Per the final pricing decision, tax (VAT) is the
+// only fee — no cleaning fee, no service fee.
 const MOCK_TAX_PERCENT = 15;
 
 interface MockPricing {
   nights: number;
   nightly_rate: number;
   subtotal: number;
-  service_fee: number;
-  service_fee_percent: number;
-  cleaning_fee: number;
   taxes: number;
   tax_percent: number;
   total: number;
@@ -80,17 +77,12 @@ interface MockPricing {
 
 function computeMockPricing(unit: Unit, nights: number): MockPricing {
   const subtotal = unit.pricePerNight * nights;
-  const cleaningFee = unit.cleaningFee ?? 0;
-  const serviceFee = Math.round(subtotal * (MOCK_SERVICE_FEE_PERCENT / 100) * 100) / 100;
-  const taxes = Math.round((subtotal + cleaningFee + serviceFee) * (MOCK_TAX_PERCENT / 100) * 100) / 100;
-  const total = Math.round((subtotal + cleaningFee + serviceFee + taxes) * 100) / 100;
+  const taxes = Math.round(subtotal * (MOCK_TAX_PERCENT / 100) * 100) / 100;
+  const total = Math.round((subtotal + taxes) * 100) / 100;
   return {
     nights,
     nightly_rate: unit.pricePerNight,
     subtotal,
-    service_fee: serviceFee,
-    service_fee_percent: MOCK_SERVICE_FEE_PERCENT,
-    cleaning_fee: cleaningFee,
     taxes,
     tax_percent: MOCK_TAX_PERCENT,
     total,
@@ -201,10 +193,7 @@ export const mockApi = {
       const unit = findUnitById(input.unitId);
       if (!unit) return fail('الوحدة غير موجودة') as Promise<Booking>;
       const nights = diffNights(input.checkInDate, input.checkOutDate);
-      const { subtotal, cleaning_fee: cleaningFee, service_fee: serviceFee, taxes: tax, total } = computeMockPricing(
-        unit,
-        nights,
-      );
+      const { subtotal, taxes: tax, total } = computeMockPricing(unit, nights);
 
       // ⭐ SRS FR-036: snapshot the unit's cancellation policy NOW
       const booking: Booking = {
@@ -228,8 +217,6 @@ export const mockApi = {
           pricePerNight: unit.pricePerNight,
           nights,
           subtotal,
-          cleaningFee,
-          serviceFee: Math.round(serviceFee * 100) / 100,
           tax: Math.round(tax * 100) / 100,
           total: Math.round(total * 100) / 100,
         },

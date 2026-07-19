@@ -29,8 +29,6 @@ function makeBooking(overrides: Partial<Booking> = {}): Booking {
       pricePerNight: 1000,
       nights: 4,
       subtotal: 4000,
-      cleaningFee: 0,
-      serviceFee: 0,
       tax: 0,
       total: 4000,
     },
@@ -60,17 +58,17 @@ describe('daysUntilCheckIn (Riyadh-midnight boundary)', () => {
 
 describe('Riyadh-based policy cutoffs flip at the exact boundary instant', () => {
   // Check-in 2026-07-15 → property midnight = 2026-07-14T21:00:00Z.
-  // Flexible policy: ≥7 days → 100%, 3–7 days → 50%. The 7-day cutoff
+  // Flexible policy: ≥7 days → 100%, 3–7 days → 75%. The 7-day cutoff
   // instant is therefore 2026-07-07T21:00:00Z for every user worldwide.
   it('one minute BEFORE the 7-day cutoff → still 100% refund', () => {
     const b = makeBooking({ checkInDate: '2026-07-15' });
     const p = previewCancellation(b, new Date('2026-07-07T20:59:00Z'));
     expect(p.refundPercent).toBe(100);
   });
-  it('one minute AFTER the 7-day cutoff → drops to 50% refund', () => {
+  it('one minute AFTER the 7-day cutoff → drops to 75% refund', () => {
     const b = makeBooking({ checkInDate: '2026-07-15' });
     const p = previewCancellation(b, new Date('2026-07-07T21:01:00Z'));
-    expect(p.refundPercent).toBe(50);
+    expect(p.refundPercent).toBe(75);
   });
   it('cancellability flips exactly at property midnight on the check-in day', () => {
     const b = makeBooking({ checkInDate: '2026-07-15' });
@@ -84,28 +82,28 @@ describe('resolveTier (Flexible)', () => {
     expect(resolveTier(FLEXIBLE_POLICY, 10).refundPercent).toBe(100);
     expect(resolveTier(FLEXIBLE_POLICY, 7.5).refundPercent).toBe(100);
   });
-  it('returns 50% for 3-7 days', () => {
-    expect(resolveTier(FLEXIBLE_POLICY, 5).refundPercent).toBe(50);
-    expect(resolveTier(FLEXIBLE_POLICY, 3).refundPercent).toBe(50);
+  it('returns 75% for 3-7 days', () => {
+    expect(resolveTier(FLEXIBLE_POLICY, 5).refundPercent).toBe(75);
+    expect(resolveTier(FLEXIBLE_POLICY, 3).refundPercent).toBe(75);
   });
-  it('returns 0% for < 3 days', () => {
-    expect(resolveTier(FLEXIBLE_POLICY, 1).refundPercent).toBe(0);
-    expect(resolveTier(FLEXIBLE_POLICY, 0.5).refundPercent).toBe(0);
+  it('returns 50% for < 3 days', () => {
+    expect(resolveTier(FLEXIBLE_POLICY, 1).refundPercent).toBe(50);
+    expect(resolveTier(FLEXIBLE_POLICY, 0.5).refundPercent).toBe(50);
   });
 });
 
 describe('resolveTier (Moderate)', () => {
-  it('25% in 3-7 days window (vs Flexible 50%)', () => {
-    expect(resolveTier(MODERATE_POLICY, 5).refundPercent).toBe(25);
+  it('50% in 3-7 days window (vs Flexible 75%)', () => {
+    expect(resolveTier(MODERATE_POLICY, 5).refundPercent).toBe(50);
   });
 });
 
 describe('resolveTier (Strict)', () => {
-  it('only 50% even when > 7 days', () => {
-    expect(resolveTier(STRICT_POLICY, 14).refundPercent).toBe(50);
+  it('only 75% even when > 7 days', () => {
+    expect(resolveTier(STRICT_POLICY, 14).refundPercent).toBe(75);
   });
-  it('0% in 3-7 days window', () => {
-    expect(resolveTier(STRICT_POLICY, 5).refundPercent).toBe(0);
+  it('25% in 3-7 days window', () => {
+    expect(resolveTier(STRICT_POLICY, 5).refundPercent).toBe(25);
   });
 });
 
@@ -138,19 +136,19 @@ describe('previewCancellation', () => {
     expect(p.forfeitedAmount).toBe(0);
   });
 
-  it('Flexible policy, 5 days before → 50% refund', () => {
+  it('Flexible policy, 5 days before → 75% refund', () => {
     const b = makeBooking({ checkInDate: '2026-07-15' });
     const p = previewCancellation(b, new Date('2026-07-10'));
-    expect(p.refundPercent).toBe(50);
-    expect(p.refundAmount).toBe(2000);
-    expect(p.forfeitedAmount).toBe(2000);
+    expect(p.refundPercent).toBe(75);
+    expect(p.refundAmount).toBe(3000);
+    expect(p.forfeitedAmount).toBe(1000);
   });
 
-  it('Flexible policy, 1 day before → 0% refund', () => {
+  it('Flexible policy, 1 day before → 50% refund', () => {
     const b = makeBooking({ checkInDate: '2026-07-15' });
     const p = previewCancellation(b, new Date('2026-07-14'));
-    expect(p.refundPercent).toBe(0);
-    expect(p.refundAmount).toBe(0);
+    expect(p.refundPercent).toBe(50);
+    expect(p.refundAmount).toBe(2000);
   });
 
   it('after check-in → not allowed', () => {
@@ -178,8 +176,8 @@ describe('previewCancellation', () => {
       policySnapshot: STRICT_POLICY,
     });
     const p = previewCancellation(b, new Date('2026-07-05')); // 10 days before
-    expect(p.refundPercent).toBe(50); // strict rule
-    expect(p.refundAmount).toBe(2000);
+    expect(p.refundPercent).toBe(75); // strict rule
+    expect(p.refundAmount).toBe(3000);
   });
 });
 

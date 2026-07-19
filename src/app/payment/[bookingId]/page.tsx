@@ -282,15 +282,11 @@ export default function PaymentPage() {
                   pricePerNight: booking.nightlyRate,
                   nights: booking.nights,
                   subtotal: booking.subtotal,
-                  cleaningFee: booking.cleaningFee,
-                  serviceFee: booking.serviceFee,
                   tax: booking.taxes,
                   total: info.amount,
                 }}
                 labels={{
                   priceLine: t('priceLine', { price: booking.nightlyRate, nights: booking.nights }),
-                  cleaningFee: t('cleaningFee'),
-                  serviceFee: t('serviceFee'),
                   taxes: t('taxes'),
                   total: t('total'),
                 }}

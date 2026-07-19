@@ -11,8 +11,6 @@
     "home": "Home",
     "explore": "Explore",
     "perNight": "/ night",
-    "serviceFee": "Service fee",
-    "total": "Total",
     "viewAll": "View all",
     "sar": "SAR",
     "cancel": "Cancel",
@@ -183,6 +181,7 @@
     "guestsLabel": "Guests",
     "guestOption": "{count} guests",
     "nightsLine": "{price} × {nights} nights",
+    "estimateNote": "Estimated price — the final price and tax are calculated once you pick your dates on the booking page",
     "bookNow": "Book now",
     "noChargeYet": "You won't be charged at this stage"
   },
@@ -417,8 +416,6 @@
     "secureNote": "Your card is processed securely via Moyasar — we never store your full card number.",
     "priceDetails": "Price details",
     "priceLine": "{price} SAR × {nights} nights",
-    "cleaningFee": "Cleaning fee",
-    "serviceFeeWithPercent": "Service fee ({percent}%)",
     "taxesWithPercent": "Taxes ({percent}%)",
     "total": "Total (SAR)",
     "backToUnit": "Back to the unit page",
@@ -497,6 +494,7 @@
       "completed": "A completed booking can't be cancelled.",
       "afterCheckIn": "The booking can't be cancelled after the check-in date."
     },
+    "pendingPaymentNote": "This booking hasn't been paid yet — cancelling it will simply free up the dates. No refund applies.",
     "refundSummary": "Refund summary",
     "applicableTier": "Applicable tier",
     "totalAmount": "Total amount",
@@ -897,9 +895,9 @@
       "freezeNote": "<strong>Policy freeze:</strong> the policy you see at checkout is locked in on your booking — any later change the host makes to it does not apply to existing bookings.",
       "templatesTitle": "The three approved policies",
       "templateDescriptions": {
-        "flexible": "Full refund up to 7 days before arrival, 50% up to 3 days, and no refund after that.",
-        "moderate": "Full refund up to 7 days before arrival, 25% up to 3 days, and no refund after that.",
-        "strict": "50% refund up to 7 days before arrival, and no refund after that."
+        "flexible": "Full refund up to 7 days before arrival, 75% up to 3 days, and 50% after that.",
+        "moderate": "Full refund up to 7 days before arrival, 50% up to 3 days, and 25% after that.",
+        "strict": "75% refund up to 7 days before arrival, 25% up to 3 days, and no refund after that."
       },
       "generalTermsTitle": "General terms",
       "generalTerms": {

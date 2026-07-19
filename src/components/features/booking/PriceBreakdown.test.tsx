@@ -6,48 +6,26 @@ afterEach(cleanup);
 
 const LABELS = {
   priceLine: '100 ر.س × 1 ليالي',
-  cleaningFee: 'رسوم النظافة',
-  serviceFee: 'رسوم الخدمة',
-  taxes: 'الضرائب',
+  taxes: 'الضرائب (15٪)',
   total: 'المجموع',
 };
 
 const format = (n: number) => `${n} ر.س`;
 
-describe('PriceBreakdown — cleaning fee row visibility', () => {
-  it('hides the cleaning-fee row when the value is 0 and hideZeroCleaningFee is set', () => {
+describe('PriceBreakdown — tax-only breakdown', () => {
+  it('renders the subtotal, tax, and total rows straight from the given price — no cleaning/service fee rows', () => {
     render(
       <PriceBreakdown
-        price={{ pricePerNight: 100, nights: 1, subtotal: 100, cleaningFee: 0, serviceFee: 10, tax: 15, total: 125 }}
-        labels={LABELS}
-        format={format}
-        hideZeroCleaningFee
-      />,
-    );
-    expect(screen.queryByText('رسوم النظافة')).toBeNull();
-  });
-
-  it('shows the cleaning-fee row when the value is non-zero, even with hideZeroCleaningFee set', () => {
-    render(
-      <PriceBreakdown
-        price={{ pricePerNight: 100, nights: 1, subtotal: 100, cleaningFee: 50, serviceFee: 10, tax: 15, total: 175 }}
-        labels={LABELS}
-        format={format}
-        hideZeroCleaningFee
-      />,
-    );
-    expect(screen.getByText('رسوم النظافة')).toBeTruthy();
-    expect(screen.getByText(format(50))).toBeTruthy();
-  });
-
-  it('shows the cleaning-fee row even when 0 if hideZeroCleaningFee is not set (existing pages unaffected)', () => {
-    render(
-      <PriceBreakdown
-        price={{ pricePerNight: 100, nights: 1, subtotal: 100, cleaningFee: 0, serviceFee: 10, tax: 15, total: 125 }}
+        price={{ pricePerNight: 100, nights: 1, subtotal: 100, tax: 15, total: 115 }}
         labels={LABELS}
         format={format}
       />,
     );
-    expect(screen.getByText('رسوم النظافة')).toBeTruthy();
+    expect(screen.getByText(LABELS.priceLine)).toBeTruthy();
+    expect(screen.getByText(format(100))).toBeTruthy();
+    expect(screen.getByText(LABELS.taxes)).toBeTruthy();
+    expect(screen.getByText(format(15))).toBeTruthy();
+    expect(screen.getByText(LABELS.total)).toBeTruthy();
+    expect(screen.getByText(format(115))).toBeTruthy();
   });
 });

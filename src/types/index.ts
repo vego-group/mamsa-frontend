@@ -53,8 +53,6 @@ export interface Unit {
   latitude: number;
   longitude: number;
   pricePerNight: number; // SAR
-  cleaningFee?: number;
-  serviceFeePercent?: number;
   taxPercent?: number;
   capacity: number;
   bedrooms: number;
@@ -120,8 +118,6 @@ export interface PriceBreakdown {
   pricePerNight: number;
   nights: number;
   subtotal: number;
-  cleaningFee: number;
-  serviceFee: number;
   tax: number;
   total: number;
 }

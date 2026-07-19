@@ -75,14 +75,24 @@ export default function UnitDetailsPage() {
     if (!checkIn || !checkOut) return 0;
     return Math.max(0, Math.round((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000));
   })();
+  // Rough preview only — no fee/tax math here. The real, final price only
+  // exists after checkAvailability() runs on the checkout page, once dates
+  // are confirmed (see checkout-page-client.tsx).
   const subtotal = unit ? unit.pricePerNight * nights : 0;
-  const serviceFee = subtotal * 0.1;
-  const total = subtotal + serviceFee;
+
+  // Local YYYY-MM-DD "today" — floors the date pickers so past dates can't
+  // be picked or typed in. Availability itself is still verified server-side
+  // on the checkout page; this is just a UX guard against obviously invalid input.
+  const todayStr = (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  })();
+
+  const datesSelected = !!checkIn && !!checkOut && nights >= 1 && checkIn >= todayStr;
 
   const handleBook = () => {
-    if (!unit) return;
+    if (!unit || !datesSelected) return;
     if (!isAuth) { openAuth('login'); return; }
-    if (!checkIn || !checkOut || nights < 1) { alert(t('pickDates')); return; }
     const q = new URLSearchParams({ checkIn, checkOut, guests: String(guests) });
     router.push(`/booking/${unit.id}?${q.toString()}`);
   };
@@ -296,6 +306,7 @@ export default function UnitDetailsPage() {
                   <input
                     type="date"
                     value={checkIn}
+                    min={todayStr}
                     max={checkOut || undefined}
                     onChange={(e) => setCheckIn(e.target.value)}
                     className="w-full bg-transparent text-sm text-brand-ink focus:outline-none"
@@ -306,7 +317,7 @@ export default function UnitDetailsPage() {
                   <input
                     type="date"
                     value={checkOut}
-                    min={checkIn || undefined}
+                    min={checkIn || todayStr}
                     onChange={(e) => setCheckOut(e.target.value)}
                     className="w-full bg-transparent text-sm text-brand-ink focus:outline-none"
                   />
@@ -328,18 +339,28 @@ export default function UnitDetailsPage() {
 
             {nights > 0 && (
               <div className="space-y-1.5 text-sm">
-                <Row label={t('nightsLine', { price: formatSAR(unit.pricePerNight), nights })} value={formatSAR(subtotal)} />
-                <Row label={tCommon('serviceFee')} value={formatSAR(serviceFee)} />
-                <hr className="border-brand-border" />
-                <Row label={tCommon('total')} value={formatSAR(total)} bold />
+                <Row label={t('nightsLine', { price: formatSAR(unit.pricePerNight), nights })} value={formatSAR(subtotal)} bold />
+                <p className="text-xs text-brand-muted">{t('estimateNote')}</p>
               </div>
             )}
 
-            <Button size="lg" className="w-full" onClick={handleBook}>{t('bookNow')}</Button>
-            <p className="flex items-center justify-center gap-1.5 text-center text-xs text-brand-muted">
-              <ShieldCheck className="h-3.5 w-3.5 text-brand-primary" />
-              {t('noChargeYet')}
-            </p>
+            <Button
+              size="lg"
+              className="w-full"
+              onClick={handleBook}
+              disabled={!datesSelected}
+              title={datesSelected ? undefined : t('pickDates')}
+            >
+              {t('bookNow')}
+            </Button>
+            {!datesSelected ? (
+              <p className="text-center text-xs text-status-danger">{t('pickDates')}</p>
+            ) : (
+              <p className="flex items-center justify-center gap-1.5 text-center text-xs text-brand-muted">
+                <ShieldCheck className="h-3.5 w-3.5 text-brand-primary" />
+                {t('noChargeYet')}
+              </p>
+            )}
           </Card>
         </aside>
       </div>

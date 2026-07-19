@@ -115,11 +115,12 @@ describe('Checkout — EMAIL_VERIFICATION_REQUIRED recovery', () => {
   });
 });
 
-// U-001: pricePerNight 1200, cleaningFee 300 — 4 nights (2026-08-01 → 2026-08-05).
-// Mirrors the mock backend's formula (10% service fee, 15% tax) purely to
-// compute the EXPECTED numbers for these assertions — the component itself
-// must never do this math; it only renders whatever the (mocked) API returns.
-const EXPECTED_QUOTE = { subtotal: 4800, cleaningFee: 300, serviceFee: 480, taxes: 837, total: 6417 };
+// U-001: pricePerNight 1200 — 4 nights (2026-08-01 → 2026-08-05).
+// Mirrors the mock backend's tax-only formula (15% VAT, no cleaning/service
+// fee) purely to compute the EXPECTED numbers for these assertions — the
+// component itself must never do this math; it only renders whatever the
+// (mocked) API returns.
+const EXPECTED_QUOTE = { subtotal: 4800, taxes: 720, total: 5520 };
 
 function bookingFixture(overrides: Partial<Booking> = {}): Booking {
   return {
@@ -137,8 +138,6 @@ function bookingFixture(overrides: Partial<Booking> = {}): Booking {
       pricePerNight: 1200,
       nights: 4,
       subtotal: EXPECTED_QUOTE.subtotal,
-      cleaningFee: EXPECTED_QUOTE.cleaningFee,
-      serviceFee: EXPECTED_QUOTE.serviceFee,
       tax: EXPECTED_QUOTE.taxes,
       total: EXPECTED_QUOTE.total,
     },
@@ -150,14 +149,12 @@ function bookingFixture(overrides: Partial<Booking> = {}): Booking {
 }
 
 describe('Checkout — price breakdown renders the server-computed quote exactly', () => {
-  it('shows subtotal / cleaning fee / service fee / taxes / total straight from the quote — no client math', async () => {
+  it('shows subtotal / taxes / total straight from the quote — no client math, no cleaning/service fee rows', async () => {
     useAuthStore.setState({ user: baseUser({ emailVerified: true }), isAuthenticated: true });
     renderCheckout();
     await waitForUnitToLoad();
 
     expect(screen.getByText(formatSAR(EXPECTED_QUOTE.subtotal))).toBeTruthy();
-    expect(screen.getByText(formatSAR(EXPECTED_QUOTE.cleaningFee))).toBeTruthy();
-    expect(screen.getByText(formatSAR(EXPECTED_QUOTE.serviceFee))).toBeTruthy();
     expect(screen.getByText(formatSAR(EXPECTED_QUOTE.taxes))).toBeTruthy();
     expect(screen.getByText(formatSAR(EXPECTED_QUOTE.total))).toBeTruthy();
   });
@@ -169,8 +166,8 @@ describe('Checkout — post-booking price switches to the frozen booking respons
     renderCheckout();
     await waitForUnitToLoad();
 
-    // Before submitting: the page shows the QUOTE's cleaning fee.
-    expect(screen.getByText(formatSAR(EXPECTED_QUOTE.cleaningFee))).toBeTruthy();
+    // Before submitting: the page shows the QUOTE's total.
+    expect(screen.getByText(formatSAR(EXPECTED_QUOTE.total))).toBeTruthy();
 
     fireEvent.change(screen.getByPlaceholderText('أدخل الاسم الأول'), { target: { value: 'سارة' } });
     fireEvent.change(screen.getByPlaceholderText('أدخل اسم العائلة'), { target: { value: 'محمد' } });
@@ -183,10 +180,8 @@ describe('Checkout — post-booking price switches to the frozen booking respons
         pricePerNight: 1200,
         nights: 4,
         subtotal: EXPECTED_QUOTE.subtotal,
-        cleaningFee: 999,
-        serviceFee: EXPECTED_QUOTE.serviceFee,
-        tax: EXPECTED_QUOTE.taxes,
-        total: 7116,
+        tax: 1200,
+        total: 6000,
       },
     });
     vi.spyOn(bookingsApi, 'create').mockResolvedValueOnce(booking);
@@ -197,10 +192,10 @@ describe('Checkout — post-booking price switches to the frozen booking respons
       await vi.advanceTimersByTimeAsync(350);
     });
 
-    // The frozen booking numbers now win — the quote's old cleaning fee/total are gone.
-    expect(screen.getByText(formatSAR(999))).toBeTruthy();
-    expect(screen.getByText(formatSAR(7116))).toBeTruthy();
-    expect(screen.queryByText(formatSAR(EXPECTED_QUOTE.cleaningFee))).toBeNull();
+    // The frozen booking numbers now win — the quote's old tax/total are gone.
+    expect(screen.getByText(formatSAR(1200))).toBeTruthy();
+    expect(screen.getByText(formatSAR(6000))).toBeTruthy();
+    expect(screen.queryByText(formatSAR(EXPECTED_QUOTE.taxes))).toBeNull();
     expect(screen.queryByText(formatSAR(EXPECTED_QUOTE.total))).toBeNull();
   });
 });

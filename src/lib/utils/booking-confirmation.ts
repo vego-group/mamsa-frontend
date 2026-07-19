@@ -72,8 +72,6 @@ export function downloadBookingConfirmation(booking: Booking) {
     <h2>ملخص السعر</h2>
     <table>
       ${row(`${booking.price.pricePerNight} ر.س × ${booking.price.nights} ليالي`, formatSAR(booking.price.subtotal))}
-      ${row('رسوم الخدمة', formatSAR(booking.price.serviceFee))}
-      ${row('رسوم التنظيف', formatSAR(booking.price.cleaningFee))}
       ${row('الضرائب', formatSAR(booking.price.tax))}
       <tr class="total"><td>المجموع الكلي</td><td class="val">${formatSAR(booking.price.total)}</td></tr>
     </table>
