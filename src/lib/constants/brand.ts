@@ -3,6 +3,16 @@
  * المصدر الوحيد لمعلومات المنصة المعروضة للمستخدم.
  */
 
+/**
+ * قاعدة رابط الموقع العام (تطبيق المستخدم — www). يُستخدم في robots.txt و
+ * sitemap.xml والروابط المطلقة. يُضبط لكل بيئة عبر NEXT_PUBLIC_SITE_URL؛
+ * القيمة الافتراضية هي نطاق الإنتاج. بدون شرطة مائلة في النهاية.
+ */
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.mamsaa.com').replace(
+  /\/+$/,
+  '',
+);
+
 export const BRAND = {
   nameAr: 'مَمسَى',
   nameEn: 'Mamsa',
