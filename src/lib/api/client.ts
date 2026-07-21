@@ -287,12 +287,21 @@ export const authApi = {
       refreshToken: d.refresh_token,
     })),
 
-  completeProfile: (data: { name: string; email: string }) =>
+  /**
+   * Sends the name as two parts — the backend builds `name` from them, so a
+   * compound first name ("عبد الله") is stored and returned intact instead of
+   * being re-split on the space.
+   */
+  completeProfile: (data: { firstName: string; lastName: string; email: string }) =>
     USE_MOCK
-      ? withLatency(mockApi.account.updateProfile({ firstName: data.name, email: data.email }))
+      ? withLatency(mockApi.account.updateProfile(data))
       : http<RawUser>('/auth/complete-profile', {
           method: 'POST',
-          body: JSON.stringify(data),
+          body: JSON.stringify({
+            first_name: data.firstName,
+            last_name: data.lastName,
+            email: data.email,
+          }),
         }).then(mapUser),
 
   logout: () =>
@@ -693,7 +702,8 @@ export const accountApi = {
       : http<RawUser>('/user/profile', {
           method: 'PUT',
           body: JSON.stringify({
-            name: `${data.firstName ?? ''} ${data.lastName ?? ''}`.trim(),
+            first_name: data.firstName,
+            last_name: data.lastName,
             email: data.email,
           }),
         }).then(mapUserProfile),

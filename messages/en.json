@@ -91,14 +91,18 @@
     "parking": "Parking",
     "ac": "Air conditioning",
     "garden": "Garden",
-    "tv": "Smart TV",
     "washer": "Washing machine",
     "security": "24h security",
-    "self_checkin": "Self check-in"
+    "self_checkin": "Self check-in",
+    "smart_tv": "Smart TV",
+    "family_friendly": "Family friendly",
+    "bbq": "BBQ",
+    "elevator": "Elevator",
+    "private_beach": "Private beach",
+    "event_hall": "Event hall"
   },
   "card": {
     "save": "Save to favorites",
-    "discount": "{percent}% off",
     "featured": "Featured",
     "guests": "{count} guests",
     "rooms": "{count} rooms",
@@ -147,7 +151,6 @@
   "unit": {
     "pickDates": "Pick check-in and check-out dates",
     "featured": "Featured",
-    "discount": "{percent}% off",
     "reviewCount": "{count} reviews",
     "share": "Share",
     "saved": "Saved",
@@ -234,18 +237,39 @@
     "howTitle": "How it works",
     "howSubtitle": "Three simple steps between you and the perfect getaway",
     "how": {
-      "0": { "title": "Discover", "body": "Search thousands of verified properties across the Kingdom by destination and need." },
-      "1": { "title": "Explore", "body": "Browse each property's details, photos, amenities and guest reviews before booking." },
-      "2": { "title": "Book", "body": "Complete your booking in a few safe steps and pay confidently through trusted methods." }
+      "0": {
+        "title": "Discover",
+        "body": "Search thousands of verified properties across the Kingdom by destination and need."
+      },
+      "1": {
+        "title": "Explore",
+        "body": "Browse each property's details, photos, amenities and guest reviews before booking."
+      },
+      "2": {
+        "title": "Book",
+        "body": "Complete your booking in a few safe steps and pay confidently through trusted methods."
+      }
     },
     "trustEyebrow": "A modern Saudi platform for unique stays",
     "trustTitle": "Building your trust from day one",
     "trustSubtitle": "A smooth, secure booking experience with verified stays and high quality standards.",
     "trust": {
-      "licensed": { "title": "Licensed & trusted", "body": "Accredited by the Ministry of Tourism, operating within official frameworks." },
-      "quality": { "title": "High quality", "body": "Strict standards for photos and amenities to guarantee the best stay." },
-      "coverage": { "title": "Wide coverage", "body": "Diverse stays across the Kingdom's cities." },
-      "support": { "title": "Ongoing support", "body": "A support team ready to help at every step of your journey." }
+      "licensed": {
+        "title": "Licensed & trusted",
+        "body": "Accredited by the Ministry of Tourism, operating within official frameworks."
+      },
+      "quality": {
+        "title": "High quality",
+        "body": "Strict standards for photos and amenities to guarantee the best stay."
+      },
+      "coverage": {
+        "title": "Wide coverage",
+        "body": "Diverse stays across the Kingdom's cities."
+      },
+      "support": {
+        "title": "Ongoing support",
+        "body": "A support team ready to help at every step of your journey."
+      }
     }
   },
   "testimonials": {
@@ -750,10 +774,22 @@
     "eyebrow": "Get to know us",
     "heroTitle": "About {name}",
     "stats": {
-      "0": { "value": "2026", "label": "We launched in" },
-      "1": { "value": "100%", "label": "Verified units" },
-      "2": { "value": "24/7", "label": "Customer support" },
-      "3": { "value": "Licensed", "label": "By the Ministry of Tourism" }
+      "0": {
+        "value": "2026",
+        "label": "We launched in"
+      },
+      "1": {
+        "value": "100%",
+        "label": "Verified units"
+      },
+      "2": {
+        "value": "24/7",
+        "label": "Customer support"
+      },
+      "3": {
+        "value": "Licensed",
+        "label": "By the Ministry of Tourism"
+      }
     },
     "visionTitle": "Our vision",
     "visionBody": "To be the leading platform in Saudi Arabia for booking unique stays, contributing to the growth of the tourism and hospitality sector in support of Vision 2030's goals.",
@@ -762,18 +798,42 @@
     "valuesTitle": "Our values",
     "valuesSubtitle": "The principles behind every detail of the platform",
     "values": {
-      "0": { "title": "Licensed", "body": "A platform accredited by the Saudi {authority}, operating within official frameworks." },
-      "1": { "title": "Verified", "body": "Every property undergoes an on-site review and audit before being listed on the platform." },
-      "2": { "title": "Wide coverage", "body": "Diverse stays across the Kingdom's cities, from major cities to quiet destinations." },
-      "3": { "title": "High quality", "body": "Strict standards for photos, amenities and service to guarantee the best stay experience." }
+      "0": {
+        "title": "Licensed",
+        "body": "A platform accredited by the Saudi {authority}, operating within official frameworks."
+      },
+      "1": {
+        "title": "Verified",
+        "body": "Every property undergoes an on-site review and audit before being listed on the platform."
+      },
+      "2": {
+        "title": "Wide coverage",
+        "body": "Diverse stays across the Kingdom's cities, from major cities to quiet destinations."
+      },
+      "3": {
+        "title": "High quality",
+        "body": "Strict standards for photos, amenities and service to guarantee the best stay experience."
+      }
     },
     "whyTitle": "Why {name}?",
     "whySubtitle": "What makes your experience with us different",
     "why": {
-      "0": { "title": "Seamless experience", "body": "Search and book in a few simple steps with a clear interface designed for your comfort." },
-      "1": { "title": "Secure payment", "body": "Protected payments and trusted payment methods, with full price transparency." },
-      "2": { "title": "Ongoing support", "body": "A customer service team ready to help before, during and after your stay." },
-      "3": { "title": "Standout stays", "body": "Carefully selected units that combine comfort, privacy and refined taste." }
+      "0": {
+        "title": "Seamless experience",
+        "body": "Search and book in a few simple steps with a clear interface designed for your comfort."
+      },
+      "1": {
+        "title": "Secure payment",
+        "body": "Protected payments and trusted payment methods, with full price transparency."
+      },
+      "2": {
+        "title": "Ongoing support",
+        "body": "A customer service team ready to help before, during and after your stay."
+      },
+      "3": {
+        "title": "Standout stays",
+        "body": "Carefully selected units that combine comfort, privacy and refined taste."
+      }
     },
     "ctaTitle": "Start your journey with {name} today",
     "ctaBody": "Whether you're looking for your next stay or want to list your property — Mamsa is your destination.",
@@ -799,37 +859,94 @@
     "benefitsTitle": "Why list your property on {name}?",
     "benefitsSubtitle": "Everything you need to manage your property and earn extra income with confidence",
     "benefits": {
-      "0": { "title": "Only 2% commission", "body": "Among the lowest in the market — a small percentage of each completed booking, with your earnings paid out safely and quickly after each guest checks out." },
-      "1": { "title": "Host protection", "body": "Coverage against damage guests might cause, so you can host with confidence and peace of mind." },
-      "2": { "title": "Wide audience", "body": "Showcase your property to thousands of people searching for a stay across the Kingdom every month." },
-      "3": { "title": "Full control", "body": "You're in charge — set the price, calendar and house rules as you see fit." },
-      "4": { "title": "Smart pricing", "body": "Price suggestions based on demand and season to boost your income and occupancy." },
-      "5": { "title": "Round-the-clock support", "body": "The Mamsa team is ready to help anytime, before, during and after a booking." }
+      "0": {
+        "title": "Only 2% commission",
+        "body": "Among the lowest in the market — a small percentage of each completed booking, with your earnings paid out safely and quickly after each guest checks out."
+      },
+      "1": {
+        "title": "Host protection",
+        "body": "Coverage against damage guests might cause, so you can host with confidence and peace of mind."
+      },
+      "2": {
+        "title": "Wide audience",
+        "body": "Showcase your property to thousands of people searching for a stay across the Kingdom every month."
+      },
+      "3": {
+        "title": "Full control",
+        "body": "You're in charge — set the price, calendar and house rules as you see fit."
+      },
+      "4": {
+        "title": "Smart pricing",
+        "body": "Price suggestions based on demand and season to boost your income and occupancy."
+      },
+      "5": {
+        "title": "Round-the-clock support",
+        "body": "The Mamsa team is ready to help anytime, before, during and after a booking."
+      }
     },
     "stepsTitle": "Join in 3 simple steps",
     "stepsSubtitle": "From registration to your first booking in no time",
     "steps": {
-      "0": { "title": "List your property", "body": "Create your host account in minutes with simple details and your phone number." },
-      "1": { "title": "Add details and photos", "body": "Write your property's description, add photos and amenities, and set its price and rules." },
-      "2": { "title": "Receive bookings and earn", "body": "Publish your property, receive booking requests and start earning extra income." }
+      "0": {
+        "title": "List your property",
+        "body": "Create your host account in minutes with simple details and your phone number."
+      },
+      "1": {
+        "title": "Add details and photos",
+        "body": "Write your property's description, add photos and amenities, and set its price and rules."
+      },
+      "2": {
+        "title": "Receive bookings and earn",
+        "body": "Publish your property, receive booking requests and start earning extra income."
+      }
     },
     "registerNow": "List your property now",
     "testimonialsTitle": "What our hosts say",
     "testimonialsSubtitle": "Real success stories from property owners on Mamsa",
     "testimonials": {
-      "0": { "quote": "I listed my chalet in under fifteen minutes, and my first booking came within two days. The platform is so easy.", "name": "Fahad Alotaibi", "role": "Host in Riyadh" },
-      "1": { "quote": "What I liked most was the fast payouts and protection. I now host with total peace of mind about my property.", "name": "Noura Alshahri", "role": "Host in Abha" },
-      "2": { "quote": "My chalet's occupancy rose noticeably after listing it on Mamsa, and support is helpful anytime.", "name": "Sultan Alqahtani", "role": "Host in Jeddah" }
+      "0": {
+        "quote": "I listed my chalet in under fifteen minutes, and my first booking came within two days. The platform is so easy.",
+        "name": "Fahad Alotaibi",
+        "role": "Host in Riyadh"
+      },
+      "1": {
+        "quote": "What I liked most was the fast payouts and protection. I now host with total peace of mind about my property.",
+        "name": "Noura Alshahri",
+        "role": "Host in Abha"
+      },
+      "2": {
+        "quote": "My chalet's occupancy rose noticeably after listing it on Mamsa, and support is helpful anytime.",
+        "name": "Sultan Alqahtani",
+        "role": "Host in Jeddah"
+      }
     },
     "faqTitle": "Frequently asked questions",
     "faqSubtitle": "Answers to what hosts ask most",
     "faqs": {
-      "0": { "q": "Is registration free?", "a": "Yes, creating a host account and listing your property on Mamsa is completely free. There are no upfront subscription fees." },
-      "1": { "q": "What is Mamsa's commission?", "a": "Our current commission is just 2% of each completed booking — deducted automatically from the booking amount, with no subscription or listing fees." },
-      "2": { "q": "When will my property appear to guests?", "a": "Once you complete your property's details and photos, it goes through a quick review by our team and is then published and available for booking." },
-      "3": { "q": "When do I receive my earnings?", "a": "Your payments are transferred securely after the guest checks out, via the payment method you choose." },
-      "4": { "q": "Do I control the pricing and availability?", "a": "Completely. You set the price, calendar and house rules, and can adjust them anytime from your dashboard." },
-      "5": { "q": "What if a guest causes damage?", "a": "We provide host protection against damage, and you can report any issue for our team to follow up with you." }
+      "0": {
+        "q": "Is registration free?",
+        "a": "Yes, creating a host account and listing your property on Mamsa is completely free. There are no upfront subscription fees."
+      },
+      "1": {
+        "q": "What is Mamsa's commission?",
+        "a": "Our current commission is just 2% of each completed booking — deducted automatically from the booking amount, with no subscription or listing fees."
+      },
+      "2": {
+        "q": "When will my property appear to guests?",
+        "a": "Once you complete your property's details and photos, it goes through a quick review by our team and is then published and available for booking."
+      },
+      "3": {
+        "q": "When do I receive my earnings?",
+        "a": "Your payments are transferred securely after the guest checks out, via the payment method you choose."
+      },
+      "4": {
+        "q": "Do I control the pricing and availability?",
+        "a": "Completely. You set the price, calendar and house rules, and can adjust them anytime from your dashboard."
+      },
+      "5": {
+        "q": "What if a guest causes damage?",
+        "a": "We provide host protection against damage, and you can report any issue for our team to follow up with you."
+      }
     },
     "finalCtaTitle": "Ready to start? List your property today and start welcoming guests",
     "finalCtaBody": "Join hundreds of hosts on Mamsa and turn your property into a reliable source of income."
@@ -843,39 +960,78 @@
       "booking": {
         "title": "Booking",
         "items": {
-          "0": { "q": "How do I book a unit?", "a": "Search for your destination, choose your dates and number of guests, then complete payment securely — you'll get instant confirmation with a booking code, and find all your bookings on the \"My reservations\" page." },
-          "1": { "q": "Do I need an account to complete a booking?", "a": "Yes — registration is done with your Saudi phone number and a verification code (OTP) sent by text, with no passwords at all." },
-          "2": { "q": "How do I know a unit is trustworthy?", "a": "Every unit on Mamsa goes through review and approval before publishing, and you'll find genuine reviews from guests who completed their stay there." },
-          "3": { "q": "Can I contact the host before arrival?", "a": "Yes — from the booking details page you can message the host directly within the platform (to arrange arrival time, for example)." }
+          "0": {
+            "q": "How do I book a unit?",
+            "a": "Search for your destination, choose your dates and number of guests, then complete payment securely — you'll get instant confirmation with a booking code, and find all your bookings on the \"My reservations\" page."
+          },
+          "1": {
+            "q": "Do I need an account to complete a booking?",
+            "a": "Yes — registration is done with your Saudi phone number and a verification code (OTP) sent by text, with no passwords at all."
+          },
+          "2": {
+            "q": "How do I know a unit is trustworthy?",
+            "a": "Every unit on Mamsa goes through review and approval before publishing, and you'll find genuine reviews from guests who completed their stay there."
+          },
+          "3": {
+            "q": "Can I contact the host before arrival?",
+            "a": "Yes — from the booking details page you can message the host directly within the platform (to arrange arrival time, for example)."
+          }
         }
       },
       "payment": {
         "title": "Payment",
         "items": {
-          "0": { "q": "What payment methods are available?", "a": "Bank cards (mada, Visa, Mastercard) via the licensed Moyasar payment gateway. Your bank may request an extra verification step (3-D Secure) to complete the transaction." },
-          "1": { "q": "Is my card data safe?", "a": "Completely — card data is processed directly by the payment gateway and never touches our servers, and we never store your full card number." },
-          "2": { "q": "When is the amount charged?", "a": "Once the payment is completed, and your booking is confirmed as soon as it succeeds. If the transaction fails for any reason, nothing is charged." }
+          "0": {
+            "q": "What payment methods are available?",
+            "a": "Bank cards (mada, Visa, Mastercard) via the licensed Moyasar payment gateway. Your bank may request an extra verification step (3-D Secure) to complete the transaction."
+          },
+          "1": {
+            "q": "Is my card data safe?",
+            "a": "Completely — card data is processed directly by the payment gateway and never touches our servers, and we never store your full card number."
+          },
+          "2": {
+            "q": "When is the amount charged?",
+            "a": "Once the payment is completed, and your booking is confirmed as soon as it succeeds. If the transaction fails for any reason, nothing is charged."
+          }
         }
       },
       "cancellation": {
         "title": "Cancellation & refunds",
         "items": {
-          "0": { "q": "How do I cancel my booking?", "a": "From \"My reservations\" → booking details → cancel booking. Before confirming, you'll see an exact summary of the amount that will be refunded according to the cancellation policy locked in on your booking." },
-          "1": { "q": "When will I receive my refund?", "a": "The amount is automatically returned to the same card within 5 to 14 business days depending on the bank. Full details in the <cancellationLink>cancellation policy</cancellationLink>." },
-          "2": { "q": "What if the host cancels the booking?", "a": "You get a 100% refund of the amount paid, regardless of the cancellation policy applied to the unit." }
+          "0": {
+            "q": "How do I cancel my booking?",
+            "a": "From \"My reservations\" → booking details → cancel booking. Before confirming, you'll see an exact summary of the amount that will be refunded according to the cancellation policy locked in on your booking."
+          },
+          "1": {
+            "q": "When will I receive my refund?",
+            "a": "The amount is automatically returned to the same card within 5 to 14 business days depending on the bank. Full details in the <cancellationLink>cancellation policy</cancellationLink>."
+          },
+          "2": {
+            "q": "What if the host cancels the booking?",
+            "a": "You get a 100% refund of the amount paid, regardless of the cancellation policy applied to the unit."
+          }
         }
       },
       "account": {
         "title": "Account",
         "items": {
-          "0": { "q": "How do I change my phone number?", "a": "From account settings → phone number — you'll receive a verification code on the new number to confirm it before switching." },
-          "1": { "q": "How do I delete my account?", "a": "From account settings → delete account. Deletion is permanent and your data is completely erased, so a confirmation message will appear before it's carried out." }
+          "0": {
+            "q": "How do I change my phone number?",
+            "a": "From account settings → phone number — you'll receive a verification code on the new number to confirm it before switching."
+          },
+          "1": {
+            "q": "How do I delete my account?",
+            "a": "From account settings → delete account. Deletion is permanent and your data is completely erased, so a confirmation message will appear before it's carried out."
+          }
         }
       },
       "hosts": {
         "title": "For hosts",
         "items": {
-          "0": { "q": "How do I list my property on Mamsa?", "a": "Submit an application from the <hostLink>list your property</hostLink> page — after your application is reviewed and approved, you'll receive an email with a link to the partner dashboard to manage your units and bookings." }
+          "0": {
+            "q": "How do I list my property on Mamsa?",
+            "a": "Submit an application from the <hostLink>list your property</hostLink> page — after your application is reviewed and approved, you'll receive an email with a link to the partner dashboard to manage your units and bookings."
+          }
         }
       }
     },

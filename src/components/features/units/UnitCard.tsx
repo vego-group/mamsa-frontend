@@ -44,10 +44,7 @@ export function UnitCard({ unit, variant = 'list' }: UnitCardProps) {
           >
             <Heart className={cn('h-4 w-4 transition', isFav ? 'fill-status-danger text-status-danger' : 'text-brand-muted')} />
           </button>
-          {unit.hasDiscount && unit.discountPercent && (
-            <Badge variant="danger" className="absolute start-3 top-3">{t('discount', { percent: unit.discountPercent })}</Badge>
-          )}
-          {unit.isFeatured && !unit.hasDiscount && (
+          {unit.isFeatured && (
             <Badge variant="cream" className="absolute start-3 top-3">{t('featured')}</Badge>
           )}
         </div>

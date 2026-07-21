@@ -1,0 +1,44 @@
+{
+  "name": "com.mamsaa.www",
+  "title": "Mamsa",
+  "description": "Search and inspect Mamsa vacation-rental listings across Saudi Arabia. Read-only access to the public catalogue: search by city, unit type, capacity, nightly price and rating; fetch full listing details and guest reviews.",
+  "version": "1.0.0",
+  "websiteUrl": "https://www.mamsaa.com",
+  "serverInfo": {
+    "name": "com.mamsaa.www",
+    "version": "1.0.0"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://www.mamsaa.com/mcp"
+    }
+  ],
+  "capabilities": {
+    "tools": {
+      "listChanged": true
+    }
+  },
+  "tools": [
+    {
+      "name": "search_units",
+      "title": "Search units",
+      "description": "Search Mamsa vacation-rental listings in Saudi Arabia by city, unit type, guest capacity, nightly price range and rating. Returns matching units with pricing and a link to each listing."
+    },
+    {
+      "name": "get_unit",
+      "title": "Get unit",
+      "description": "Fetch the full details of one Mamsa listing by id: description, amenities, check-in/out times, cancellation policy, coordinates and images."
+    },
+    {
+      "name": "list_featured_units",
+      "title": "List featured units",
+      "description": "List the currently popular/featured Mamsa listings."
+    },
+    {
+      "name": "get_unit_reviews",
+      "title": "Get unit reviews",
+      "description": "Fetch guest reviews for one Mamsa listing by id."
+    }
+  ]
+}

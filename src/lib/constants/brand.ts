@@ -67,6 +67,11 @@ export const PRICE_FILTER = {
   step: 50,
 } as const;
 
+/**
+ * The backend's closed amenity vocabulary (keys are the slugs it returns on
+ * `amenities[].key` and accepts on the `features[]` filter). Keep in sync with
+ * AMENITY_ICONS on the unit page and the `amenities` message namespace.
+ */
 export const AMENITIES_CATALOG = [
   { key: 'wifi', labelAr: 'واي فاي' },
   { key: 'pool', labelAr: 'مسبح' },
@@ -74,10 +79,15 @@ export const AMENITIES_CATALOG = [
   { key: 'parking', labelAr: 'موقف سيارات' },
   { key: 'ac', labelAr: 'تكييف' },
   { key: 'garden', labelAr: 'حديقة' },
-  { key: 'tv', labelAr: 'تلفزيون ذكي' },
+  { key: 'smart_tv', labelAr: 'تلفزيون ذكي' },
   { key: 'washer', labelAr: 'غسالة ملابس' },
   { key: 'security', labelAr: 'أمن 24 ساعة' },
   { key: 'self_checkin', labelAr: 'دخول ذاتي' },
+  { key: 'family_friendly', labelAr: 'مناسب للعائلات' },
+  { key: 'bbq', labelAr: 'شواية' },
+  { key: 'elevator', labelAr: 'مصعد' },
+  { key: 'private_beach', labelAr: 'شاطئ خاص' },
+  { key: 'event_hall', labelAr: 'قاعة مناسبات' },
 ] as const;
 
 export const UNIT_TYPE_LABELS_AR: Record<string, string> = {

@@ -8,13 +8,17 @@
 import type {
   Unit,
   UnitType,
+  UnitStatus,
   UnitAmenity,
   Booking,
   BookingStatus,
+  PaymentInfo,
   Review,
   User,
   CancellationTemplate,
   CancellationPolicy,
+  CancellationTier,
+  RefundRecord,
   SavedCard,
   Transaction,
 } from '@/types';
@@ -26,7 +30,23 @@ const DEFAULT_COUNTRY = 'السعودية';
 // ============ Raw backend shapes ============
 
 interface RawImage { id: number; url: string; is_main: boolean }
-interface RawOwner { id: number; name: string }
+interface RawOwner {
+  id: number;
+  name: string;
+  type?: 'individual' | 'company';
+  is_verified?: boolean;
+  avatar_url?: string | null;
+}
+
+/**
+ * Structured amenity (`amenities` on the unit resource). `key` is a slug from
+ * the backend's closed vocabulary, or `null` when the amenity isn't in it yet —
+ * report those labels to the backend so a slug gets assigned.
+ */
+interface RawAmenity {
+  key: string | null;
+  label: string;
+}
 
 /**
  * The tiered cancellation policy as the backend's refund engine sees it.
@@ -34,12 +54,18 @@ interface RawOwner { id: number; name: string }
  * and as `policy_snapshot` on bookings (frozen at payment — FR-036); both
  * share this exact shape, built from the same source of truth server-side.
  */
+interface RawPolicyTier {
+  min_hours_before_checkin?: number;
+  refund_percent?: number;
+  label?: string;
+}
+
 interface RawPolicyDetails {
   template?: string;
   name?: string;
   /** Booking snapshots only. */
   checkin_at?: string;
-  tiers?: Array<{ min_hours_before_checkin?: number; refund_percent?: number; label?: string }>;
+  tiers?: RawPolicyTier[];
 }
 
 export interface RawUnit {
@@ -48,8 +74,10 @@ export interface RawUnit {
   type: string;
   code?: string;
   price: number;
+  tax_percent?: number;
   capacity: number;
   bedrooms: number;
+  beds?: number;
   bathrooms: number;
   area?: number;
   city: string;
@@ -64,8 +92,12 @@ export interface RawUnit {
   cancellation_policy_details?: RawPolicyDetails | null;
   status?: string;
   approval_status?: string;
+  rejection_reason?: string | null;
+  is_featured?: boolean;
   images?: RawImage[];
+  /** DEPRECATED — Arabic label strings. Read `amenities` instead. */
   features?: string[];
+  amenities?: RawAmenity[];
   avg_rating?: number;
   reviews_count?: number;
   owner?: RawOwner;
@@ -75,11 +107,15 @@ export interface RawUnit {
 export interface RawBooking {
   id: number | string;
   reference?: string;
+  user_id?: number | string;
+  guest_name?: string | null;
   unit?: RawUnit;
   start_date: string;
   end_date: string;
   nights?: number;
+  /** Total headcount. The adults/children split lives in `guests_detail`. */
   guests?: number;
+  guests_detail?: { adults?: number; children?: number } | null;
   total_amount?: number;
   pricing?: {
     nightly_rate?: number;
@@ -114,12 +150,18 @@ export interface RawBooking {
 
 export interface RawUser {
   id: number | string;
+  /** Display concatenation of the two parts below — kept for backward compat. */
   name?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
   phone?: string;
   email?: string | null;
   email_verified?: boolean;
+  avatar_url?: string | null;
   is_admin?: boolean;
   is_partner?: boolean;
+  /** Present when the user is a partner — same source as `owner.type` on units. */
+  partner_type?: 'individual' | 'company';
   created_at?: string;
 }
 
@@ -127,7 +169,13 @@ export interface RawCancellationPreview {
   cancellable: boolean;
   refund_amount: number;
   refund_percent: number;
+  /** The booking total. Explicit since 2026-07-21 — no more reverse-division. */
+  total_amount?: number;
+  /** Correct even at `refund_percent: 0`, where it equals the full total. */
+  forfeited_amount?: number;
   tier_label: string;
+  /** The matched tier, same shape as one `cancellation_policy_details.tiers` entry. `null` when not cancellable. */
+  tier?: RawPolicyTier | null;
   hours_before_checkin: number;
   reason?: string | null;
 }
@@ -185,6 +233,13 @@ function mapTemplate(policy?: string): CancellationTemplate {
  * field is absent (mock mode, or an unpaid booking with no snapshot yet) —
  * callers fall back to `getPolicyByTemplate(the legacy enum)`.
  */
+/** Backend tiers count hours before check-in; the engine and UI work in days. */
+const mapTier = (t: RawPolicyTier): CancellationTier => ({
+  minDaysBeforeCheckIn: Number(t.min_hours_before_checkin ?? 0) / 24,
+  refundPercent: Number(t.refund_percent ?? 0),
+  labelAr: t.label || `${Number(t.refund_percent ?? 0)}%`,
+});
+
 function mapPolicyDetails(raw: RawPolicyDetails | null | undefined): CancellationPolicy | null {
   if (!raw?.tiers?.length) return null;
   const template = mapTemplate(raw.template);
@@ -194,20 +249,29 @@ function mapPolicyDetails(raw: RawPolicyDetails | null | undefined): Cancellatio
     labelAr: raw.name || base.labelAr,
     descriptionAr: base.descriptionAr,
     // Backend tiers are in hours before check-in; the engine/display use days.
-    tiers: raw.tiers
-      .map((t) => ({
-        minDaysBeforeCheckIn: Number(t.min_hours_before_checkin ?? 0) / 24,
-        refundPercent: Number(t.refund_percent ?? 0),
-        labelAr: t.label || `${Number(t.refund_percent ?? 0)}%`,
-      }))
-      .sort((a, b) => b.minDaysBeforeCheckIn - a.minDaysBeforeCheckIn),
+    tiers: raw.tiers.map(mapTier).sort((a, b) => b.minDaysBeforeCheckIn - a.minDaysBeforeCheckIn),
     postCheckInBehavior: 'hidden',
   };
 }
 
-function mapFeatures(features?: string[]): UnitAmenity[] {
-  return (features ?? []).map((f) => ({ key: FEATURE_KEYS[f] ?? f, labelAr: f }));
+/**
+ * Prefers the backend's structured `amenities` (stable slugs) and falls back to
+ * the deprecated `features` string array, where the only way to recover a slug
+ * is matching the Arabic label — which breaks on any spelling the table misses.
+ * A `null` key (amenity outside the vocabulary) degrades to the label, so the UI
+ * shows the generic icon rather than dropping the amenity.
+ */
+function mapAmenities(u: Pick<RawUnit, 'amenities' | 'features'>): UnitAmenity[] {
+  if (u.amenities?.length) {
+    return u.amenities.map((a) => ({ key: a.key ?? a.label, labelAr: a.label }));
+  }
+  return (u.features ?? []).map((f) => ({ key: FEATURE_KEYS[f] ?? f, labelAr: f }));
 }
+
+const UNIT_STATUSES: readonly UnitStatus[] = ['draft', 'pending', 'approved', 'rejected'];
+
+const mapUnitStatus = (s?: string): UnitStatus =>
+  UNIT_STATUSES.includes(s as UnitStatus) ? (s as UnitStatus) : 'pending';
 
 function hhmm(time?: string, fallback = '00:00'): string {
   return (time ?? fallback).slice(0, 5);
@@ -221,23 +285,29 @@ export function mapUnit(u: RawUnit): Unit {
     id: String(u.id),
     ownerId: u.owner ? String(u.owner.id) : '',
     ownerName: u.owner?.name ?? '',
-    ownerType: 'individual',
+    ownerType: u.owner?.type === 'company' ? 'company' : 'individual',
+    ownerVerified: Boolean(u.owner?.is_verified),
+    ownerAvatarUrl: u.owner?.avatar_url ?? null,
     title: u.name ?? '',
     description: u.description ?? '',
     type: u.type as UnitType,
-    status: u.approval_status === 'approved' ? 'approved' : 'pending',
+    status: mapUnitStatus(u.approval_status),
+    rejectionReason: u.rejection_reason ?? null,
     city: u.city ?? '',
     district: u.district ?? '',
     country: DEFAULT_COUNTRY,
     latitude: u.lat ?? 0,
     longitude: u.lng ?? 0,
     pricePerNight: Number(u.price ?? 0),
+    taxPercent: u.tax_percent == null ? undefined : Number(u.tax_percent),
     capacity: Number(u.capacity ?? 0),
     bedrooms: Number(u.bedrooms ?? 0),
-    beds: Number(u.bedrooms ?? 0),
+    beds: Number(u.beds ?? 0),
     bathrooms: Number(u.bathrooms ?? 0),
-    amenities: mapFeatures(u.features),
+    area: u.area == null ? undefined : Number(u.area),
+    amenities: mapAmenities(u),
     imageUrls: images.map((i) => i.url),
+    isFeatured: Boolean(u.is_featured),
     rating: Number(u.avg_rating ?? 0),
     reviewCount: Number(u.reviews_count ?? 0),
     checkInTime: hhmm(u.checkin_time, '15:00'),
@@ -246,6 +316,29 @@ export function mapUnit(u: RawUnit): Unit {
     cancellationPolicyDetails: mapPolicyDetails(u.cancellation_policy_details),
     createdAt: u.created_at ?? new Date().toISOString(),
   };
+}
+
+/**
+ * Closed set confirmed by the backend — `customer` = guest, `partner` = host,
+ * `admin` = back-office, `system` = automated (e.g. payment expiry). No aliases
+ * (`guest`/`host` are explicitly not used), so anything else means the contract
+ * changed; fall back to the commonest case rather than render a blank actor.
+ */
+const CANCELLED_BY = ['customer', 'partner', 'admin', 'system'] as const;
+
+const mapCancelledBy = (v?: string): RefundRecord['cancelledBy'] =>
+  CANCELLED_BY.includes(v as RefundRecord['cancelledBy']) ? (v as RefundRecord['cancelledBy']) : 'customer';
+
+/**
+ * `guests` is the total headcount and `guests_detail` the split. When the split
+ * is absent (older bookings), everyone counts as an adult — which is what the
+ * total meant before `children` existed, so no guest is invented or lost.
+ */
+function mapGuests(b: RawBooking): { adults: number; children: number } {
+  const total = Number(b.guests ?? 1);
+  const children = Number(b.guests_detail?.children ?? 0);
+  const adults = b.guests_detail?.adults != null ? Number(b.guests_detail.adults) : total - children;
+  return { adults: Math.max(0, adults), children: Math.max(0, children) };
 }
 
 export function mapBooking(b: RawBooking): Booking {
@@ -264,12 +357,13 @@ export function mapBooking(b: RawBooking): Booking {
       imageUrl: mainImage,
       ownerName: unit?.owner?.name ?? '',
     },
-    userId: 'CURRENT_USER',
+    userId: b.user_id == null ? 'CURRENT_USER' : String(b.user_id),
+    guestName: b.guest_name ?? undefined,
     status: BOOKING_STATUS_MAP[b.status ?? ''] ?? 'confirmed',
     checkInDate: b.start_date,
     checkOutDate: b.end_date,
     nights: Number(b.nights ?? p.nights ?? 0),
-    guests: { adults: Number(b.guests ?? 1), children: 0 },
+    guests: mapGuests(b),
     price: {
       pricePerNight: Number(p.nightly_rate ?? 0),
       nights: Number(p.nights ?? b.nights ?? 0),
@@ -282,6 +376,11 @@ export function mapBooking(b: RawBooking): Booking {
     policySnapshot:
       mapPolicyDetails(b.policy_snapshot) ?? getPolicyByTemplate(mapTemplate(unit?.cancellation_policy)),
     isReviewed: Boolean(b.review),
+    // Only surface a method the UI can label; `last4` stays optional (wallet
+    // methods carry no PAN digits).
+    payment: b.payment?.method
+      ? { method: b.payment.method as PaymentInfo['method'], last4: b.payment.last4 }
+      : undefined,
     refund: b.cancellation
       ? {
           amount: Number(b.cancellation.refunded_amount ?? 0),
@@ -289,7 +388,7 @@ export function mapBooking(b: RawBooking): Booking {
           tierLabel: b.cancellation.tier_label ?? '',
           refundedAt: b.cancelled_at ?? new Date().toISOString(),
           reason: b.cancellation.reason ?? undefined,
-          cancelledBy: (b.cancellation.cancelled_by as 'customer' | 'partner' | 'admin' | 'system') ?? 'customer',
+          cancelledBy: mapCancelledBy(b.cancellation.cancelled_by),
         }
       : undefined,
     createdAt: b.created_at ?? new Date().toISOString(),
@@ -300,16 +399,26 @@ export function mapBooking(b: RawBooking): Booking {
 export function mapCancellationPreview(c: RawCancellationPreview): RefundPreview {
   const refundAmount = Number(c.refund_amount ?? 0);
   const refundPercent = Number(c.refund_percent ?? 0);
-  // The preview endpoint omits the booking total, so derive the forfeited part
-  // from the refunded share when a partial refund applies.
-  const total = refundPercent > 0 ? refundAmount / (refundPercent / 100) : refundAmount;
   const hours = Number(c.hours_before_checkin ?? 0);
+
+  // The backend returns the forfeited figure outright. Fall back to the booking
+  // total only if it's missing; the old reverse-division (refund ÷ percent) is
+  // gone — it collapsed at refund_percent = 0 and reported "forfeited: 0" when
+  // the guest was in fact losing the entire amount.
+  const round2 = (n: number) => Math.max(0, Math.round(n * 100) / 100);
+  const forfeitedAmount =
+    c.forfeited_amount != null
+      ? round2(Number(c.forfeited_amount))
+      : c.total_amount != null
+        ? round2(Number(c.total_amount) - refundAmount)
+        : 0;
+
   return {
     refundPercent,
     refundAmount,
-    forfeitedAmount: Math.max(0, Math.round((total - refundAmount) * 100) / 100),
-    // The live backend only returns pre-rendered text, not structured tier data.
-    tier: null,
+    forfeitedAmount,
+    tier: c.tier ? mapTier(c.tier) : null,
+    // Kept as the display fallback for when `tier` is absent (not cancellable).
     rawTierLabel: c.tier_label ?? '',
     isAllowed: Boolean(c.cancellable),
     rawNotAllowedReason: c.cancellable ? undefined : c.reason ?? undefined,
@@ -325,6 +434,7 @@ export function mapReview(r: Record<string, unknown>): Review {
     unitId: String(r.unit_id ?? ''),
     userId: String(r.user_id ?? 'CURRENT_USER'),
     userName: String(r.user_name ?? r.name ?? ''),
+    userAvatarUrl: r.user_avatar_url == null ? undefined : String(r.user_avatar_url),
     rating: Number(r.rating ?? 0),
     comment: String(r.comment ?? ''),
     createdAt: String(r.created_at ?? new Date().toISOString()),
@@ -355,15 +465,26 @@ export function mapTransaction(t: Record<string, unknown>): Transaction {
   };
 }
 
+function mapRole(u: RawUser): User['role'] {
+  if (u.is_admin) return 'super_admin';
+  if (!u.is_partner) return 'user';
+  return u.partner_type === 'company' ? 'company' : 'individual';
+}
+
 export function mapUser(u: RawUser): User {
+  // `first_name`/`last_name` are real columns now, so compound Arabic names
+  // ("عبد الله محمد") survive intact. The whitespace split is only a fallback
+  // for a row that predates the backfill — never the normal path.
+  const hasParts = u.first_name != null || u.last_name != null;
   const parts = (u.name ?? '').trim().split(/\s+/).filter(Boolean);
   return {
     id: String(u.id),
-    role: u.is_admin ? 'super_admin' : u.is_partner ? 'individual' : 'user',
-    firstName: parts[0] ?? '',
-    lastName: parts.slice(1).join(' '),
+    role: mapRole(u),
+    firstName: hasParts ? u.first_name ?? '' : parts[0] ?? '',
+    lastName: hasParts ? u.last_name ?? '' : parts.slice(1).join(' '),
     email: u.email ?? null,
     emailVerified: Boolean(u.email_verified),
+    avatarUrl: u.avatar_url ?? undefined,
     phone: u.phone ?? '',
     createdAt: u.created_at ?? new Date().toISOString(),
   };
