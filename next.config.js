@@ -22,6 +22,17 @@ const nextConfig = {
         headers: [{ key: 'Content-Type', value: 'application/octet-stream' }],
       },
       {
+        // RFC 9727 API catalog: served as a linkset document, not JSON, so that
+        // agents fetching the api-catalog target get the registered media type.
+        source: '/.well-known/api-catalog',
+        headers: [
+          {
+            key: 'Content-Type',
+            value: 'application/linkset+json; profile="https://www.rfc-editor.org/info/rfc9727"',
+          },
+        ],
+      },
+      {
         // Baseline security headers for every page. A strict CSP is deliberately
         // NOT set here: moyasar.js injects inline styles/scripts and data: images,
         // so a CSP must be introduced in Report-Only mode first or it will break
@@ -37,6 +48,15 @@ const nextConfig = {
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           // We never use these browser capabilities.
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+          // RFC 8288 agent discovery: advertise the API catalog (published at
+          // /.well-known/api-catalog) and the MCP Server Card (SEP-1649, which
+          // describes the read-only MCP server at /mcp) so agents can find both
+          // from any page — including the homepage.
+          {
+            key: 'Link',
+            value:
+              '</.well-known/api-catalog>; rel="api-catalog", </.well-known/mcp/server-card.json>; rel="mcp-server-card"',
+          },
         ],
       },
     ];

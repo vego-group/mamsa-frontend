@@ -7,7 +7,8 @@ import { useTranslations } from 'next-intl';
 import {
   Heart, Share2, Star, ChevronLeft, MapPin, Users, BedDouble, Bath, DoorOpen,
   Home as HomeIcon, Wifi, Snowflake, Car, Waves, UtensilsCrossed, Tv, Trees,
-  ShieldCheck, KeyRound, WashingMachine, Clock, BadgeCheck, type LucideIcon,
+  ShieldCheck, KeyRound, WashingMachine, Clock, BadgeCheck, Baby, Flame,
+  ArrowUpDown, Umbrella, PartyPopper, type LucideIcon,
 } from 'lucide-react';
 import { unitsApi } from '@/lib/api/client';
 import { useFavoritesStore } from '@/stores/favorites';
@@ -24,9 +25,16 @@ import { formatSAR, formatDate } from '@/lib/utils/format';
 import { cn } from '@/lib/utils/cn';
 import type { Unit, Review } from '@/types';
 
+/**
+ * One icon per slug in the backend's closed amenity vocabulary. Anything the
+ * backend sends with `key: null` (or a slug added there before here) falls
+ * through to the generic HomeIcon rather than disappearing.
+ */
 const AMENITY_ICONS: Record<string, LucideIcon> = {
   wifi: Wifi, pool: Waves, kitchen: UtensilsCrossed, parking: Car, ac: Snowflake,
-  garden: Trees, tv: Tv, washer: WashingMachine, security: ShieldCheck, self_checkin: KeyRound,
+  garden: Trees, smart_tv: Tv, washer: WashingMachine, security: ShieldCheck,
+  self_checkin: KeyRound, family_friendly: Baby, bbq: Flame, elevator: ArrowUpDown,
+  private_beach: Umbrella, event_hall: PartyPopper,
 };
 
 function ratingKey(r: number): 'exceptional' | 'excellent' | 'veryGood' | 'good' {
@@ -132,9 +140,6 @@ export default function UnitDetailsPage() {
             {unit.isFeatured && (
               <Badge variant="cream" className="gap-1"><BadgeCheck className="h-3 w-3" /> {t('featured')}</Badge>
             )}
-            {unit.hasDiscount && unit.discountPercent && (
-              <Badge variant="danger">{t('discount', { percent: unit.discountPercent })}</Badge>
-            )}
           </div>
           <h1 className="text-2xl font-bold text-brand-ink md:text-3xl">{unit.title}</h1>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-brand-muted">
@@ -174,16 +179,26 @@ export default function UnitDetailsPage() {
 
           {/* host */}
           <div className="flex items-center gap-4 rounded-2xl border border-brand-border bg-white p-5">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-brand-primary text-lg font-bold text-white">
-              {initials}
-            </div>
+            {unit.ownerAvatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element -- avatar host is not in next.config images.remotePatterns
+              <img
+                src={unit.ownerAvatarUrl}
+                alt={unit.ownerName}
+                className="h-14 w-14 shrink-0 rounded-full object-cover"
+              />
+            ) : (
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-brand-primary text-lg font-bold text-white">
+                {initials}
+              </div>
+            )}
             <div className="min-w-0">
               <div className="font-bold text-brand-ink">{t('hostedBy', { name: unit.ownerName })}</div>
               <div className="text-sm text-brand-muted">
                 {unit.ownerType === 'company' ? t('hostCompany') : t('hostIndividual')}
               </div>
             </div>
-            <BadgeCheck className="ms-auto h-6 w-6 shrink-0 text-brand-primary" />
+            {/* Badge only for partners whose application was actually approved. */}
+            {unit.ownerVerified && <BadgeCheck className="ms-auto h-6 w-6 shrink-0 text-brand-primary" />}
           </div>
 
           <Divider />

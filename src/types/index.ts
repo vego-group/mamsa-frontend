@@ -34,6 +34,11 @@ export type UnitType = 'apartment' | 'studio' | 'villa';
 export type UnitStatus = 'draft' | 'pending' | 'approved' | 'rejected';
 
 export interface UnitAmenity {
+  /**
+   * Stable slug from the backend's closed vocabulary (wifi, ac, kitchen, …).
+   * Falls back to the raw Arabic label when the backend sends `key: null`
+   * (amenity not yet in the vocabulary) — the UI then shows a generic icon.
+   */
   key: string;
   labelAr: string;
 }
@@ -43,6 +48,10 @@ export interface Unit {
   ownerId: string;
   ownerName: string;
   ownerType: 'individual' | 'company';
+  /** Partner application approved — drives the "مضيف موثّق" badge. */
+  ownerVerified: boolean;
+  /** Null until the backend ships avatar storage; render initials meanwhile. */
+  ownerAvatarUrl: string | null;
   title: string;
   description: string;
   type: UnitType;
@@ -58,6 +67,8 @@ export interface Unit {
   bedrooms: number;
   beds: number;
   bathrooms: number;
+  /** Floor area in m². Optional — not every listing carries one. */
+  area?: number;
   amenities: UnitAmenity[];
   imageUrls: string[];
   rating: number;
@@ -74,8 +85,10 @@ export interface Unit {
    */
   cancellationPolicyDetails?: CancellationPolicy | null;
   isFeatured?: boolean;
-  hasDiscount?: boolean;
-  discountPercent?: number;
+  // No unit-level discount: the platform has none, and a badge that doesn't
+  // change the charged price would mislead the guest (owner decision 2026-07-21).
+  /** Present when `status === 'rejected'` — the admin's reason. */
+  rejectionReason?: string | null;
   createdAt: string;
 }
 

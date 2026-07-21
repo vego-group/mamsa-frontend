@@ -1,0 +1,24 @@
+{
+  "linkset": [
+    {
+      "anchor": "https://www.mamsaa.com/.well-known/api-catalog",
+      "item": [
+        {
+          "href": "https://api.mamsaa.com/api/v1",
+          "title": "Mamsa Platform API (v1)"
+        }
+      ]
+    },
+    {
+      "anchor": "https://api.mamsaa.com/api/v1",
+      "title": "Mamsa Platform API (v1)",
+      "status": [
+        {
+          "href": "https://api.mamsaa.com/up",
+          "type": "text/html",
+          "title": "Service health"
+        }
+      ]
+    }
+  ]
+}

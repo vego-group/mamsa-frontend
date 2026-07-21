@@ -16,7 +16,14 @@ import { bookingsApi, reviewsApi } from '@/lib/api/client';
 import { formatDate, formatSAR } from '@/lib/utils/format';
 import { downloadBookingConfirmation } from '@/lib/utils/booking-confirmation';
 import { isBookingCancellable } from '@/lib/cancellation/engine';
-import type { Booking, Review } from '@/types';
+import type { Booking, PaymentInfo, Review } from '@/types';
+
+const PAYMENT_LABELS: Record<PaymentInfo['method'], string> = {
+  mada: 'Mada',
+  visa: 'Visa',
+  mastercard: 'Mastercard',
+  applepay: 'Apple Pay',
+};
 
 export default function BookingDetailsPage() {
   const t = useTranslations('bookingDetails');
@@ -174,11 +181,9 @@ export default function BookingDetailsPage() {
               <h2 className="font-semibold">{t('paymentMethod')}</h2>
               <div className="flex items-center gap-3 rounded-xl border border-brand-border p-3">
                 <CreditCard className="h-6 w-6 text-brand-primary" />
-                <div>
-                  <div className="font-medium">
-                    {booking.payment.method === 'mada' ? 'Mada' : 'Visa'} •••• {booking.payment.last4}
-                  </div>
-                  <div className="text-xs text-brand-muted">{t('expiresOn', { date: '12/25' })}</div>
+                <div className="font-medium">
+                  {PAYMENT_LABELS[booking.payment.method] ?? booking.payment.method}
+                  {booking.payment.last4 ? ` •••• ${booking.payment.last4}` : ''}
                 </div>
               </div>
             </Card>

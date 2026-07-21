@@ -99,7 +99,8 @@ export function RegisterDialog() {
     // Persist the name/email collected on the form (backend only took the phone at request-otp).
     try {
       const updated = await authApi.completeProfile({
-        name: `${values.firstName} ${values.lastName}`.trim(),
+        firstName: values.firstName.trim(),
+        lastName: values.lastName.trim(),
         email: values.email,
       });
       updateUser(updated);
