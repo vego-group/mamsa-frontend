@@ -10,7 +10,8 @@
     "lint": "next lint",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "skills:index": "node scripts/build-agent-skills-index.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
