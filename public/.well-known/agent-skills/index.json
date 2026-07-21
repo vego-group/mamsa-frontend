@@ -1,0 +1,19 @@
+{
+  "$schema": "https://schemas.agentskills.io/discovery/0.2.0/schema.json",
+  "skills": [
+    {
+      "name": "booking-policy",
+      "type": "skill-md",
+      "description": "Mamsa (مَمسَى) booking rules an agent needs before advising a guest — how nightly totals are calculated, the three cancellation policies and their refund tiers, check-in times, and why an agent cannot complete a booking on a user's behalf.",
+      "url": "/.well-known/agent-skills/booking-policy/SKILL.md",
+      "digest": "sha256:9a76c9f0cbd9fa5d4412b9188c0b814ea2c3abab0292573d3483a471d4b40603"
+    },
+    {
+      "name": "search-rentals",
+      "type": "skill-md",
+      "description": "Search and inspect Mamsa (مَمسَى) short-term rental listings in Saudi Arabia — filter by city, unit type, guest capacity, nightly price and rating, then read full details and guest reviews.",
+      "url": "/.well-known/agent-skills/search-rentals/SKILL.md",
+      "digest": "sha256:f954940f9f3962117427ec9579d1643a067e8c3fdd19c57822771de0bfeccfe1"
+    }
+  ]
+}
