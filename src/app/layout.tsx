@@ -31,6 +31,10 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t('title'),
     description: t('description'),
+    other: {
+      // Ownership proof for the Saudi Business Center (المركز السعودي للأعمال) domain check.
+      'domain-verification': '510bd1445bcfa63e566bc867cacdced1ea4f545bd92624b01a6be6831752074f',
+    },
   };
 }
 
