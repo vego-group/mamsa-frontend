@@ -43,6 +43,8 @@ export async function Footer() {
             <li><Link href="/policies/cancellation" className="hover:text-brand-primary">{t('links.cancellationPolicy')}</Link></li>
             <li><Link href="/policies/safety" className="hover:text-brand-primary">{t('links.safety')}</Link></li>
             <li><Link href="/policies/house-rules" className="hover:text-brand-primary">{t('links.houseRules')}</Link></li>
+            <li><Link href="/policies/privacy" className="hover:text-brand-primary">{t('links.privacy')}</Link></li>
+            <li><Link href="/policies/terms" className="hover:text-brand-primary">{t('links.terms')}</Link></li>
           </ul>
         </div>
 

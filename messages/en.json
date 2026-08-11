@@ -51,8 +51,10 @@
       "contact": "Contact us",
       "faq": "FAQ",
       "cancellationPolicy": "Cancellation policy",
-      "safety": "Basic safety rules",
-      "houseRules": "House rules"
+      "safety": "Safety policies",
+      "houseRules": "House rules",
+      "privacy": "Privacy policy",
+      "terms": "Terms & conditions"
     }
   },
   "filter": {
@@ -430,7 +432,7 @@
     "agreeTo": "I agree to the",
     "cancellationPolicyLink": "cancellation policy",
     "listSeparator": ",",
-    "safetyLink": "basic safety rules",
+    "safetyLink": "safety policies",
     "andLastSeparator": ", and",
     "houseRulesLink": "house rules",
     "agreeChargeNote": "I also agree that the site may charge my payment method if I'm responsible for any damages.",
@@ -1074,9 +1076,9 @@
       "needHelpBody": "If you're facing an emergency or have a question about cancelling a specific booking, reach us via the <contactLink>contact us</contactLink> page and our support team will help you as soon as possible."
     },
     "safety": {
-      "metaTitle": "Basic Safety Rules — {name}",
+      "metaTitle": "Safety Policies — {name}",
       "metaDescription": "Safety guidelines to protect your account, payments and stay on Mamsa.",
-      "title": "Basic Safety Rules",
+      "title": "Safety Policies",
       "subtitle": "Your safety is our priority — from the moment you book until you check out. These rules protect you and the Mamsa community.",
       "lastUpdated": "Last updated: {date}",
       "lastUpdatedDate": "July 2026",
@@ -1149,6 +1151,152 @@
       },
       "complianceTitle": "Compliance with regulations",
       "complianceBody": "Guests must comply with the laws and regulations in effect in Saudi Arabia throughout the stay. Any unlawful activity inside the unit exposes the booking to immediate termination without a refund, along with any necessary legal action."
+    },
+    "privacy": {
+      "metaTitle": "Privacy Policy — {name}",
+      "metaDescription": "What data Mamsa collects, why, who we share it with, and your rights under Saudi Arabia's Personal Data Protection Law.",
+      "title": "Privacy Policy",
+      "subtitle": "In plain language: what we collect, why we collect it, who we share it with, and how you stay in control.",
+      "lastUpdated": "Last updated: {date}",
+      "lastUpdatedDate": "August 2026",
+      "intro": "This policy explains how <strong>Mamsa</strong> handles your personal data when you browse the site or book through it. We collect and process it in line with Saudi Arabia's <strong>Personal Data Protection Law</strong> and its implementing regulations.",
+      "collectTitle": "What we collect",
+      "collectIntro": "We collect the minimum needed to complete your booking and serve you afterwards:",
+      "collect": {
+        "0": "<strong>Account data:</strong> first and last name, mobile number (your login method, via a one-time code), and email address if you add one.",
+        "1": "<strong>Booking data:</strong> the unit booked, check-in and check-out dates, guest count, amount paid, and the cancellation policy locked in with the booking.",
+        "2": "<strong>Support and contact data:</strong> messages you send through the contact form, and reviews you publish after a stay.",
+        "3": "<strong>Technical data:</strong> <strongLtr>IP</strongLtr> address, device and browser type, and login/activity logs — used for security and fraud detection."
+      },
+      "paymentTitle": "Payment data",
+      "paymentBody": "Payments are processed entirely by the licensed payment gateway <strong>Moyasar</strong>. <strong>We never receive or store your full card number on our servers</strong> — we keep only the card brand, its last four digits, the cardholder name, and a secure token issued by the gateway if you choose to save the card. You can delete any saved card from the payment methods page at any time.",
+      "usageTitle": "Why we use your data",
+      "usage": {
+        "0": "Creating and verifying your account through the code sent to your mobile.",
+        "1": "Processing your booking, collecting payment, and issuing refunds on cancellation.",
+        "2": "Sending booking notifications, confirmations and reminders by SMS or email.",
+        "3": "Answering your enquiries, providing support, and documenting reports.",
+        "4": "Protecting the platform and its users from fraud and abuse.",
+        "5": "Meeting regulatory and accounting requirements in Saudi Arabia."
+      },
+      "sharingTitle": "Who we share it with",
+      "sharing": {
+        "0": "<strong>The host of the unit:</strong> your name and the booking details needed to receive you — never any payment data.",
+        "1": "<strong>The payment gateway (Moyasar):</strong> to process the payment or refund.",
+        "2": "<strong>Technical service providers:</strong> site hosting, SMS and email delivery — under agreements binding them to confidentiality and to using the data only to operate the service.",
+        "3": "<strong>Competent authorities:</strong> where a legal or judicial request requires it."
+      },
+      "noSaleNote": "<strong>We do not sell or rent your personal data to anyone, and we do not use it for third-party advertising.</strong>",
+      "cookiesTitle": "Cookies and local storage",
+      "cookies": {
+        "0": "<strong>Language cookie:</strong> remembers whether you chose Arabic or English.",
+        "1": "<strong>Browser local storage:</strong> your session token, so you don't have to sign in on every visit, and your favourites list.",
+        "2": "All of these are <strong>essential to running the site</strong> — we use no advertising cookies and no third-party marketing trackers.",
+        "3": "You can clear them from your browser settings at any time; clearing the session token signs you out."
+      },
+      "retentionTitle": "How long we keep it",
+      "retentionBody": "We keep your data for as long as your account is active. When you delete your account from the account page, we delete or anonymise your data — except what we must retain to meet regulatory and accounting requirements (such as booking records, invoices and refunds) or to resolve an open dispute or claim.",
+      "securityTitle": "How we protect your data",
+      "security": {
+        "0": "Fully encrypted transport over <strongLtr>HTTPS/TLS</strongLtr> between your browser and our servers.",
+        "1": "One-time code sign-in instead of a static password.",
+        "2": "No card data stored with us — it stays inside the licensed payment gateway.",
+        "3": "Access to user data restricted to staff whose duties require it."
+      },
+      "securityNote": "<strong>Mamsa staff will never ask you for your verification code or card details by phone or message.</strong> See the <safetyLink>safety policies</safetyLink> for details.",
+      "rightsTitle": "Your rights",
+      "rightsIntro": "The Personal Data Protection Law grants you the following rights:",
+      "rights": {
+        "0": "<strong>Right to be informed:</strong> to know why your data is collected and on what legal basis.",
+        "1": "<strong>Right of access:</strong> to see the data we hold about you and obtain a copy of it.",
+        "2": "<strong>Right to rectification:</strong> to correct any inaccurate or incomplete data.",
+        "3": "<strong>Right to erasure:</strong> to request destruction of your data once it is no longer needed for the purpose it was collected for.",
+        "4": "<strong>Right to withdraw consent:</strong> at any time, without affecting processing carried out before the withdrawal."
+      },
+      "rightsHow": "To exercise any of these rights, write to us at <strongLtr>{email}</strongLtr> or through the <contactLink>contact page</contactLink>. You also have the right to complain to the competent personal data protection authority in Saudi Arabia if you believe our processing breaches the law.",
+      "childrenTitle": "Minors' privacy",
+      "childrenBody": "Mamsa's services are intended for people aged 18 and over. We do not knowingly collect data from anyone below that age, and we delete it if we discover we have. If you are a parent or guardian and believe your child has given us their data, contact us to have it removed.",
+      "transferTitle": "Processing outside Saudi Arabia",
+      "transferBody": "Some data may be processed or stored by technical service providers outside Saudi Arabia (cloud hosting, for example). Where that happens we comply with the law's rules on transferring personal data abroad, and contract only with providers offering an adequate level of protection.",
+      "changesTitle": "Updates to this policy",
+      "changesBody": "We may update this policy as the service or the regulations evolve. The last-updated date appears at the top of this page, and for any material change we will notify you through the platform or by email before it takes effect.",
+      "contactTitle": "Privacy contact",
+      "contactBody": "For any question or request about your personal data, write to us at <strongLtr>{email}</strongLtr> or use the <contactLink>contact page</contactLink>. Mamsa is an entity registered in Saudi Arabia under commercial registration number <strongLtr>{cr}</strongLtr>."
+    },
+    "terms": {
+      "metaTitle": "Terms & Conditions — {name}",
+      "metaDescription": "The terms governing use of Mamsa: booking, payment and cancellation, and the obligations of guests and partners.",
+      "title": "Terms & Conditions",
+      "subtitle": "The framework governing your relationship with Mamsa — read it before creating an account or completing a booking.",
+      "lastUpdated": "Last updated: {date}",
+      "lastUpdatedDate": "August 2026",
+      "intro": "By using the <strong>Mamsa</strong> website, creating an account, or completing a booking through it, you confirm that you have read and accepted these terms. If you do not agree with any part of them, please do not use the platform.",
+      "definitionsTitle": "Definitions",
+      "definitions": {
+        "0": "<strong>Platform:</strong> the Mamsa website and its related online services.",
+        "1": "<strong>Guest:</strong> the user who books a unit through the platform.",
+        "2": "<strong>Partner (host):</strong> the owner of the unit, or whoever is authorised to list and rent it.",
+        "3": "<strong>Unit:</strong> the accommodation listed on the platform.",
+        "4": "<strong>Booking:</strong> a stay for a defined period, confirmed once payment succeeds."
+      },
+      "roleTitle": "Mamsa's role",
+      "roleBody": "Mamsa is an online intermediary platform that lets partners list their units and guests book and pay for them securely. <strong>The accommodation contract is between the guest and the partner</strong>; the platform facilitates the booking and payment and enforces the published policies. Units are reviewed before they go live, but the partner remains responsible for the accuracy of the unit's details, its readiness, and its match to what is advertised.",
+      "eligibilityTitle": "Eligibility and your account",
+      "eligibility": {
+        "0": "You must be <strong>18 or older</strong> and legally capable of entering into a contract.",
+        "1": "Sign-in uses a valid mobile number and a code sent to it — you are responsible for everything done through your account.",
+        "2": "Never share your verification code, and tell us immediately about any unauthorised use of your account.",
+        "3": "Providing false information or impersonating someone else may result in account suspension."
+      },
+      "pricingTitle": "Prices and payment",
+      "pricing": {
+        "0": "All prices are in Saudi riyals (<strongLtr>SAR</strongLtr>). VAT is added at the statutory rate and shown as a separate line in the price summary before payment.",
+        "1": "<strong>There are no service fees and no cleaning fees</strong> — what you see in the price summary is what you pay.",
+        "2": "Payments are made inside the platform only, through the licensed payment gateway (Moyasar), and the booking is confirmed once payment succeeds.",
+        "3": "<strong>Any payment or arrangement made outside the platform is entirely at your own risk</strong> and is covered by neither our guarantee nor the refund policy.",
+        "4": "By completing a booking you agree that compensation charges may be applied to your payment method for damage you are found — after verification — responsible for."
+      },
+      "cancellationTitle": "Cancellation and refunds",
+      "cancellationBody": "Cancelling a booking and refunding amounts are governed by the <cancellationLink>cancellation policy</cancellationLink> published on the unit's page. <strong>The policy shown at checkout is locked in with your booking</strong> and is unaffected by any later change the partner makes. After the check-in time cancellation is no longer available, and a no-show is treated as a late cancellation.",
+      "guestObligationsTitle": "Guest obligations",
+      "guestObligations": {
+        "0": "Follow the <houseRulesLink>house rules</houseRulesLink> and any unit-specific rules published on its page.",
+        "1": "Do not exceed the guest count stated in the booking, and do not use the unit for anything other than the agreed stay.",
+        "2": "Look after the unit and its contents, and cover the cost of damage caused by misuse.",
+        "3": "Comply with the laws in force in Saudi Arabia throughout the stay."
+      },
+      "partnerObligationsTitle": "Partner obligations",
+      "partnerObligations": {
+        "0": "Keep the unit's description, photos, price and amenities accurate, and keep the availability calendar up to date.",
+        "1": "Hold the legal right to rent the unit and maintain the licences and requirements the law demands.",
+        "2": "Prepare the unit and receive the guest as confirmed in the booking.",
+        "3": "Applications to join are subject to review and approval; the platform may reject an application or suspend a unit for breaches.",
+        "4": "The platform's commission is deducted from completed bookings at the rate disclosed at registration, and partners are notified of any change before it takes effect."
+      },
+      "reviewsTitle": "Reviews and content",
+      "reviewsBody": "Guests may publish a review after their stay ends, provided it is honest and free of abuse, other people's personal data, or unlawful content. Content you publish remains yours, and you grant the platform a non-exclusive licence to display it within the service. The platform may remove any content that breaches these terms or is misleading.",
+      "prohibitedTitle": "Prohibited use",
+      "prohibited": {
+        "0": "Using the platform for any unlawful purpose or one contrary to public morals.",
+        "1": "Fraud, misleading information, or manipulating reviews.",
+        "2": "Attempting to breach or disrupt the platform, or to access user data without authorisation.",
+        "3": "Scraping the content or republishing it commercially without prior written permission.",
+        "4": "Circumventing the platform by moving the booking or the payment outside it."
+      },
+      "ipTitle": "Intellectual property",
+      "ipBody": "The Mamsa name, logo, platform design and content are owned by the platform and legally protected; they may not be copied or used commercially without prior written permission.",
+      "liabilityTitle": "Limitation of liability",
+      "liabilityBody": "The platform takes reasonable care in reviewing units and partners, but does not guarantee the service will be uninterrupted or error-free, and is not liable for the conduct of guests or partners beyond the scope of its intermediation. In all cases the platform's liability towards you does not exceed <strong>the amount actually paid for the booking in dispute</strong>, and does not cover indirect damages or loss of profit. Nothing in this clause limits any right granted to you by law.",
+      "suspensionTitle": "Suspension and termination",
+      "suspensionBody": "The platform may suspend an account or terminate the service for breach of these terms or on suspicion of fraud or abuse, handling any open bookings under the published policies. You may delete your account at any time from your account page.",
+      "privacyTitle": "Privacy",
+      "privacyBody": "Your personal data is processed in line with the <privacyLink>privacy policy</privacyLink>, which forms an integral part of these terms.",
+      "changesTitle": "Changes to these terms",
+      "changesBody": "We may update these terms from time to time. The last-updated date appears at the top of this page and changes take effect from the date they are published. Bookings confirmed before a change remain governed by the terms and policies in force when they were confirmed.",
+      "lawTitle": "Governing law",
+      "lawBody": "These terms are governed by and construed in accordance with the laws in force in the <strong>Kingdom of Saudi Arabia</strong>, and Saudi judicial authorities have jurisdiction over any dispute arising from them. We will always seek to resolve a disagreement amicably through our support team first.",
+      "contactTitle": "Contact",
+      "contactBody": "For any question about these terms, write to us at <strongLtr>{email}</strongLtr> or use the <contactLink>contact page</contactLink>. Mamsa is an entity registered in Saudi Arabia under commercial registration number <strongLtr>{cr}</strongLtr>."
     }
   }
 }
