@@ -38,7 +38,9 @@ export function PolicyPage({ icon: Icon, title, subtitle, lastUpdatedLabel, chil
 export function PolicySection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="space-y-3">
-      <h2 className="border-e-4 border-brand-primary pe-3 text-xl font-bold text-brand-ink">{title}</h2>
+      {/* Accent bar hugs the start of the text (right in RTL, left in LTR) — an
+          inline-END border would sit at the far edge of the full-width h2. */}
+      <h2 className="border-s-4 border-brand-primary ps-3 text-xl font-bold text-brand-ink">{title}</h2>
       <div className="space-y-2 text-sm leading-relaxed text-brand-muted [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pe-5 [&_strong]:text-brand-ink">
         {children}
       </div>
