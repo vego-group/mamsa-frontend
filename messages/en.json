@@ -52,7 +52,7 @@
       "faq": "FAQ",
       "cancellationPolicy": "Cancellation policy",
       "safety": "Safety policies",
-      "houseRules": "House rules",
+      "houseRules": "Stay policies",
       "privacy": "Privacy policy",
       "terms": "Terms & conditions"
     }
@@ -434,7 +434,7 @@
     "listSeparator": ",",
     "safetyLink": "safety policies",
     "andLastSeparator": ", and",
-    "houseRulesLink": "house rules",
+    "houseRulesLink": "stay policies",
     "agreeChargeNote": "I also agree that the site may charge my payment method if I'm responsible for any damages.",
     "creatingBooking": "Creating your booking...",
     "continueToPayment": "Continue to payment — {amount}",
@@ -1114,9 +1114,9 @@
       "reportIssueBody": "Noticed suspicious behavior, a misleading listing, or a suspicious contact attempt? Report it to us immediately via the <contactLink>contact us</contactLink> page — we handle reports with complete confidentiality."
     },
     "houseRules": {
-      "metaTitle": "House Rules — {name}",
+      "metaTitle": "Stay Policies — {name}",
       "metaDescription": "General rules for staying in units on the Mamsa platform.",
-      "title": "House Rules",
+      "title": "Stay Policies",
       "subtitle": "General rules that ensure a comfortable stay for you, and preserve the unit's condition and the neighbors' peace.",
       "lastUpdated": "Last updated: {date}",
       "lastUpdatedDate": "July 2026",
@@ -1260,7 +1260,7 @@
       "cancellationBody": "Cancelling a booking and refunding amounts are governed by the <cancellationLink>cancellation policy</cancellationLink> published on the unit's page. <strong>The policy shown at checkout is locked in with your booking</strong> and is unaffected by any later change the partner makes. After the check-in time cancellation is no longer available, and a no-show is treated as a late cancellation.",
       "guestObligationsTitle": "Guest obligations",
       "guestObligations": {
-        "0": "Follow the <houseRulesLink>house rules</houseRulesLink> and any unit-specific rules published on its page.",
+        "0": "Follow the <houseRulesLink>stay policies</houseRulesLink> and any unit-specific rules published on its page.",
         "1": "Do not exceed the guest count stated in the booking, and do not use the unit for anything other than the agreed stay.",
         "2": "Look after the unit and its contents, and cover the cost of damage caused by misuse.",
         "3": "Comply with the laws in force in Saudi Arabia throughout the stay."

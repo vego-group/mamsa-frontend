@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 
 /**
- * Shared shell for legal/policy pages (سياسة الإلغاء، سياسات الأمان، قواعد البيت،
+ * Shared shell for legal/policy pages (سياسة الإلغاء، سياسات الأمان، سياسات الإقامة،
  * سياسة الخصوصية، الشروط والأحكام).
  * Keeps every one of them visually identical: brand hero + narrow reading column.
  */
