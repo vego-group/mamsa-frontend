@@ -38,20 +38,21 @@ export function CancellationPolicyDisplay({
       )}
       <ul className="space-y-2 text-sm">
         {sortedTiers.map((tier, i) => {
-          const next = sortedTiers[i + 1];
-          const windowLabel = next
-            ? t('between', { from: next.minDaysBeforeCheckIn, to: tier.minDaysBeforeCheckIn })
-            : t('moreThan', { days: tier.minDaysBeforeCheckIn });
-          const firstLabel = t('moreThan', { days: tier.minDaysBeforeCheckIn });
-          const lastLabel =
-            tier.minDaysBeforeCheckIn === 0
-              ? t('lessThan', { days: sortedTiers[i - 1]?.minDaysBeforeCheckIn ?? 3 })
-              : windowLabel;
+          // A tier applies when daysBeforeCheckIn >= its own threshold (see
+          // resolveTier), so its window runs from its OWN threshold up to the
+          // previous (wider) tier's threshold — not down to the next one's.
+          const prev = sortedTiers[i - 1];
+          const windowLabel = !prev
+            ? t('moreThan', { days: tier.minDaysBeforeCheckIn })
+            : tier.minDaysBeforeCheckIn === 0
+              ? t('lessThan', { days: prev.minDaysBeforeCheckIn })
+              : t('between', {
+                  from: tier.minDaysBeforeCheckIn,
+                  to: prev.minDaysBeforeCheckIn,
+                });
           return (
             <li key={i} className="flex items-start justify-between gap-3 text-brand-muted">
-              <span>
-                {i === 0 ? firstLabel : i === sortedTiers.length - 1 ? lastLabel : windowLabel}
-              </span>
+              <span>{windowLabel}</span>
               <span
                 className={cn(
                   'shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold',
