@@ -21,6 +21,8 @@ export const BRAND = {
   phone: '+966 50 000 0000',
   licenseNumber: '00000',
   licenseAuthority: 'وزارة السياحة',
+  /** رقم السجل التجاري الصادر من المركز السعودي للأعمال — يُعرض في الفوتر. */
+  crNumber: '1010920108',
 } as const;
 
 /**
