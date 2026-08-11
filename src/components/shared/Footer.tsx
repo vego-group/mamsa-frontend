@@ -87,11 +87,8 @@ export async function Footer() {
         </div>
       </div>
 
-      <div className="container mx-auto flex flex-col items-center gap-2 px-4 pb-8 md:flex-row md:items-start">
-        <div className="w-full rounded-full border border-brand-border bg-white/60 px-4 py-2 text-center text-xs text-brand-muted md:w-auto md:text-start">
-          {t('license', { authority: t('licenseAuthority'), number: BRAND.licenseNumber })}
-        </div>
-        <div className="w-full rounded-full border border-brand-border bg-white/60 px-4 py-2 text-center text-xs text-brand-muted md:w-auto md:text-start">
+      <div className="container mx-auto px-4 pb-8">
+        <div className="rounded-full border border-brand-border bg-white/60 px-4 py-2 text-center text-xs text-brand-muted md:inline-block md:text-start">
           {t('cr', { number: BRAND.crNumber })}
         </div>
       </div>
