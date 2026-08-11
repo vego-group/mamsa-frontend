@@ -9,6 +9,7 @@
  */
 import { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { Check } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { authApi } from '@/lib/api/client';
@@ -118,8 +119,13 @@ export default function PartnerOnboardingPage() {
           {/* Footer */}
           <p className="text-center text-xs text-brand-muted">
             {t('agreeTo')}{' '}
-            <span className="font-medium text-brand-ink">{t('terms')}</span> {t('and')}{' '}
-            <span className="font-medium text-brand-ink">{t('privacyPolicy')}</span>.
+            <Link href="/policies/terms" className="font-medium text-brand-ink hover:text-brand-primary hover:underline">
+              {t('terms')}
+            </Link>{' '}
+            {t('and')}{' '}
+            <Link href="/policies/privacy" className="font-medium text-brand-ink hover:text-brand-primary hover:underline">
+              {t('privacyPolicy')}
+            </Link>.
           </p>
         </section>
 

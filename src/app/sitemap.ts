@@ -26,6 +26,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: '/policies/cancellation', priority: 0.4, changeFrequency: 'yearly' },
     { path: '/policies/safety', priority: 0.4, changeFrequency: 'yearly' },
     { path: '/policies/house-rules', priority: 0.4, changeFrequency: 'yearly' },
+    { path: '/policies/privacy', priority: 0.4, changeFrequency: 'yearly' },
+    { path: '/policies/terms', priority: 0.4, changeFrequency: 'yearly' },
   ];
 
   return routes.map(({ path, priority, changeFrequency }) => ({
