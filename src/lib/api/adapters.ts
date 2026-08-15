@@ -120,6 +120,11 @@ export interface RawBooking {
   pricing?: {
     nightly_rate?: number;
     nights?: number;
+    /** VAT-inclusive keys — sent once the backend's own refactor ships. */
+    gross?: number;
+    net_base?: number;
+    vat?: number;
+    /** Current VAT-exclusive keys, naming the same three quantities. */
     subtotal?: number;
     taxes?: number;
     total?: number;
@@ -207,6 +212,17 @@ const TEMPLATE_MAP: Record<string, CancellationTemplate> = {
   non_refundable: 'strict',
 };
 
+/**
+ * Backend booking status → our union. Every spelling the API is known to emit
+ * must be listed here, because the lookup's fallback is a coin-flip between two
+ * unsafe answers (see the note at its call site).
+ *
+ * Covered keys — check this list against the API's enum, don't assume:
+ *   pending_payment ← pending (pre-2026-08-13 name), pending_payment, awaiting_payment
+ *   confirmed       ← confirmed, paid, active
+ *   completed       ← completed
+ *   cancelled       ← cancelled, canceled
+ */
 const BOOKING_STATUS_MAP: Record<string, BookingStatus> = {
   pending: 'pending_payment',
   pending_payment: 'pending_payment',
@@ -298,8 +314,10 @@ export function mapUnit(u: RawUnit): Unit {
     country: DEFAULT_COUNTRY,
     latitude: u.lat ?? 0,
     longitude: u.lng ?? 0,
+    // Gross, VAT-inclusive. The API's `tax_percent` is deliberately NOT mapped:
+    // the VAT rate is a platform constant (VAT_RATE), not per-unit data, and a
+    // per-unit tax field invites someone to re-derive tax from it later.
     pricePerNight: Number(u.price ?? 0),
-    taxPercent: u.tax_percent == null ? undefined : Number(u.tax_percent),
     capacity: Number(u.capacity ?? 0),
     bedrooms: Number(u.bedrooms ?? 0),
     beds: Number(u.beds ?? 0),
@@ -359,17 +377,33 @@ export function mapBooking(b: RawBooking): Booking {
     },
     userId: b.user_id == null ? 'CURRENT_USER' : String(b.user_id),
     guestName: b.guest_name ?? undefined,
+    // As of 2026-08-14 the API returns exactly `pending_payment`, `confirmed`,
+    // `completed` and `cancelled` (confirmed with the backend team).
+    // BOOKING_STATUS_MAP covers all four plus five legacy aliases, so this
+    // default is UNREACHABLE — it exists as defence against an undocumented
+    // fifth value, not as a real code path.
+    //
+    // Should one ever appear, note there is no safe default to fall back to:
+    //   'confirmed'       → an UNPAID booking renders as paid and confirmed.
+    //   'pending_payment' → a PAID booking gets a "complete payment" CTA,
+    //                       inviting the guest to be charged twice.
+    // So the fix for a new status is always to add it to the map, never to
+    // retune this default.
     status: BOOKING_STATUS_MAP[b.status ?? ''] ?? 'confirmed',
     checkInDate: b.start_date,
     checkOutDate: b.end_date,
     nights: Number(b.nights ?? p.nights ?? 0),
     guests: mapGuests(b),
+    // VAT-inclusive. Until the backend ships its refactor it still sends the
+    // VAT-exclusive trio, which names the same three quantities — its
+    // `subtotal` is the net base, `taxes` the VAT, `total` the gross. New keys
+    // are read first so the backend swap needs no change here.
     price: {
       pricePerNight: Number(p.nightly_rate ?? 0),
       nights: Number(p.nights ?? b.nights ?? 0),
-      subtotal: Number(p.subtotal ?? 0),
-      tax: Number(p.taxes ?? 0),
-      total: Number(p.total ?? b.total_amount ?? 0),
+      gross: Number(p.gross ?? p.total ?? b.total_amount ?? 0),
+      netBase: Number(p.net_base ?? p.subtotal ?? 0),
+      vat: Number(p.vat ?? p.taxes ?? 0),
     },
     // Prefer the API's frozen snapshot (FR-036); the unit's embedded policy is
     // a deprecated legacy enum — used ONLY as the pre-payment fallback.

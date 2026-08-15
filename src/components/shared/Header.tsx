@@ -62,7 +62,7 @@ export function Header() {
   const initials = user ? `${user.firstName.charAt(0)}${user.lastName.charAt(0)}` : '؟';
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-brand-border bg-white/95 backdrop-blur">
+    <header className="no-print sticky top-0 z-40 w-full border-b border-brand-border bg-white/95 backdrop-blur">
       <div className="container mx-auto flex h-16 items-center justify-between gap-4 px-4 md:h-20">
         {/* Logo (inline start) */}
         <Link href="/" className="flex items-center gap-2">

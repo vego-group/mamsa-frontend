@@ -28,6 +28,11 @@ export function BookingCard({ booking, tabContext, onCancelled }: BookingCardPro
   const guests = booking.guests.adults + booking.guests.children;
 
   const statusBadge = () => {
+    // Status wins over the tab. An unpaid booking is bucketed into upcoming/active
+    // purely by check-in date, so a tab-only badge renders it as "Confirmed" —
+    // claiming a paid booking the guest never paid for.
+    if (booking.status === 'pending_payment')
+      return <Badge variant="warning">{t('status.pendingPayment')}</Badge>;
     if (tabContext === 'cancelled') return <Badge variant="danger">{t('status.cancelled')}</Badge>;
     if (tabContext === 'completed') return <Badge variant="sage">{t('status.completed')}</Badge>;
     if (tabContext === 'active') return <Badge variant="success">{t('status.confirmed')}</Badge>;
@@ -76,7 +81,7 @@ export function BookingCard({ booking, tabContext, onCancelled }: BookingCardPro
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-brand-border pt-4">
               <div>
                 <div className="text-xs text-brand-muted">{t('total')}</div>
-                <div className="text-xl font-bold text-brand-ink">{formatSAR(booking.price.total)}</div>
+                <div className="text-xl font-bold text-brand-ink">{formatSAR(booking.price.gross)}</div>
               </div>
               <div className="flex gap-2">
                 <Button asChild size="sm" variant="default">

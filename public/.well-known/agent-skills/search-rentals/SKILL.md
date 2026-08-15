@@ -112,8 +112,16 @@ Responses are wrapped as `{ success, message, data }` — the listings are in
 `pricing` block (`nights`, `nightly_rate`, `subtotal`, `taxes`, `tax_percent`,
 `total`).
 
-**Never compute a total yourself.** Quote the server's numbers. Pricing is
-subtotal + 15% VAT — there are no cleaning or service fees.
+**Never compute a total yourself — quote the server's `total`.** Mamsa quotes
+prices VAT-inclusive: the figure in `total` is what the guest pays, VAT
+included. There are no cleaning or service fees; VAT is the only tax.
+
+The block also carries `gross` (identical to `total`), `net_base` (= `subtotal`),
+`vat` (= `taxes`) and `vat_rate`, where `net_base + vat === gross` exactly. The
+VAT is contained in the total, not added to it.
+
+A listing's `pricePerNight` in search results is likewise the **final** nightly
+price, VAT included — quote it as-is and never multiply it by 1.15.
 
 ## Reading pages as Markdown
 

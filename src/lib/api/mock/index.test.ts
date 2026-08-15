@@ -29,8 +29,12 @@ describe('mock pricing stays in sync between the quote and booking-creation endp
     });
 
     expect(quote).toBeTruthy();
-    expect(booking.price.subtotal).toBe(quote!.subtotal);
-    expect(booking.price.tax).toBe(quote!.taxes);
-    expect(booking.price.total).toBe(quote!.total);
+    expect(booking.price.gross).toBe(quote!.gross);
+    expect(booking.price.netBase).toBe(quote!.net_base);
+    expect(booking.price.vat).toBe(quote!.vat);
+    // VAT is split out of the gross, never added to it: the parts sum back
+    // exactly, and the total never exceeds nightly rate × nights.
+    expect(booking.price.netBase + booking.price.vat).toBe(booking.price.gross);
+    expect(booking.price.gross).toBe(booking.price.pricePerNight * booking.price.nights);
   });
 });

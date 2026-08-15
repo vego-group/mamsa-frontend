@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Payment page — step 2 of checkout (the booking already exists as `pending`).
+ * Payment page — step 2 of checkout (the booking already exists as `pending_payment`).
  *
  * `POST /payments/initiate` decides what UI to show:
  *  - test_mode           → "simulate" button hitting `POST /payments/pay { payment_id }`
@@ -25,10 +25,12 @@ import { paymentsApi, accountApi, type InitiatePaymentResult } from '@/lib/api/c
 import { PriceBreakdown } from '@/components/features/booking/PriceBreakdown';
 import { loadMoyasarAssets, initMoyasarForm } from '@/lib/payments/moyasar';
 import { formatSAR, formatDate } from '@/lib/utils/format';
+import { vatPercentLabel } from '@/lib/pricing';
 import type { SavedCard } from '@/types';
 
 export default function PaymentPage() {
   const t = useTranslations('payment');
+  const tPricing = useTranslations('pricing');
   const locale = useLocale() as 'ar' | 'en';
   const { bookingId } = useParams<{ bookingId: string }>();
   const router = useRouter();
@@ -281,14 +283,21 @@ export default function PaymentPage() {
                 price={{
                   pricePerNight: booking.nightlyRate,
                   nights: booking.nights,
-                  subtotal: booking.subtotal,
-                  tax: booking.taxes,
-                  total: info.amount,
+                  // `info.amount` is what Moyasar will actually charge. The pay
+                  // screen shows that figure and never a separately-derived one,
+                  // so the number on the button can't drift from the number above it.
+                  gross: info.amount,
+                  netBase: booking.netBase,
+                  vat: booking.vat,
                 }}
                 labels={{
                   priceLine: t('priceLine', { price: booking.nightlyRate, nights: booking.nights }),
-                  taxes: t('taxes'),
+                  inclVat: tPricing('inclVat'),
                   total: t('total'),
+                  showTaxDetails: tPricing('showTaxDetails'),
+                  netBase: tPricing('netBase'),
+                  // The frozen summary carries no rate — platform constant.
+                  vat: tPricing('vat', { percent: vatPercentLabel() }),
                 }}
                 format={formatSAR}
               />

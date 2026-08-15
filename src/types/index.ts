@@ -61,8 +61,8 @@ export interface Unit {
   country: string;
   latitude: number;
   longitude: number;
-  pricePerNight: number; // SAR
-  taxPercent?: number;
+  /** SAR, GROSS — VAT-inclusive. Displayed verbatim; never multiplied by a tax rate. */
+  pricePerNight: number;
   capacity: number;
   bedrooms: number;
   beds: number;
@@ -127,12 +127,21 @@ export interface PaymentInfo {
   cardholderName?: string;
 }
 
+/**
+ * A stay's price, VAT-inclusive. `gross` is the payable total and the ONLY
+ * number the guest is asked to act on; `netBase` and `vat` are the downward
+ * split of it for the tax invoice, and always sum back to it exactly.
+ * There is deliberately no `subtotal`/`total` pair — that vocabulary encoded
+ * the old "add VAT at checkout" model.
+ */
 export interface PriceBreakdown {
+  /** Gross, VAT-inclusive, per night. */
   pricePerNight: number;
   nights: number;
-  subtotal: number;
-  tax: number;
-  total: number;
+  /** pricePerNight × nights — what the guest pays. */
+  gross: number;
+  netBase: number;
+  vat: number;
 }
 
 export interface RefundRecord {

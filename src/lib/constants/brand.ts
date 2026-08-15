@@ -45,6 +45,34 @@ export const CURRENCY = {
   symbolEn: 'SAR',
 } as const;
 
+/**
+ * Saudi VAT. Displayed prices are GROSS (VAT-inclusive) everywhere — VAT is
+ * broken out DOWNWARD from the gross figure, never added upward to it, so
+ * nothing the guest sees ever grows between search and payment.
+ *
+ * This is the single source of the rate. The only module allowed to do
+ * arithmetic with it is `src/lib/pricing.ts`; everything else displays the
+ * numbers that module (or the backend) produced.
+ */
+export const VAT_RATE = 0.15;
+/** The same rate as a whole number, for labels like "ضريبة القيمة المضافة (15%)". */
+export const VAT_PERCENT_LABEL = 15;
+
+/**
+ * Seller of record on a guest tax invoice. Mamsa is the seller — the host's
+ * name must NEVER appear here.
+ *
+ * Held as a constant rather than inlined in the invoice template: these are
+ * registration numbers, they change rarely and centrally, and a ZATCA QR is
+ * generated server-side from the same values. Consumed by the Phase 3 invoice.
+ */
+export const INVOICE_SELLER = {
+  name: 'شركة ممسى للتقنية',
+  vatNumber: '310456370500003',
+  crNumber: '1010456370',
+  address: 'الرياض، المملكة العربية السعودية',
+} as const;
+
 export const DATE_FORMAT = {
   display: 'dd/MM/yyyy', // gregorian only — قرار معتمد
   displayLong: 'dd MMMM yyyy',

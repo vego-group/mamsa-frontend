@@ -1,5 +1,16 @@
-import type { Booking } from '@/types';
+import type { Booking, PriceBreakdown } from '@/types';
 import { FLEXIBLE_POLICY, MODERATE_POLICY } from '@/lib/constants/cancellation-policies';
+import { quoteFromNightly } from '@/lib/pricing';
+
+/**
+ * Builds a fixture price from a GROSS nightly rate — the same split the mock
+ * backend performs, so seeded bookings and freshly created ones can never
+ * disagree. Rates below are VAT-inclusive; VAT is split out, never added.
+ */
+function priceOf(pricePerNight: number, nights: number): PriceBreakdown {
+  const q = quoteFromNightly(pricePerNight, nights);
+  return { pricePerNight: q.nightlyRate, nights: q.nights, gross: q.gross, netBase: q.netBase, vat: q.vat };
+}
 
 /** Booking states distributed across the 4 tabs */
 export const MOCK_BOOKINGS: Booking[] = [
@@ -21,13 +32,7 @@ export const MOCK_BOOKINGS: Booking[] = [
     checkOutDate: addDays(50),
     nights: 5,
     guests: { adults: 2, children: 1 },
-    price: {
-      pricePerNight: 1200,
-      nights: 5,
-      subtotal: 6000,
-      tax: 900,
-      total: 6900,
-    },
+    price: priceOf(1200, 5),
     payment: { method: 'visa', last4: '4242', cardholderName: 'Mohamed Ahmed' },
     policySnapshot: FLEXIBLE_POLICY,
     isReviewed: false,
@@ -50,13 +55,7 @@ export const MOCK_BOOKINGS: Booking[] = [
     checkOutDate: addDays(23),
     nights: 3,
     guests: { adults: 3, children: 0 },
-    price: {
-      pricePerNight: 1200,
-      nights: 3,
-      subtotal: 3600,
-      tax: 540,
-      total: 4140,
-    },
+    price: priceOf(1200, 3),
     payment: { method: 'mada', last4: '8888' },
     policySnapshot: MODERATE_POLICY,
     isReviewed: false,
@@ -80,13 +79,7 @@ export const MOCK_BOOKINGS: Booking[] = [
     checkOutDate: addDays(8),
     nights: 3,
     guests: { adults: 4, children: 2 },
-    price: {
-      pricePerNight: 1200,
-      nights: 3,
-      subtotal: 3600,
-      tax: 540,
-      total: 4140,
-    },
+    price: priceOf(1200, 3),
     payment: { method: 'visa', last4: '4242' },
     policySnapshot: FLEXIBLE_POLICY,
     isReviewed: false,
@@ -109,13 +102,7 @@ export const MOCK_BOOKINGS: Booking[] = [
     checkOutDate: addDays(4),
     nights: 2,
     guests: { adults: 2, children: 0 },
-    price: {
-      pricePerNight: 1200,
-      nights: 2,
-      subtotal: 2400,
-      tax: 360,
-      total: 2760,
-    },
+    price: priceOf(1200, 2),
     payment: { method: 'mada', last4: '8888' },
     policySnapshot: MODERATE_POLICY,
     isReviewed: false,
@@ -139,13 +126,7 @@ export const MOCK_BOOKINGS: Booking[] = [
     checkOutDate: addDays(-25),
     nights: 5,
     guests: { adults: 4, children: 2 },
-    price: {
-      pricePerNight: 1200,
-      nights: 5,
-      subtotal: 6000,
-      tax: 900,
-      total: 6900,
-    },
+    price: priceOf(1200, 5),
     payment: { method: 'visa', last4: '4242' },
     policySnapshot: FLEXIBLE_POLICY,
     isReviewed: false,
@@ -168,13 +149,7 @@ export const MOCK_BOOKINGS: Booking[] = [
     checkOutDate: addDays(-55),
     nights: 5,
     guests: { adults: 6, children: 2 },
-    price: {
-      pricePerNight: 1200,
-      nights: 5,
-      subtotal: 6000,
-      tax: 900,
-      total: 6900,
-    },
+    price: priceOf(1200, 5),
     payment: { method: 'mada', last4: '8888' },
     policySnapshot: FLEXIBLE_POLICY,
     isReviewed: false,
@@ -198,13 +173,7 @@ export const MOCK_BOOKINGS: Booking[] = [
     checkOutDate: addDays(-12),
     nights: 3,
     guests: { adults: 3, children: 0 },
-    price: {
-      pricePerNight: 1200,
-      nights: 3,
-      subtotal: 3600,
-      tax: 540,
-      total: 4140,
-    },
+    price: priceOf(1200, 3),
     payment: { method: 'visa', last4: '4242' },
     policySnapshot: MODERATE_POLICY,
     isReviewed: false,
@@ -218,6 +187,35 @@ export const MOCK_BOOKINGS: Booking[] = [
     },
     createdAt: addDays(-40),
     cancelledAt: addDays(-25),
+  },
+
+  // === بانتظار الدفع (حجز لم يُدفع بعد) ===
+  // Check-in is inside the 14-day window, so this lands in the "active" tab —
+  // the exact bucket where a tab-driven badge used to render it as "مؤكد".
+  {
+    id: 'BK-008',
+    code: 'PAYQ7M2X4T',
+    unitId: 'U-001',
+    unitSnapshot: {
+      title: 'فيلا فاخرة مع إطلالة على البحر',
+      city: 'الرياض',
+      country: 'المملكة العربية السعودية',
+      imageUrl: 'https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?auto=format&fit=crop&w=800&q=80',
+      ownerName: 'شركة الإقامة الذهبية',
+    },
+    userId: 'CURRENT_USER',
+    status: 'pending_payment',
+    checkInDate: addDays(9),
+    checkOutDate: addDays(12),
+    nights: 3,
+    guests: { adults: 2, children: 0 },
+    price: priceOf(1200, 3),
+    // No `payment` — nothing was ever charged. The real backend also leaves
+    // policy_snapshot null until payment (FR-036); the mapped type is
+    // non-nullable, so the adapter's template fallback is mirrored here.
+    policySnapshot: FLEXIBLE_POLICY,
+    isReviewed: false,
+    createdAt: addDays(-1),
   },
 ];
 

@@ -102,3 +102,56 @@
   color: #fff;
   transform: translate(-50%, -50%) scale(1.12);
 }
+
+/* ============ Printable documents (tax invoice) ============ */
+
+/*
+ * Tabular numerals: every digit takes the same width, so decimal points line up
+ * down a money column. This one property is the difference between a document
+ * that looks issued and one that looks generated.
+ */
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* A4 portrait width on screen, so what you see matches what prints. */
+.invoice-sheet {
+  max-width: 210mm;
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 14mm;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+  }
+
+  /* Keep the brand rule and the totals band on paper — without this, browsers
+     drop background colours and the document loses its only structural accent. */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Site chrome and on-screen controls. `.no-print` is carried by the site
+     header/footer and by any page's own button row. */
+  .no-print {
+    display: none !important;
+  }
+
+  .invoice-sheet {
+    max-width: none;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
+
+  /* The invoice is short by design; this stops a stray widow row from
+     spilling onto a second sheet. */
+  .invoice-sheet {
+    page-break-inside: avoid;
+  }
+}

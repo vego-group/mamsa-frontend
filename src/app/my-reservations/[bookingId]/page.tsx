@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { ArrowRight, CreditCard, MessageCircle, Download, X, ShieldCheck, MapPin, Star } from 'lucide-react';
+import { ArrowRight, CreditCard, MessageCircle, Download, FileText, X, ShieldCheck, MapPin, Star } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +16,7 @@ import { bookingsApi, reviewsApi } from '@/lib/api/client';
 import { formatDate, formatSAR } from '@/lib/utils/format';
 import { downloadBookingConfirmation } from '@/lib/utils/booking-confirmation';
 import { isBookingCancellable } from '@/lib/cancellation/engine';
+import { vatPercentLabel } from '@/lib/pricing';
 import type { Booking, PaymentInfo, Review } from '@/types';
 
 const PAYMENT_LABELS: Record<PaymentInfo['method'], string> = {
@@ -27,6 +28,8 @@ const PAYMENT_LABELS: Record<PaymentInfo['method'], string> = {
 
 export default function BookingDetailsPage() {
   const t = useTranslations('bookingDetails');
+  const tPricing = useTranslations('pricing');
+  const tInvoice = useTranslations('invoice');
   const tc = useTranslations('common');
   const { bookingId } = useParams<{ bookingId: string }>();
   const [booking, setBooking] = useState<Booking | null>(null);
@@ -50,7 +53,7 @@ export default function BookingDetailsPage() {
     booking.status === 'cancelled' ? <Badge variant="danger">{t('status.cancelled')}</Badge>
     : booking.status === 'completed' ? <Badge variant="sage">{t('status.completed')}</Badge>
     : booking.status === 'confirmed' ? <Badge variant="success">{t('status.confirmed')}</Badge>
-    : <Badge variant="warning">{t('status.pending')}</Badge>;
+    : <Badge variant="warning">{t('status.pendingPayment')}</Badge>;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -72,8 +75,12 @@ export default function BookingDetailsPage() {
               price={booking.price}
               labels={{
                 priceLine: t('priceLine', { price: booking.price.pricePerNight, nights: booking.price.nights }),
-                taxes: t('taxes'),
+                inclVat: tPricing('inclVat'),
                 total: t('grandTotal'),
+                showTaxDetails: tPricing('showTaxDetails'),
+                netBase: tPricing('netBase'),
+                // A frozen booking carries no rate — platform constant.
+                vat: tPricing('vat', { percent: vatPercentLabel() }),
               }}
               format={formatSAR}
             />
@@ -96,6 +103,15 @@ export default function BookingDetailsPage() {
             <Button variant="ghost" className="w-full" size="sm" onClick={() => downloadBookingConfirmation(booking)}>
               <Download className="h-4 w-4" /> {t('downloadConfirmation')}
             </Button>
+
+            {/* Only a paid booking has a tax invoice — nothing was charged otherwise. */}
+            {(booking.status === 'confirmed' || booking.status === 'completed') && (
+              <Button asChild variant="ghost" className="w-full" size="sm">
+                <Link href={`/my-reservations/${booking.id}/invoice`}>
+                  <FileText className="h-4 w-4" /> {tInvoice('download')}
+                </Link>
+              </Button>
+            )}
 
             {booking.status === 'pending_payment' && (
               <Button asChild className="w-full" size="sm">

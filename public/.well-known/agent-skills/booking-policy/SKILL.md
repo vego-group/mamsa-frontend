@@ -10,19 +10,36 @@ do on their behalf. To find listings first, see the `search-rentals` skill.
 
 ## Pricing
 
-```
-total = (nightly rate × nights) + 15% VAT
-```
+Mamsa quotes prices **VAT-inclusive**: the price a guest is shown is the price
+they pay. There are **no cleaning fees and no service fees** — VAT is the only
+tax, and it is broken out *downward* from the total rather than added on top.
 
-There are **no cleaning fees and no service fees**. A listing's `pricePerNight`
-is the pre-VAT nightly rate, in SAR.
+**Never compute a total yourself. Quote the server's `total` verbatim** — that
+figure is the one that gets charged, and it is frozen onto the booking.
 
-Get a real quote from `POST /units/{id}/availability` with `start_date` and
+Get a quote from `POST /units/{id}/availability` with `start_date` and
 `end_date` (see `search-rentals`). It returns `nights`, `nightly_rate`,
 `subtotal`, `taxes`, `tax_percent` and `total`.
 
-**Quote those numbers verbatim. Never compute a total yourself** — the server's
-figure is the one that gets charged, and it is frozen onto the booking.
+The response also carries the split, for transparency:
+
+| Field | Meaning |
+|---|---|
+| `gross` (= `total`) | **what the guest pays** — quote this |
+| `nightly_rate` | gross per night; `nightly_rate × nights` equals `gross` |
+| `net_base` (= `subtotal`) | the base before VAT |
+| `vat` (= `taxes`) | the VAT contained in `gross` |
+| `vat_rate` (= `tax_percent` ÷ 100) | currently 0.15 |
+
+`net_base + vat === gross` exactly. VAT is **broken out of** the total, not
+added to it, so a listing's `pricePerNight` is already the final nightly price —
+never multiply it by 1.15.
+
+> **One exception: bookings created before 2026-08-14.** Their price was frozen
+> at creation under the older VAT-exclusive model, so an old booking's stored
+> figures will not satisfy the identity above. That is intentional — a pricing
+> change must never re-price an existing booking. Quote such a booking's own
+> stored `total`; do not recompute it.
 
 ## Cancellation policies
 
