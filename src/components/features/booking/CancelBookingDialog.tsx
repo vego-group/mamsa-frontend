@@ -120,7 +120,7 @@ export function CancelBookingDialog({ booking, open, onClose, onCancelled }: Can
                       </div>
                       <div className="flex justify-between">
                         <dt className="text-brand-muted">{t('totalAmount')}</dt>
-                        <dd>{formatSAR(booking.price.total)}</dd>
+                        <dd>{formatSAR(booking.price.gross)}</dd>
                       </div>
                       <div className="flex justify-between">
                         <dt className="text-brand-muted">{t('refundPercent')}</dt>

@@ -115,12 +115,12 @@ describe('Checkout — EMAIL_VERIFICATION_REQUIRED recovery', () => {
   });
 });
 
-// U-001: pricePerNight 1200 — 4 nights (2026-08-01 → 2026-08-05).
-// Mirrors the mock backend's tax-only formula (15% VAT, no cleaning/service
-// fee) purely to compute the EXPECTED numbers for these assertions — the
-// component itself must never do this math; it only renders whatever the
-// (mocked) API returns.
-const EXPECTED_QUOTE = { subtotal: 4800, taxes: 720, total: 5520 };
+// U-001: pricePerNight 1200 GROSS — 4 nights (2026-08-01 → 2026-08-05).
+// Prices are VAT-inclusive, so the payable total is a plain multiplication and
+// VAT is split back out of it. These are the EXPECTED numbers for the
+// assertions only — the component never does this math; it renders whatever
+// the (mocked) API returns.
+const EXPECTED_QUOTE = { gross: 4800, netBase: 4173.91, vat: 626.09 };
 
 function bookingFixture(overrides: Partial<Booking> = {}): Booking {
   return {
@@ -137,9 +137,9 @@ function bookingFixture(overrides: Partial<Booking> = {}): Booking {
     price: {
       pricePerNight: 1200,
       nights: 4,
-      subtotal: EXPECTED_QUOTE.subtotal,
-      tax: EXPECTED_QUOTE.taxes,
-      total: EXPECTED_QUOTE.total,
+      gross: EXPECTED_QUOTE.gross,
+      netBase: EXPECTED_QUOTE.netBase,
+      vat: EXPECTED_QUOTE.vat,
     },
     policySnapshot: getPolicyByTemplate('flexible'),
     isReviewed: false,
@@ -149,14 +149,15 @@ function bookingFixture(overrides: Partial<Booking> = {}): Booking {
 }
 
 describe('Checkout — price breakdown renders the server-computed quote exactly', () => {
-  it('shows subtotal / taxes / total straight from the quote — no client math, no cleaning/service fee rows', async () => {
+  it('shows the VAT-inclusive total straight from the quote — no client math, no fee rows', async () => {
     useAuthStore.setState({ user: baseUser({ emailVerified: true }), isAuthenticated: true });
     renderCheckout();
     await waitForUnitToLoad();
 
-    expect(screen.getByText(formatSAR(EXPECTED_QUOTE.subtotal))).toBeTruthy();
-    expect(screen.getByText(formatSAR(EXPECTED_QUOTE.taxes))).toBeTruthy();
-    expect(screen.getByText(formatSAR(EXPECTED_QUOTE.total))).toBeTruthy();
+    // The nights line and the total are both the gross figure.
+    expect(screen.getAllByText(formatSAR(EXPECTED_QUOTE.gross)).length).toBeGreaterThan(0);
+    // Nothing that could read as VAT added on top of it.
+    expect(screen.queryByText(formatSAR(EXPECTED_QUOTE.gross + EXPECTED_QUOTE.vat))).toBeNull();
   });
 });
 
@@ -167,7 +168,7 @@ describe('Checkout — post-booking price switches to the frozen booking respons
     await waitForUnitToLoad();
 
     // Before submitting: the page shows the QUOTE's total.
-    expect(screen.getByText(formatSAR(EXPECTED_QUOTE.total))).toBeTruthy();
+    expect(screen.getAllByText(formatSAR(EXPECTED_QUOTE.gross)).length).toBeGreaterThan(0);
 
     fireEvent.change(screen.getByPlaceholderText('أدخل الاسم الأول'), { target: { value: 'سارة' } });
     fireEvent.change(screen.getByPlaceholderText('أدخل اسم العائلة'), { target: { value: 'محمد' } });
@@ -177,11 +178,11 @@ describe('Checkout — post-booking price switches to the frozen booking respons
     // can prove the page switched sources rather than coincidentally matching.
     const booking = bookingFixture({
       price: {
-        pricePerNight: 1200,
+        pricePerNight: 1500,
         nights: 4,
-        subtotal: EXPECTED_QUOTE.subtotal,
-        tax: 1200,
-        total: 6000,
+        gross: 6000,
+        netBase: 5217.39,
+        vat: 782.61,
       },
     });
     vi.spyOn(bookingsApi, 'create').mockResolvedValueOnce(booking);
@@ -192,10 +193,8 @@ describe('Checkout — post-booking price switches to the frozen booking respons
       await vi.advanceTimersByTimeAsync(350);
     });
 
-    // The frozen booking numbers now win — the quote's old tax/total are gone.
-    expect(screen.getByText(formatSAR(1200))).toBeTruthy();
-    expect(screen.getByText(formatSAR(6000))).toBeTruthy();
-    expect(screen.queryByText(formatSAR(EXPECTED_QUOTE.taxes))).toBeNull();
-    expect(screen.queryByText(formatSAR(EXPECTED_QUOTE.total))).toBeNull();
+    // The frozen booking numbers now win — the quote's total is gone.
+    expect(screen.getAllByText(formatSAR(6000)).length).toBeGreaterThan(0);
+    expect(screen.queryByText(formatSAR(EXPECTED_QUOTE.gross))).toBeNull();
   });
 });

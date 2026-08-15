@@ -4,10 +4,10 @@
  * يحافظ على state في الذاكرة للجلسة الحالية فقط (sessionStorage معطّل لأنه لا يعمل في artifacts).
  */
 import { MOCK_UNITS, findUnitById } from '@/data/mock/units';
-import { MOCK_BOOKINGS, findBookingById } from '@/data/mock/bookings';
+import { MOCK_BOOKINGS } from '@/data/mock/bookings';
 import { MOCK_REVIEWS, getReviewForBooking } from '@/data/mock/reviews';
 import { MOCK_CURRENT_USER, MOCK_SAVED_CARDS, MOCK_TRANSACTIONS } from '@/data/mock/users';
-import { OTP_CONFIG } from '@/lib/constants/brand';
+import { OTP_CONFIG, INVOICE_SELLER, VAT_RATE } from '@/lib/constants/brand';
 import { previewCancellation, buildRefundRecord } from '@/lib/cancellation/engine';
 import { getPolicyByTemplate } from '@/lib/constants/cancellation-policies';
 import { ApiError, ERROR_CODE_MESSAGES } from '../errors';
@@ -21,6 +21,7 @@ import type {
   RefundRecord,
 } from '@/types';
 import { diffNights } from '@/lib/utils/format';
+import { quoteFromNightly } from '@/lib/pricing';
 
 // Matches the backend's OTP_FIXED_CODE convention for staging, so the same code
 // works whether you're pointed at the local mock or a staging backend.
@@ -36,6 +37,14 @@ const EMAIL_MAX_ATTEMPTS = 5;
 // ============ In-memory state ============
 let units: Unit[] = [...MOCK_UNITS];
 let bookings: Booking[] = [...MOCK_BOOKINGS];
+
+/**
+ * Look-ups MUST go through the live session list, not `findBookingById` from
+ * the fixtures module — that one only ever sees the seeded array, so a booking
+ * created during the session was invisible to getById/getInvoice/cancellation
+ * and the flow died with "الحجز غير موجود" right after checkout.
+ */
+const findBooking = (id: string): Booking | undefined => bookings.find((b) => b.id === id);
 let reviews: Review[] = [...MOCK_REVIEWS];
 let currentUser: User | null = null; // null until login
 
@@ -65,28 +74,30 @@ function genCode(): string {
 // never computes money; this function exists purely to role-play what the
 // backend would return. Per the final pricing decision, tax (VAT) is the
 // only fee — no cleaning fee, no service fee.
-const MOCK_TAX_PERCENT = 15;
-
 interface MockPricing {
   nights: number;
   nightly_rate: number;
-  subtotal: number;
-  taxes: number;
-  tax_percent: number;
-  total: number;
+  gross: number;
+  net_base: number;
+  vat: number;
+  vat_rate: number;
 }
 
+/**
+ * `pricePerNight` on the fixtures is already GROSS, so the total is a plain
+ * multiplication and VAT is split back out of it — nothing is ever added on
+ * top. This is the wire shape the backend will send once its own VAT-inclusive
+ * refactor ships.
+ */
 function computeMockPricing(unit: Unit, nights: number): MockPricing {
-  const subtotal = unit.pricePerNight * nights;
-  const taxes = Math.round(subtotal * (MOCK_TAX_PERCENT / 100) * 100) / 100;
-  const total = Math.round((subtotal + taxes) * 100) / 100;
+  const q = quoteFromNightly(unit.pricePerNight, nights);
   return {
-    nights,
-    nightly_rate: unit.pricePerNight,
-    subtotal,
-    taxes,
-    tax_percent: MOCK_TAX_PERCENT,
-    total,
+    nights: q.nights,
+    nightly_rate: q.nightlyRate,
+    gross: q.gross,
+    net_base: q.netBase,
+    vat: q.vat,
+    vat_rate: q.vatRate,
   };
 }
 
@@ -178,9 +189,43 @@ export const mockApi = {
     list: async () => ok(bookings.filter((b) => b.userId === 'CURRENT_USER')),
 
     getById: async (id: string) => {
-      const b = findBookingById(id);
+      const b = findBooking(id);
       if (!b) return fail('الحجز غير موجود');
       return ok(b);
+    },
+
+    /**
+     * Role-plays `GET /bookings/{id}/invoice`. `qr_code` is deliberately null:
+     * the real ZATCA payload is signed server-side and is not ready yet, and a
+     * fake base64 string would render a QR that looks valid and scans to
+     * nothing — worse than the honest placeholder the page shows for null.
+     */
+    getInvoice: async (id: string) => {
+      const b = findBooking(id);
+      if (!b) return fail('الحجز غير موجود');
+      return ok({
+        invoiceNumber: `INV-${b.code}`,
+        issuedAt: new Date().toISOString(),
+        seller: { ...INVOICE_SELLER },
+        buyerName: b.guestName ?? MOCK_CURRENT_USER.firstName + ' ' + MOCK_CURRENT_USER.lastName,
+        lines: [
+          {
+            description: b.unitSnapshot.title,
+            checkIn: b.checkInDate,
+            checkOut: b.checkOutDate,
+            nights: b.price.nights,
+            netBase: b.price.netBase,
+            vatRate: VAT_RATE,
+            vat: b.price.vat,
+            gross: b.price.gross,
+          },
+        ],
+        totalNetBase: b.price.netBase,
+        totalVat: b.price.vat,
+        totalGross: b.price.gross,
+        currency: 'SAR' as const,
+        qrCode: null,
+      });
     },
 
     create: async (input: {
@@ -194,7 +239,7 @@ export const mockApi = {
       const unit = findUnitById(input.unitId);
       if (!unit) return fail('الوحدة غير موجودة') as Promise<Booking>;
       const nights = diffNights(input.checkInDate, input.checkOutDate);
-      const { subtotal, taxes: tax, total } = computeMockPricing(unit, nights);
+      const quote = computeMockPricing(unit, nights);
 
       // ⭐ SRS FR-036: snapshot the unit's cancellation policy NOW
       const booking: Booking = {
@@ -215,11 +260,11 @@ export const mockApi = {
         nights,
         guests: input.guests,
         price: {
-          pricePerNight: unit.pricePerNight,
+          pricePerNight: quote.nightly_rate,
           nights,
-          subtotal,
-          tax: Math.round(tax * 100) / 100,
-          total: Math.round(total * 100) / 100,
+          gross: quote.gross,
+          netBase: quote.net_base,
+          vat: quote.vat,
         },
         payment: { method: input.paymentMethod, last4: input.paymentMethod === 'mada' ? '8888' : '4242' },
         policySnapshot: getPolicyByTemplate(unit.cancellationPolicy), // frozen at booking time
@@ -231,7 +276,7 @@ export const mockApi = {
     },
 
     previewCancellation: async (id: string) => {
-      const b = findBookingById(id);
+      const b = findBooking(id);
       if (!b) return fail('الحجز غير موجود');
       return ok(previewCancellation(b, new Date()));
     },
@@ -256,7 +301,7 @@ export const mockApi = {
 
   reviews: {
     add: async (input: { bookingId: string; rating: number; comment: string }) => {
-      const b = findBookingById(input.bookingId);
+      const b = findBooking(input.bookingId);
       if (!b) return fail('الحجز غير موجود');
       if (b.status !== 'completed') return fail('لا يمكن إضافة تقييم لحجز غير منتهي');
       if (getReviewForBooking(input.bookingId)) return fail('تم التقييم لهذا الحجز مسبقًا');

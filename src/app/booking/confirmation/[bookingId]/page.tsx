@@ -13,6 +13,7 @@ import type { Booking } from '@/types';
 
 export default function ConfirmationPage() {
   const t = useTranslations('bookingConfirmation');
+  const tPricing = useTranslations('pricing');
   const tc = useTranslations('common');
   const { bookingId } = useParams<{ bookingId: string }>();
   const [booking, setBooking] = useState<Booking | null>(null);
@@ -73,7 +74,9 @@ export default function ConfirmationPage() {
             </div>
             <div>
               <div className="text-brand-muted">{t('amountPaid')}</div>
-              <div className="font-semibold">{formatSAR(booking.price.total)}</div>
+              {/* Same gross figure as the unit page, checkout and payment. */}
+              <div className="font-semibold">{formatSAR(booking.price.gross)}</div>
+              <div className="text-xs text-brand-muted">{tPricing('inclVat')}</div>
             </div>
             <div>
               <div className="text-brand-muted">{t('checkIn')}</div>

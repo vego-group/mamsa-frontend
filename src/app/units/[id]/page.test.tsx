@@ -8,6 +8,17 @@ import { formatSAR } from '@/lib/utils/format';
 const UNIT_ID = 'U-001'; // pricePerNight 1200 in mock data
 const pushMock = vi.fn();
 
+/**
+ * Dates must be relative to now. Hardcoded ones silently drift into the past,
+ * the widget then refuses them and renders no estimate, and this file goes
+ * permanently red — masking any real regression in it.
+ */
+function isoInDays(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 vi.mock('next/navigation', () => ({
   useParams: () => ({ id: UNIT_ID }),
   useRouter: () => ({ push: pushMock }),
@@ -38,24 +49,26 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe('Unit details — booking-preview widget shows a subtotal-only estimate', () => {
-  it('renders no service fee row and computes no fee, once dates are picked', async () => {
+describe('Unit details — booking widget shows the final VAT-inclusive price', () => {
+  it('renders no service fee row and adds nothing to the nightly rate, once dates are picked', async () => {
     const { container } = renderUnitPage();
     await waitForUnitToLoad();
 
     const [checkInInput, checkOutInput] = Array.from(container.querySelectorAll('input[type="date"]'));
-    fireEvent.change(checkInInput!, { target: { value: '2026-08-01' } });
-    fireEvent.change(checkOutInput!, { target: { value: '2026-08-05' } });
+    fireEvent.change(checkInInput!, { target: { value: isoInDays(30) } });
+    fireEvent.change(checkOutInput!, { target: { value: isoInDays(34) } });
 
-    // 1200/night × 4 nights (2026-08-01 → 2026-08-05) = 4800, no fee added.
+    // 1200/night × 4 nights = 4800, no fee added.
     expect(screen.getByText(formatSAR(4800))).toBeTruthy();
 
     // No service fee row, no old "total" label — the widget never computed one.
     expect(screen.queryByText('رسوم الخدمة')).toBeNull();
     expect(screen.queryByText('المجموع')).toBeNull();
 
-    // Clearly framed as an estimate, not a final price.
-    expect(screen.getByText('سعر تقديري — يشمل السعر النهائي والضريبة عند اختيار تواريخك في صفحة الحجز')).toBeTruthy();
+    // Stated as final and VAT-inclusive — the old "estimate" caveat is gone,
+    // and must not come back: it tells the guest the number may still grow.
+    expect(screen.getByText('السعر النهائي شامل ضريبة القيمة المضافة. لا توجد رسوم إضافية.')).toBeTruthy();
+    expect(screen.queryByText(/سعر تقديري/)).toBeNull();
   });
 
   it('shows nothing from the price widget before dates are picked', async () => {
@@ -63,6 +76,6 @@ describe('Unit details — booking-preview widget shows a subtotal-only estimate
     await waitForUnitToLoad();
 
     expect(screen.queryByText('رسوم الخدمة')).toBeNull();
-    expect(screen.queryByText(/سعر تقديري/)).toBeNull();
+    expect(screen.queryByText(/شامل ضريبة القيمة المضافة/)).toBeNull();
   });
 });

@@ -21,10 +21,12 @@ import { useAuthStore } from '@/stores/auth';
 import { useUiStore } from '@/stores/ui';
 import { getPolicyByTemplate } from '@/lib/constants/cancellation-policies';
 import { formatSAR, formatDate } from '@/lib/utils/format';
+import { vatPercentLabel } from '@/lib/pricing';
 import type { Unit, Booking, PriceBreakdown as PriceBreakdownData } from '@/types';
 
 export function CheckoutPageClient() {
   const t = useTranslations('checkout');
+  const tPricing = useTranslations('pricing');
   const tc = useTranslations('common');
   const tev = useTranslations('emailVerification');
   const params = useParams<{ unitId: string }>();
@@ -134,9 +136,9 @@ export function CheckoutPageClient() {
   const displayPrice: PriceBreakdownData = frozenPrice ?? {
     pricePerNight: quotePricing.nightlyRate,
     nights: quotePricing.nights,
-    subtotal: quotePricing.subtotal,
-    tax: quotePricing.taxes,
-    total: quotePricing.total,
+    gross: quotePricing.gross,
+    netBase: quotePricing.netBase,
+    vat: quotePricing.vat,
   };
 
   /** Localized message for the first invalid form field, or null when everything checks out. */
@@ -312,8 +314,12 @@ export function CheckoutPageClient() {
           </Card>
         )}
 
+        {/* The number on this button is the same one the unit page showed —
+            say so, because "did it go up?" is the question this whole pricing
+            model exists to stop the guest asking at the last step. */}
+        <p className="text-center text-xs text-brand-muted">{tPricing('noChangeNote')}</p>
         <Button size="lg" className="w-full" onClick={handleConfirm} disabled={submitting || !emailVerified}>
-          {submitting ? t('creatingBooking') : t('continueToPayment', { amount: formatSAR(displayPrice.total) })}
+          {submitting ? t('creatingBooking') : t('continueToPayment', { amount: formatSAR(displayPrice.gross) })}
         </Button>
         {!emailVerified && (
           <p className="text-center text-xs text-status-danger">{tev('verifyToPay')}</p>
@@ -338,8 +344,13 @@ export function CheckoutPageClient() {
             price={displayPrice}
             labels={{
               priceLine: t('priceLine', { price: displayPrice.pricePerNight, nights: displayPrice.nights }),
-              taxes: t('taxesWithPercent', { percent: quotePricing.taxPercent }),
+              inclVat: tPricing('inclVat'),
               total: t('total'),
+              showTaxDetails: tPricing('showTaxDetails'),
+              netBase: tPricing('netBase'),
+              // The live quote carries the server's own rate; a frozen booking
+              // does not, so that case falls back to the platform constant.
+              vat: tPricing('vat', { percent: vatPercentLabel(quotePricing.vatRate) }),
             }}
             format={formatSAR}
           />

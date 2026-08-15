@@ -28,9 +28,9 @@ function makeBooking(overrides: Partial<Booking> = {}): Booking {
     price: {
       pricePerNight: 1000,
       nights: 4,
-      subtotal: 4000,
-      tax: 0,
-      total: 4000,
+      gross: 4000,
+      netBase: 3478.26,
+      vat: 521.74,
     },
     policySnapshot: FLEXIBLE_POLICY,
     isReviewed: false,

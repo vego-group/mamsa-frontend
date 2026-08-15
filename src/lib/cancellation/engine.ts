@@ -134,7 +134,7 @@ export function previewCancellation(booking: Booking, requestAt: Date): RefundPr
     return {
       refundPercent: 0,
       refundAmount: 0,
-      forfeitedAmount: booking.price.total,
+      forfeitedAmount: booking.price.gross,
       tier: null,
       isAllowed: false,
       notAllowedReason: 'alreadyCancelled',
@@ -146,7 +146,7 @@ export function previewCancellation(booking: Booking, requestAt: Date): RefundPr
     return {
       refundPercent: 0,
       refundAmount: 0,
-      forfeitedAmount: booking.price.total,
+      forfeitedAmount: booking.price.gross,
       tier: null,
       isAllowed: false,
       notAllowedReason: 'completed',
@@ -158,7 +158,7 @@ export function previewCancellation(booking: Booking, requestAt: Date): RefundPr
     return {
       refundPercent: 0,
       refundAmount: 0,
-      forfeitedAmount: booking.price.total,
+      forfeitedAmount: booking.price.gross,
       tier: null,
       isAllowed: false,
       notAllowedReason: 'afterCheckIn',
@@ -168,8 +168,8 @@ export function previewCancellation(booking: Booking, requestAt: Date): RefundPr
   }
 
   const tier = resolveTier(booking.policySnapshot, days);
-  const refundAmount = roundMoney((booking.price.total * tier.refundPercent) / 100);
-  const forfeitedAmount = roundMoney(booking.price.total - refundAmount);
+  const refundAmount = roundMoney((booking.price.gross * tier.refundPercent) / 100);
+  const forfeitedAmount = roundMoney(booking.price.gross - refundAmount);
 
   return {
     refundPercent: tier.refundPercent,

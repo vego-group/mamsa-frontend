@@ -43,6 +43,7 @@ import type {
   SavedCard,
 } from '@/types';
 import type { RefundPreview } from '@/lib/cancellation/engine';
+import { VAT_RATE, INVOICE_SELLER } from '@/lib/constants/brand';
 
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK !== 'false';
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
@@ -105,6 +106,16 @@ async function forceLogout(): Promise<void> {
  * Real fetch wrapper (used only when USE_MOCK=false).
  * Adds auth header, unwraps the `{ data }` envelope, surfaces Laravel errors,
  * and silently renews an expired session (one refresh + retry per request).
+ *
+ * Auth is deliberately a Bearer header from localStorage, NOT a cookie session:
+ * `credentials` is left at its default so no cookie is ever sent to the API's
+ * separate origin. This is load-bearing for payments — the guest leaves for
+ * Moyasar and returns cross-site, and a session cookie would be at the mercy of
+ * SameSite on that hop (see lib/auth/tokens.ts for the storage half of this).
+ * Unifying with the dashboards' cookie sessions is therefore NOT a local edit:
+ * it needs `credentials: 'include'` here, CORS credentials + a non-wildcard
+ * origin on the API, a SameSite value that survives the payment return, and a
+ * re-check of every call site — not just the payment return.
  */
 async function http<T>(path: string, init: RequestInit = {}, isRetry = false): Promise<T> {
   const token = tokenManager.getAccessToken();
@@ -331,11 +342,14 @@ export const authApi = {
  */
 export interface QuotePricing {
   nights: number;
+  /** Gross, VAT-inclusive, per night. */
   nightlyRate: number;
-  subtotal: number;
-  taxes: number;
-  taxPercent: number;
-  total: number;
+  /** What the guest pays. Never exceeded by any line item. */
+  gross: number;
+  netBase: number;
+  vat: number;
+  vatRate: number;
+  currency: 'SAR';
 }
 
 export interface CheckAvailabilityResult {
@@ -344,16 +358,29 @@ export interface CheckAvailabilityResult {
   pricing: QuotePricing | null;
 }
 
+/**
+ * The live backend has NOT shipped its VAT-inclusive refactor yet — it still
+ * sends the VAT-EXCLUSIVE trio `subtotal` + `taxes` = `total`. Those map onto
+ * the new names without any arithmetic, because they describe the same three
+ * quantities: its `subtotal` IS the net base, its `taxes` IS the VAT, and its
+ * `total` IS the gross. So the money stays the server's, never recomputed here.
+ *
+ * What does NOT hold until the backend ships is `nightlyRate × nights === gross`,
+ * because the server's `nightly_rate` is still a NET figure. In mock mode
+ * (`NEXT_PUBLIC_USE_MOCK=true`) the identity holds exactly. The new keys are read
+ * first so the swap needs no frontend change on the day the backend lands.
+ */
 function mapQuotePricing(raw: unknown): QuotePricing | null {
   if (!raw || typeof raw !== 'object') return null;
   const p = raw as Record<string, unknown>;
   return {
     nights: Number(p.nights ?? 0),
     nightlyRate: Number(p.nightly_rate ?? 0),
-    subtotal: Number(p.subtotal ?? 0),
-    taxes: Number(p.taxes ?? 0),
-    taxPercent: Number(p.tax_percent ?? 0),
-    total: Number(p.total ?? 0),
+    gross: Number(p.gross ?? p.total ?? 0),
+    netBase: Number(p.net_base ?? p.subtotal ?? 0),
+    vat: Number(p.vat ?? p.taxes ?? 0),
+    vatRate: Number(p.vat_rate ?? VAT_RATE),
+    currency: 'SAR',
   };
 }
 
@@ -450,6 +477,91 @@ export interface CreateBookingInput {
   notes?: string;
 }
 
+/**
+ * One line of a ZATCA tax invoice.
+ *
+ * The VAT split is ALWAYS present. The server derives it for pre-conversion
+ * bookings too, from the stored total — which is exact rather than approximate,
+ * because the old model computed `total = net × 1.15` and splitting the gross
+ * back by `/ 1.15` is its precise inverse. So one code path serves every
+ * booking, old or new.
+ *
+ * The frontend still never computes any of this: it renders what the server
+ * sends, so a tax document always shows the figures the charge was made under.
+ */
+export interface TaxInvoiceLine {
+  description: string;
+  checkIn: string;
+  checkOut: string;
+  nights: number;
+  netBase: number;
+  vatRate: number;
+  vat: number;
+  gross: number;
+}
+
+export interface TaxInvoice {
+  invoiceNumber: string;
+  issuedAt: string;
+  /** Mamsa is the seller of record — never the host. */
+  seller: { name: string; vatNumber: string; crNumber: string; address: string };
+  buyerName: string;
+  lines: TaxInvoiceLine[];
+  totalNetBase: number;
+  totalVat: number;
+  /** The payable total — equal to what was charged. `totalNetBase + totalVat`. */
+  totalGross: number;
+  currency: 'SAR';
+  /**
+   * ZATCA Phase 1 TLV payload, base64, generated SERVER-SIDE. `null` until the
+   * backend ships it — the page renders a placeholder in that case. This repo
+   * must never contain a TLV encoder: the payload is signed data, not a string
+   * the frontend is entitled to assemble.
+   */
+  qrCode: string | null;
+}
+
+const num = (v: unknown): number => Number(v ?? 0);
+
+function mapInvoiceLine(raw: unknown): TaxInvoiceLine {
+  const l = (raw ?? {}) as Record<string, unknown>;
+  return {
+    description: String(l.description ?? ''),
+    checkIn: String(l.check_in ?? l.start_date ?? ''),
+    checkOut: String(l.check_out ?? l.end_date ?? ''),
+    nights: num(l.nights),
+    netBase: num(l.net_base ?? l.subtotal),
+    vatRate: num(l.vat_rate ?? VAT_RATE),
+    vat: num(l.vat ?? l.taxes),
+    gross: num(l.gross ?? l.total),
+  };
+}
+
+function mapTaxInvoice(raw: unknown): TaxInvoice {
+  const d = (raw ?? {}) as Record<string, unknown>;
+  const s = (d.seller ?? {}) as Record<string, unknown>;
+  const lines = Array.isArray(d.lines) ? d.lines : [];
+  return {
+    invoiceNumber: String(d.invoice_number ?? ''),
+    issuedAt: String(d.issued_at ?? ''),
+    // The server is authoritative; INVOICE_SELLER covers the endpoint not yet
+    // returning a seller block, so the document is never issued unsigned.
+    seller: {
+      name: String(s.name ?? INVOICE_SELLER.name),
+      vatNumber: String(s.vat_number ?? INVOICE_SELLER.vatNumber),
+      crNumber: String(s.cr_number ?? INVOICE_SELLER.crNumber),
+      address: String(s.address ?? INVOICE_SELLER.address),
+    },
+    buyerName: String(d.buyer_name ?? ''),
+    lines: lines.map(mapInvoiceLine),
+    totalNetBase: num(d.total_net_base ?? d.subtotal),
+    totalVat: num(d.total_vat ?? d.taxes),
+    totalGross: num(d.total_gross ?? d.total),
+    currency: 'SAR',
+    qrCode: d.qr_code == null || d.qr_code === '' ? null : String(d.qr_code),
+  };
+}
+
 export const bookingsApi = {
   list: () =>
     USE_MOCK
@@ -474,6 +586,12 @@ export const bookingsApi = {
             notes: input.notes ?? '',
           }),
         }).then(mapBooking),
+
+  /** ZATCA tax invoice for a paid booking. Guest-facing: carries no commission. */
+  getInvoice: (id: string): Promise<TaxInvoice> =>
+    USE_MOCK
+      ? withLatency(mockApi.bookings.getInvoice(id))
+      : http<Record<string, unknown>>(`/bookings/${id}/invoice`).then(mapTaxInvoice),
 
   /** SRS FR-043: preview refund before user confirms cancel */
   previewCancellation: (id: string): Promise<RefundPreview> =>
@@ -517,9 +635,12 @@ export interface PaymentBookingSummary {
   endDate: string;
   nights: number;
   guests: number;
+  /** Gross, VAT-inclusive, per night. */
   nightlyRate: number;
-  subtotal: number;
-  taxes: number;
+  /** What the guest pays — must equal the total shown on every earlier screen. */
+  gross: number;
+  netBase: number;
+  vat: number;
   unit: { name: string; city: string; district: string; imageUrl: string };
 }
 
@@ -532,6 +653,14 @@ export interface InitiatePaymentResult {
   currency: string;
   description: string;
   publishableKey: string;
+  /**
+   * UNUSED BY DESIGN — do not wire this up. Mapped only to mirror the API
+   * response. The callback URL that actually reaches Moyasar is built from
+   * `window.location.origin` in `initMoyasarForm` (lib/payments/moyasar.ts) so
+   * the guest returns to the exact domain they started on; honouring this
+   * server-supplied value instead would land them on whatever origin the
+   * backend is configured for, losing the localStorage that holds their session.
+   */
   callbackUrl: string;
   testMode: boolean;
   booking: PaymentBookingSummary | null;
@@ -570,8 +699,10 @@ function mapBookingSummary(raw: unknown): PaymentBookingSummary | null {
     nights: Number(b.nights ?? 0),
     guests: Number(b.guests ?? 0),
     nightlyRate: Number(b.nightly_rate ?? 0),
-    subtotal: Number(b.subtotal ?? 0),
-    taxes: Number(b.taxes ?? 0),
+    // Same transition mapping as mapQuotePricing — see the note there.
+    gross: Number(b.gross ?? b.total ?? 0),
+    netBase: Number(b.net_base ?? b.subtotal ?? 0),
+    vat: Number(b.vat ?? b.taxes ?? 0),
     unit: {
       name: String(u.name ?? ''),
       city: String(u.city ?? ''),
@@ -629,6 +760,7 @@ export const paymentsApi = {
             currency: String(d.currency ?? 'SAR'),
             description: String(d.description ?? ''),
             publishableKey: String(d.publishable_key ?? ''),
+            // Deliberately unused — see the note on the type.
             callbackUrl: String(d.callback_url ?? ''),
             testMode: Boolean(d.test_mode),
             booking: mapBookingSummary(d.booking),

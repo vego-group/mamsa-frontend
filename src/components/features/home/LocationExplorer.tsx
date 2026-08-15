@@ -26,6 +26,7 @@ const LocationMap = dynamic(() => import('./LocationMap'), {
 
 export function LocationExplorer({ units }: { units: LocationUnit[] }) {
   const t = useTranslations('map');
+  const tPricing = useTranslations('pricing');
   const [activeId, setActiveId] = useState<string | null>(units[0]?.id ?? null);
   const mapUnits = useMemo<MapUnit[]>(
     () => units.map(({ id, title, price, lat, lng }) => ({ id, title, price, lat, lng })),
@@ -69,7 +70,9 @@ export function LocationExplorer({ units }: { units: LocationUnit[] }) {
                 <div className="mt-1.5 flex items-center justify-between">
                   <span className="text-sm font-bold text-brand-primary">
                     {u.price.toLocaleString('en-US')} {t('sar')}
-                    <span className="text-xs font-normal text-brand-muted"> {t('perNight')}</span>
+                    <span className="text-xs font-normal text-brand-muted">
+                      {' '}{t('perNight')} · {tPricing('inclVatShort')}
+                    </span>
                   </span>
                   <span className="flex items-center gap-0.5 text-xs text-brand-ink">
                     <Star className="h-3 w-3 fill-amber-400 text-amber-400" />

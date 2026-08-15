@@ -22,6 +22,7 @@ import { LoadError } from '@/components/shared/LoadError';
 import { CancellationPolicyDisplay } from '@/components/features/booking/CancellationPolicyDisplay';
 import { getPolicyByTemplate } from '@/lib/constants/cancellation-policies';
 import { formatSAR, formatDate } from '@/lib/utils/format';
+import { quoteFromNightly } from '@/lib/pricing';
 import { cn } from '@/lib/utils/cn';
 import type { Unit, Review } from '@/types';
 
@@ -49,6 +50,7 @@ export default function UnitDetailsPage() {
   const tCommon = useTranslations('common');
   const tTypes = useTranslations('types');
   const tAmenities = useTranslations('amenities');
+  const tPricing = useTranslations('pricing');
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const [unit, setUnit] = useState<Unit | null>(null);
@@ -83,10 +85,9 @@ export default function UnitDetailsPage() {
     if (!checkIn || !checkOut) return 0;
     return Math.max(0, Math.round((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000));
   })();
-  // Rough preview only — no fee/tax math here. The real, final price only
-  // exists after checkAvailability() runs on the checkout page, once dates
-  // are confirmed (see checkout-page-client.tsx).
-  const subtotal = unit ? unit.pricePerNight * nights : 0;
+  // Not a preview any more: `pricePerNight` is gross, so this IS the final
+  // payable amount and must match checkout, payment and confirmation exactly.
+  const gross = unit ? quoteFromNightly(unit.pricePerNight, nights).gross : 0;
 
   // Local YYYY-MM-DD "today" — floors the date pickers so past dates can't
   // be picked or typed in. Availability itself is still verified server-side
@@ -305,8 +306,11 @@ export default function UnitDetailsPage() {
           <Card className="sticky top-24 space-y-4 p-5 shadow-sm">
             <div className="flex items-end justify-between">
               <div>
-                <span className="text-2xl font-bold text-brand-ink">{formatSAR(unit.pricePerNight)}</span>
-                <span className="text-sm text-brand-muted"> {tCommon('perNight')}</span>
+                <div>
+                  <span className="text-2xl font-bold text-brand-ink">{formatSAR(unit.pricePerNight)}</span>
+                  <span className="text-sm text-brand-muted"> {tCommon('perNight')}</span>
+                </div>
+                <div className="text-xs text-brand-muted">{tPricing('inclVatShort')}</div>
               </div>
               <span className="flex items-center gap-1 text-sm font-semibold text-brand-ink">
                 <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
@@ -354,8 +358,12 @@ export default function UnitDetailsPage() {
 
             {nights > 0 && (
               <div className="space-y-1.5 text-sm">
-                <Row label={t('nightsLine', { price: formatSAR(unit.pricePerNight), nights })} value={formatSAR(subtotal)} bold />
-                <p className="text-xs text-brand-muted">{t('estimateNote')}</p>
+                <Row label={t('nightsLine', { price: formatSAR(unit.pricePerNight), nights })} value={formatSAR(gross)} bold />
+                {/* The commercial payoff of VAT-inclusive pricing — given real
+                    presence next to the number, not buried as fine print. */}
+                <p className="rounded-lg bg-brand-sage/20 px-3 py-2 text-xs font-medium leading-relaxed text-brand-primary">
+                  {tPricing('finalPriceNote')}
+                </p>
               </div>
             )}
 
@@ -384,7 +392,7 @@ export default function UnitDetailsPage() {
       <div className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-between gap-3 border-t border-brand-border bg-white/95 px-4 py-3 backdrop-blur md:hidden">
         <div>
           <div className="text-lg font-bold text-brand-ink">{formatSAR(unit.pricePerNight)}</div>
-          <div className="text-xs text-brand-muted">{tCommon('perNight')}</div>
+          <div className="text-xs text-brand-muted">{tCommon('perNight')} · {tPricing('inclVatShort')}</div>
         </div>
         <Button size="lg" className="max-w-[220px] flex-1" onClick={() => {
           document.getElementById('booking-card')?.scrollIntoView({ behavior: 'smooth' });

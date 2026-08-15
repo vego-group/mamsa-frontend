@@ -18,6 +18,7 @@ interface UnitCardProps {
 
 export function UnitCard({ unit, variant = 'list' }: UnitCardProps) {
   const t = useTranslations('card');
+  const tPricing = useTranslations('pricing');
   const tAmenities = useTranslations('amenities');
   const { has, toggle } = useFavoritesStore();
   const isFav = has(unit.id);
@@ -59,8 +60,12 @@ export function UnitCard({ unit, variant = 'list' }: UnitCardProps) {
           </div>
           <div className="flex items-center justify-between pt-1">
             <div className="text-sm">
-              <span className="font-bold text-brand-ink">{unit.pricePerNight}</span>
-              <span className="text-xs text-brand-muted"> {t('perNight')}</span>
+              <div>
+                {/* Gross and final — rendered verbatim, never multiplied. */}
+                <span className="font-bold text-brand-ink">{formatSAR(unit.pricePerNight)}</span>
+                <span className="text-xs text-brand-muted"> {t('perNight')}</span>
+              </div>
+              <div className="text-[11px] text-brand-muted">{tPricing('inclVatShort')}</div>
             </div>
             <span className="flex items-center gap-1 text-xs">
               <Star className="h-3.5 w-3.5 fill-yellow-500 text-yellow-500" />
@@ -130,6 +135,7 @@ export function UnitCard({ unit, variant = 'list' }: UnitCardProps) {
                 <span className="font-bold text-brand-ink">{formatSAR(unit.pricePerNight)}</span>
               </div>
               <div className="text-xs text-brand-muted">{t('perNight')}</div>
+              <div className="text-[11px] text-brand-muted">{tPricing('inclVatShort')}</div>
             </div>
           </div>
         </div>
