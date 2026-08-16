@@ -7,6 +7,30 @@
 
 ---
 
+## ✅ STATUS — DONE (re-verified 2026-08-17)
+
+**Both sites are already on the production API. §3–§5 need no further action.**
+
+| Site | API base inlined in the live bundle | Verdict |
+|------|--------------------------------------|---------|
+| `www.mamsaa.com` | `https://api.mamsaa.com/api/v1` | PASS — no `staging.` anywhere |
+| `partner.mamsaa.com` | `https://api.mamsaa.com` (no suffix — that repo appends `/api/v1` in code) | PASS — no `staging.` anywhere |
+
+CORS re-checked the same day: `api.mamsaa.com` reflects `Access-Control-Allow-Origin`
+with credentials for `https://www.mamsaa.com`, `https://mamsaa.com` and
+`https://partner.mamsaa.com`. It does **not** allow `http://localhost:3000` — see
+[`mamsa-cors-localhost-task.md`](./mamsa-cors-localhost-task.md); that is a *local-dev*
+gap, unrelated to the production switch.
+
+The remaining open items are the §8 blockers, which are **backend/ops**, not frontend:
+the FGC SMS whitelist (E028) and live Moyasar charges. Confirm those before treating
+the consumer site as fully go-live.
+
+> Note: `Mamsa-Switch-To-Production.md` in this folder is a byte-identical copy of this
+> file. Keep them in sync or delete one.
+
+---
+
 ## 0. TL;DR
 
 Set one Vercel env var per project to the production API and redeploy:

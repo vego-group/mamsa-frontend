@@ -119,6 +119,9 @@ async function forceLogout(): Promise<void> {
  */
 async function http<T>(path: string, init: RequestInit = {}, isRetry = false): Promise<T> {
   const token = tokenManager.getAccessToken();
+  // A multipart body must keep the Content-Type the browser generates — it
+  // carries the boundary, and overriding it makes the API read zero fields.
+  const isMultipart = typeof FormData !== 'undefined' && init.body instanceof FormData;
   const res = await fetch(`${BASE_URL}${path}`, {
     // Prices/availability/bookings must always be fresh — Next.js's Server
     // Component fetch defaults to `force-cache` otherwise, which silently
@@ -128,7 +131,7 @@ async function http<T>(path: string, init: RequestInit = {}, isRetry = false): P
     ...init,
     headers: {
       Accept: 'application/json',
-      'Content-Type': 'application/json',
+      ...(isMultipart ? {} : { 'Content-Type': 'application/json' }),
       // Skip the ngrok browser-warning interstitial (harmless on a real domain).
       'ngrok-skip-browser-warning': '1',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -151,6 +154,7 @@ async function http<T>(path: string, init: RequestInit = {}, isRetry = false): P
     let code: string | undefined;
     let retryAfter: number | undefined;
     let remainingAttempts: number | undefined;
+    let fields: Record<string, string[]> | undefined;
     try {
       const body = (await res.json()) as {
         message?: string;
@@ -165,6 +169,7 @@ async function http<T>(path: string, init: RequestInit = {}, isRetry = false): P
       code = body.code;
       retryAfter = body.retry_after;
       remainingAttempts = body.remaining_attempts;
+      fields = body.errors;
     } catch {
       /* non-JSON error body */
     }
@@ -174,7 +179,7 @@ async function http<T>(path: string, init: RequestInit = {}, isRetry = false): P
       code = 'RATE_LIMITED';
       retryAfter ??= Number(res.headers.get('Retry-After')) || undefined;
     }
-    throw new ApiError(res.status, message, code, retryAfter, remainingAttempts);
+    throw new ApiError(res.status, message, code, retryAfter, remainingAttempts, fields);
   }
 
   if (res.status === 204) return undefined as T;
@@ -269,7 +274,14 @@ export const authApi = {
 
   /**
    * Partner sign-up: verifies the phone OTP and creates a pending partner account.
-   * `type=individual` requires `national_id`; `type=company` requires `cr_number`.
+   * `type=individual` requires `national_id` + `national_id_file`; `type=company`
+   * requires `cr_number`, with `cr_file` still optional server-side.
+   *
+   * Sent as multipart/form-data, not JSON, because the scans travel with it:
+   * there is no session at registration time, so the authenticated presign
+   * upload flow (`POST /uploads/presign`) is unavailable here. Both paths end in
+   * the same stored documents — a partner who already has a session replaces
+   * them through `PUT /me/company-docs` instead.
    */
   partnerRegister: (data: {
     type: 'individual' | 'company';
@@ -279,24 +291,37 @@ export const authApi = {
     email: string;
     nationalId?: string;
     crNumber?: string;
-  }) =>
-    http<RawAuthResult>('/auth/partner/register', {
+    /** Identity scan — required for individuals. jpg/jpeg/png/pdf, max 5 MB. */
+    nationalIdFile?: File | null;
+    /** Commercial-registration scan — optional for companies. Same formats and cap. */
+    crFile?: File | null;
+  }) => {
+    const form = new FormData();
+    form.append('type', data.type);
+    form.append('name', data.name);
+    form.append('phone', data.phone);
+    form.append('code', data.code);
+    form.append('email', data.email);
+    form.append('device', 'web');
+    // Documents are omitted rather than blanked when absent: a re-submitting
+    // applicant keeps the file already on record when the field is not sent.
+    if (data.type === 'individual') {
+      if (data.nationalId) form.append('national_id', data.nationalId);
+      if (data.nationalIdFile) form.append('national_id_file', data.nationalIdFile);
+    } else {
+      if (data.crNumber) form.append('cr_number', data.crNumber);
+      if (data.crFile) form.append('cr_file', data.crFile);
+    }
+
+    return http<RawAuthResult>('/auth/partner/register', {
       method: 'POST',
-      body: JSON.stringify({
-        type: data.type,
-        name: data.name,
-        phone: data.phone,
-        code: data.code,
-        email: data.email,
-        national_id: data.type === 'individual' ? data.nationalId : null,
-        cr_number: data.type === 'company' ? data.crNumber : null,
-        device: 'web',
-      }),
+      body: form,
     }).then((d) => ({
       user: mapUser(d.user),
       accessToken: d.access_token,
       refreshToken: d.refresh_token,
-    })),
+    }));
+  },
 
   /**
    * Sends the name as two parts — the backend builds `name` from them, so a

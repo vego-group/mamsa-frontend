@@ -12,6 +12,12 @@ export class ApiError extends Error {
     public retryAfter?: number,
     /** Wrong-code attempts left before the code is killed — only set for OTP_INVALID. */
     public remainingAttempts?: number,
+    /**
+     * Laravel's per-field validation errors (the `errors` bag on a 422), kept
+     * alongside the flattened `message` so a form can show the failure on the
+     * offending input instead of as one generic line.
+     */
+    public fields?: Record<string, string[]>,
   ) {
     super(message);
     this.name = 'ApiError';
