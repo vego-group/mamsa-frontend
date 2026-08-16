@@ -537,28 +537,48 @@ function mapInvoiceLine(raw: unknown): TaxInvoiceLine {
   };
 }
 
+/** Trims, and treats the server's `""` exactly as it treats a missing field. */
+const str = (v: unknown): string => (v == null ? '' : String(v).trim());
+
+/**
+ * The SERVER owns the seller identity — a frontend constant that shadowed it
+ * would mean a company name or VAT-number change needed a frontend deploy.
+ *
+ * So the decision is made on the whole block, not per field: if the server
+ * names a seller, its block is used verbatim, empty registration fields
+ * included (the invoice omits those rows rather than printing blank labels).
+ * INVOICE_SELLER is a last resort for the case where no seller is named at
+ * all, so a tax document is never issued with an anonymous supplier.
+ */
+function mapSeller(s: Record<string, unknown>): TaxInvoice['seller'] {
+  const name = str(s.name);
+  if (!name) return { ...INVOICE_SELLER };
+  return {
+    name,
+    vatNumber: str(s.vat_number),
+    crNumber: str(s.cr_number),
+    address: str(s.address),
+  };
+}
+
 function mapTaxInvoice(raw: unknown): TaxInvoice {
   const d = (raw ?? {}) as Record<string, unknown>;
   const s = (d.seller ?? {}) as Record<string, unknown>;
   const lines = Array.isArray(d.lines) ? d.lines : [];
   return {
-    invoiceNumber: String(d.invoice_number ?? ''),
-    issuedAt: String(d.issued_at ?? ''),
-    // The server is authoritative; INVOICE_SELLER covers the endpoint not yet
-    // returning a seller block, so the document is never issued unsigned.
-    seller: {
-      name: String(s.name ?? INVOICE_SELLER.name),
-      vatNumber: String(s.vat_number ?? INVOICE_SELLER.vatNumber),
-      crNumber: String(s.cr_number ?? INVOICE_SELLER.crNumber),
-      address: String(s.address ?? INVOICE_SELLER.address),
-    },
-    buyerName: String(d.buyer_name ?? ''),
+    invoiceNumber: str(d.invoice_number),
+    issuedAt: str(d.issued_at),
+    seller: mapSeller(s),
+    buyerName: str(d.buyer_name),
     lines: lines.map(mapInvoiceLine),
     totalNetBase: num(d.total_net_base ?? d.subtotal),
     totalVat: num(d.total_vat ?? d.taxes),
     totalGross: num(d.total_gross ?? d.total),
     currency: 'SAR',
-    qrCode: d.qr_code == null || d.qr_code === '' ? null : String(d.qr_code),
+    // null TODAY and that is correct — ZATCA payload is still being built
+    // server-side. `str()` collapses null, undefined and "" alike, so the page
+    // shows its placeholder rather than rendering a QR of an empty string.
+    qrCode: str(d.qr_code) || null,
   };
 }
 

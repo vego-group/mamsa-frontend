@@ -29,6 +29,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { LoadError } from '@/components/shared/LoadError';
 import { bookingsApi, type TaxInvoice } from '@/lib/api/client';
+import { ApiError } from '@/lib/api/errors';
 import { formatSAR, formatDate } from '@/lib/utils/format';
 import type { Booking } from '@/types';
 
@@ -58,8 +59,19 @@ export default function InvoicePage() {
         if (cancelled) return;
         setBooking(b);
         if (!INVOICEABLE.includes(b.status)) return;
-        const inv = await bookingsApi.getInvoice(bookingId);
-        if (!cancelled) setInvoice(inv);
+        try {
+          const inv = await bookingsApi.getInvoice(bookingId);
+          if (!cancelled) setInvoice(inv);
+        } catch (e) {
+          // 409 INVOICE_NOT_AVAILABLE is an EXPECTED state, not a failure: the
+          // booking simply has no invoice yet. Falling through leaves `invoice`
+          // null, which renders the same calm "not available" card an unpaid
+          // booking gets — never an error card or a toast. Any other status is
+          // a real fault and still surfaces as one.
+          const notAvailable =
+            e instanceof ApiError && (e.status === 409 || e.code === 'INVOICE_NOT_AVAILABLE');
+          if (!notAvailable) throw e;
+        }
       })
       .catch(() => !cancelled && setFailed(true))
       .finally(() => !cancelled && setLoading(false));
@@ -135,6 +147,9 @@ export default function InvoicePage() {
             <div className="space-y-2">
               <FieldLabel ar={t('seller')} en={t('sellerEn')} />
               <div className="text-sm font-semibold">{invoice.seller.name}</div>
+              {/* The server sends "" for registration fields it does not hold
+                  yet. A labelled blank on a tax document reads as a defect, so
+                  MetaLine omits the row entirely for an empty value. */}
               <MetaLine ar={t('vatNumber')} en={t('vatNumberEn')} value={invoice.seller.vatNumber} />
               <MetaLine ar={t('crNumber')} en={t('crNumberEn')} value={invoice.seller.crNumber} />
               <MetaLine ar={t('address')} en={t('addressEn')} value={invoice.seller.address} />
@@ -223,7 +238,14 @@ function FieldLabel({ ar, en }: { ar: string; en: string }) {
   );
 }
 
-function MetaLine({ ar, en, value, mono }: { ar: string; en: string; value: string; mono?: boolean }) {
+/**
+ * Renders nothing for an empty value. The server returns "" (not null) for
+ * seller registration fields it does not hold yet, and a label with nothing
+ * after it looks like a rendering bug on a document a guest may forward to an
+ * employer. Both "" and null are treated the same way.
+ */
+function MetaLine({ ar, en, value, mono }: { ar: string; en: string; value?: string | null; mono?: boolean }) {
+  if (!value?.trim()) return null;
   return (
     <div className="text-xs">
       <span className="text-brand-muted">
