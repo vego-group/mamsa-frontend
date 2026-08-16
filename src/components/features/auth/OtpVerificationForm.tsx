@@ -197,8 +197,8 @@ export function OtpVerificationForm({
           className={cn(
             'flex h-12 w-full items-center justify-center rounded-full text-sm font-semibold transition',
             complete && !submitting
-              ? 'bg-brand-primary text-white hover:bg-brand-primaryDark'
-              : 'cursor-not-allowed bg-brand-border/70 text-white',
+              ? 'bg-brand-primary text-white shadow-sm hover:bg-brand-primaryDark hover:shadow'
+              : 'cursor-not-allowed border border-brand-border bg-brand-cream/70 text-brand-muted',
           )}
         >
           {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : t('verifyNow')}
