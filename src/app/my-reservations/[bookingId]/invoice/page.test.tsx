@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import arMessages from '../../../../../messages/ar.json';
 import InvoicePage from './page';
 import { bookingsApi, type TaxInvoice } from '@/lib/api/client';
+import { ApiError } from '@/lib/api/errors';
 import { INVOICE_SELLER } from '@/lib/constants/brand';
 import { getPolicyByTemplate } from '@/lib/constants/cancellation-policies';
 import { formatSAR } from '@/lib/utils/format';
@@ -175,6 +176,63 @@ describe('Tax invoice — one layout for every booking', () => {
     // The split columns are present exactly as they are for a new booking.
     expect(screen.getByText(arMessages.invoice.colNetBase)).toBeTruthy();
     expect(screen.getByText(arMessages.invoice.colVat)).toBeTruthy();
+  });
+});
+
+describe('Tax invoice — the server owns the seller identity', () => {
+  it('omits registration rows the server sends as empty strings, without blanks', async () => {
+    vi.spyOn(bookingsApi, 'getById').mockResolvedValue(bookingFixture());
+    vi.spyOn(bookingsApi, 'getInvoice').mockResolvedValue(
+      invoiceFixture({
+        // What staging returns today: a named seller, registrations still blank.
+        seller: { name: 'شركة ممسى للتقنية', vatNumber: '', crNumber: '', address: '' },
+      }),
+    );
+    await renderInvoice();
+
+    expect(screen.getByText('شركة ممسى للتقنية')).toBeTruthy();
+    // Labels must not appear at all — not appear with nothing after them.
+    expect(screen.queryByText(new RegExp(arMessages.invoice.vatNumber))).toBeNull();
+    expect(screen.queryByText(new RegExp(arMessages.invoice.crNumber))).toBeNull();
+    // And the local constant must NOT be substituted in behind the server's back.
+    expect(screen.queryByText(INVOICE_SELLER.vatNumber)).toBeNull();
+    expect(screen.queryByText(INVOICE_SELLER.crNumber)).toBeNull();
+  });
+
+  it('prefers the server name over the local constant when the two differ', async () => {
+    vi.spyOn(bookingsApi, 'getById').mockResolvedValue(bookingFixture());
+    vi.spyOn(bookingsApi, 'getInvoice').mockResolvedValue(
+      invoiceFixture({
+        seller: { name: 'اسم مختلف', vatNumber: '999', crNumber: '888', address: 'جدة' },
+      }),
+    );
+    await renderInvoice();
+
+    expect(screen.getByText('اسم مختلف')).toBeTruthy();
+    expect(screen.getByText('999')).toBeTruthy();
+    // A company rename must not require a frontend deploy.
+    expect(screen.queryByText(INVOICE_SELLER.name)).toBeNull();
+  });
+});
+
+describe('Tax invoice — 409 INVOICE_NOT_AVAILABLE is a state, not a failure', () => {
+  it('shows the unavailable message rather than an error card', async () => {
+    vi.spyOn(bookingsApi, 'getById').mockResolvedValue(bookingFixture('confirmed'));
+    vi.spyOn(bookingsApi, 'getInvoice').mockRejectedValue(
+      new ApiError(409, 'no invoice', 'INVOICE_NOT_AVAILABLE'),
+    );
+    await renderInvoice();
+
+    expect(screen.getByText(arMessages.invoice.unavailable)).toBeTruthy();
+    expect(screen.queryByText(arMessages.invoice.loadFailed)).toBeNull();
+  });
+
+  it('still surfaces a genuine server fault as an error', async () => {
+    vi.spyOn(bookingsApi, 'getById').mockResolvedValue(bookingFixture('confirmed'));
+    vi.spyOn(bookingsApi, 'getInvoice').mockRejectedValue(new ApiError(500, 'boom'));
+    await renderInvoice();
+
+    expect(screen.getByText(arMessages.invoice.loadFailed)).toBeTruthy();
   });
 });
 
