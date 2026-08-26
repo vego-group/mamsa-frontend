@@ -2,9 +2,11 @@ import { describe, it, expect } from 'vitest';
 import {
   mapCancellationPreview,
   mapBooking,
+  mapUnit,
   mapUser,
   type RawBooking,
   type RawCancellationPreview,
+  type RawUnit,
   type RawUser,
 } from './adapters';
 
@@ -149,5 +151,71 @@ describe('mapUser — role', () => {
   it('ranks admin above partner, and defaults to a plain user', () => {
     expect(mapUser({ ...base, is_admin: true, is_partner: true }).role).toBe('super_admin');
     expect(mapUser(base).role).toBe('user');
+  });
+});
+
+describe('mapUnit — image derivatives', () => {
+  const rawUnit = (images: RawUnit['images']): RawUnit => ({
+    id: 1,
+    name: 'وحدة',
+    type: 'apartment',
+    price: 300,
+    capacity: 2,
+    bedrooms: 1,
+    bathrooms: 1,
+    city: 'الرياض',
+    images,
+  });
+
+  const withVariants = {
+    id: 91,
+    url: 'https://cdn/a.jpg',
+    is_main: true,
+    width: 432,
+    height: 768,
+    variants: { thumb: 'https://cdn/a_thumb.webp', card: 'https://cdn/a_card.webp', full: 'https://cdn/a_full.webp' },
+  };
+
+  it('routes each size to its own derivative', () => {
+    const [img] = mapUnit(rawUnit([withVariants])).images;
+    expect(img).toEqual({
+      url: 'https://cdn/a.jpg',
+      thumb: 'https://cdn/a_thumb.webp',
+      card: 'https://cdn/a_card.webp',
+      full: 'https://cdn/a_full.webp',
+      width: 432,
+      height: 768,
+    });
+  });
+
+  // The backend sends `variants: null` — never three copies of the original — for
+  // rows that predate derivatives or files its processor couldn't read. Every size
+  // has to fall back to the original so those photos still render.
+  it('falls back to the original when a photo has no derivative set', () => {
+    const [img] = mapUnit(rawUnit([{ id: 92, url: 'https://cdn/b.jpg', is_main: true, variants: null }])).images;
+    expect(img).toEqual({
+      url: 'https://cdn/b.jpg',
+      thumb: 'https://cdn/b.jpg',
+      card: 'https://cdn/b.jpg',
+      full: 'https://cdn/b.jpg',
+      width: null,
+      height: null,
+    });
+  });
+
+  it('falls back the same way when the key is absent entirely', () => {
+    const [img] = mapUnit(rawUnit([{ id: 93, url: 'https://cdn/c.jpg', is_main: true }])).images;
+    expect(img?.full).toBe('https://cdn/c.jpg');
+    expect(img?.width).toBeNull();
+  });
+
+  it('keeps the cover photo first', () => {
+    const unit = mapUnit(
+      rawUnit([
+        { id: 1, url: 'https://cdn/second.jpg', is_main: false },
+        { id: 2, url: 'https://cdn/cover.jpg', is_main: true },
+      ]),
+    );
+    expect(unit.images.map((i) => i.url)).toEqual(['https://cdn/cover.jpg', 'https://cdn/second.jpg']);
   });
 });

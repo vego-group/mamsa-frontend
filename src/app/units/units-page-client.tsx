@@ -129,7 +129,7 @@ export function UnitsPageClient() {
         lng: u.longitude,
         city: u.city,
         district: u.district,
-        image: u.imageUrls[0] ?? '',
+        image: u.images[0]?.card ?? '',
         rating: u.rating,
       })),
     [sorted],

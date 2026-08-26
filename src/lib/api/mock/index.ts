@@ -250,7 +250,7 @@ export const mockApi = {
           title: unit.title,
           city: unit.city,
           country: unit.country,
-          imageUrl: unit.imageUrls[0] ?? '',
+          imageUrl: unit.images[0]?.thumb ?? '',
           ownerName: unit.ownerName,
         },
         userId: 'CURRENT_USER',
