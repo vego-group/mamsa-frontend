@@ -82,6 +82,16 @@ export default function UnitDetailsPage() {
       .finally(() => setLoading(false));
   }, [params.id, attempt]);
 
+  // The fixed mobile book bar owns the screen corner the verification seal
+  // pins itself to, so flag the document while this page is mounted and the
+  // seal lifts clear of the CTA instead of covering it (see globals.css).
+  useEffect(() => {
+    document.body.dataset.mobileActionBar = 'true';
+    return () => {
+      delete document.body.dataset.mobileActionBar;
+    };
+  }, []);
+
   const nights = (() => {
     if (!checkIn || !checkOut) return 0;
     return Math.max(0, Math.round((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000));

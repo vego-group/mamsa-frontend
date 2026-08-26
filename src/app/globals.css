@@ -103,6 +103,40 @@
   transform: translate(-50%, -50%) scale(1.12);
 }
 
+/* ============ Saudi Business Center verified-store seal ============ */
+
+/*
+ * The seal is drawn by a third-party script into `.sbc-verify-seal`, which
+ * pins itself to the bottom-left corner — exactly where the unit page's fixed
+ * mobile book bar lives, so it landed on top of the "احجز الآن" button.
+ * Pages that carry such a bar flag the document and the seal lifts clear of
+ * it; `!important` is needed because the vendor sets these inline. `bottom`
+ * is applied to the placeholder and its direct child so it works whichever
+ * one the script chooses to position.
+ */
+:root {
+  --sbc-seal-lift: 0px;
+}
+
+.sbc-verify-seal,
+.sbc-verify-seal > * {
+  bottom: calc(0.75rem + var(--sbc-seal-lift)) !important;
+  /* Below the header, dialogs, the gallery lightbox and toasts — a trust
+     badge must never sit over the UI the guest is actually using. */
+  z-index: 30 !important;
+}
+
+body[data-mobile-action-bar='true'] {
+  --sbc-seal-lift: 5rem;
+}
+
+/* The book bar is `md:hidden`, so from `md` up there is nothing to clear. */
+@media (min-width: 768px) {
+  body[data-mobile-action-bar='true'] {
+    --sbc-seal-lift: 0px;
+  }
+}
+
 /* ============ Printable documents (tax invoice) ============ */
 
 /*
