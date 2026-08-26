@@ -55,7 +55,7 @@ function detail(u: Unit) {
     checkOutTime: u.checkOutTime,
     cancellationPolicy: u.cancellationPolicy,
     coordinates: u.latitude || u.longitude ? { lat: u.latitude, lng: u.longitude } : undefined,
-    images: u.imageUrls,
+    images: u.images.map((i) => i.url),
   };
 }
 

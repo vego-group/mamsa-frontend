@@ -43,6 +43,33 @@ export interface UnitAmenity {
   labelAr: string;
 }
 
+/**
+ * One unit photo, with the fixed-size derivatives the backend generates at
+ * upload. Every size is pre-resolved: when a photo has no derivative set (a row
+ * predating them, or a file the processor couldn't read) the backend sends
+ * `variants: null` and each size here holds the original URL instead, so
+ * callers never branch on it.
+ */
+export interface UnitImage {
+  /** The original upload, uncropped and unresized. */
+  url: string;
+  /** 400×300, cropped to 4:3. Thumbnail strip, checkout summary. */
+  thumb: string;
+  /** 800×600, cropped to 4:3. Search cards, gallery collage. */
+  card: string;
+  /** Long edge ≤2048, never cropped — keeps the original aspect ratio. Lightbox. */
+  full: string;
+  /**
+   * Pixel size of the ORIGINAL, or null when the backend hasn't measured it.
+   *
+   * These describe `full` and `url` only. `thumb` and `card` are 4:3 cover
+   * crops, so their real ratio differs from this whenever the source isn't 4:3 —
+   * using these to reserve a box for those two sizes reserves the wrong shape.
+   */
+  width: number | null;
+  height: number | null;
+}
+
 export interface Unit {
   id: string;
   ownerId: string;
@@ -70,7 +97,7 @@ export interface Unit {
   /** Floor area in m². Optional — not every listing carries one. */
   area?: number;
   amenities: UnitAmenity[];
-  imageUrls: string[];
+  images: UnitImage[];
   rating: number;
   reviewCount: number;
   checkInTime: string; // "15:00"

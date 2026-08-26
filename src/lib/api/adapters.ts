@@ -7,6 +7,7 @@
  */
 import type {
   Unit,
+  UnitImage,
   UnitType,
   UnitStatus,
   UnitAmenity,
@@ -29,7 +30,20 @@ const DEFAULT_COUNTRY = 'السعودية';
 
 // ============ Raw backend shapes ============
 
-interface RawImage { id: number; url: string; is_main: boolean }
+interface RawImage {
+  id: number;
+  url: string;
+  is_main: boolean;
+  /** Size of the original. Null on rows the backend hasn't measured. */
+  width?: number | null;
+  height?: number | null;
+  /**
+   * Fixed-size derivatives, generated once at upload. Deliberately `null` —
+   * not three copies of `url` — when a photo has no set, so it stays visible
+   * that the fallback is in play rather than silently serving full-size files.
+   */
+  variants?: { thumb: string; card: string; full: string } | null;
+}
 interface RawOwner {
   id: number;
   name: string;
@@ -295,6 +309,17 @@ function hhmm(time?: string, fallback = '00:00'): string {
 
 // ============ Domain mappers ============
 
+function mapImage(i: RawImage): UnitImage {
+  return {
+    url: i.url,
+    thumb: i.variants?.thumb ?? i.url,
+    card: i.variants?.card ?? i.url,
+    full: i.variants?.full ?? i.url,
+    width: i.width ?? null,
+    height: i.height ?? null,
+  };
+}
+
 export function mapUnit(u: RawUnit): Unit {
   const images = [...(u.images ?? [])].sort((a, b) => Number(b.is_main) - Number(a.is_main));
   return {
@@ -324,7 +349,7 @@ export function mapUnit(u: RawUnit): Unit {
     bathrooms: Number(u.bathrooms ?? 0),
     area: u.area == null ? undefined : Number(u.area),
     amenities: mapAmenities(u),
-    imageUrls: images.map((i) => i.url),
+    images: images.map(mapImage),
     isFeatured: Boolean(u.is_featured),
     rating: Number(u.avg_rating ?? 0),
     reviewCount: Number(u.reviews_count ?? 0),
@@ -362,7 +387,8 @@ function mapGuests(b: RawBooking): { adults: number; children: number } {
 export function mapBooking(b: RawBooking): Booking {
   const unit = b.unit;
   const p = b.pricing ?? {};
-  const mainImage = unit?.images?.find((i) => i.is_main)?.url ?? unit?.images?.[0]?.url ?? '';
+  const mainRaw = unit?.images?.find((i) => i.is_main) ?? unit?.images?.[0];
+  const mainImage = mainRaw ? (mainRaw.variants?.thumb ?? mainRaw.url) : '';
 
   return {
     id: String(b.id),
