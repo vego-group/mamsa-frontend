@@ -31,9 +31,9 @@ export function UnitCard({ unit, variant = 'list' }: UnitCardProps) {
     return (
       <Card className="group overflow-hidden transition hover:shadow-md">
         <div className="relative aspect-[4/3] overflow-hidden">
-          {unit.imageUrls[0] && (
+          {unit.images[0] && (
             <img
-              src={unit.imageUrls[0]}
+              src={unit.images[0].card}
               alt={unit.title}
               className="h-full w-full object-cover transition group-hover:scale-105"
             />
@@ -83,8 +83,8 @@ export function UnitCard({ unit, variant = 'list' }: UnitCardProps) {
     <Card className="overflow-hidden p-0">
       <div className="flex flex-col gap-4 p-4 md:flex-row-reverse">
         <div className="relative h-56 w-full overflow-hidden rounded-xl md:h-44 md:w-72">
-          {unit.imageUrls[0] && (
-            <img src={unit.imageUrls[0]} alt={unit.title} className="h-full w-full object-cover" />
+          {unit.images[0] && (
+            <img src={unit.images[0].card} alt={unit.title} className="h-full w-full object-cover" />
           )}
           <button
             onClick={(e) => { e.preventDefault(); toggle(unit.id); }}
