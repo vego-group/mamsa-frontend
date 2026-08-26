@@ -19,6 +19,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { UnitGallery } from '@/components/features/units/UnitGallery';
 import { LoadError } from '@/components/shared/LoadError';
+import { RichText } from '@/components/shared/RichText';
 import { CancellationPolicyDisplay } from '@/components/features/booking/CancellationPolicyDisplay';
 import { getPolicyByTemplate } from '@/lib/constants/cancellation-policies';
 import { formatSAR, formatDate } from '@/lib/utils/format';
@@ -165,7 +166,7 @@ export default function UnitDetailsPage() {
       </div>
 
       {/* Gallery */}
-      <UnitGallery images={unit.imageUrls} title={unit.title} />
+      <UnitGallery images={unit.images} title={unit.title} />
 
       <div className="grid gap-8 md:grid-cols-[1fr_380px]">
         {/* Main content */}
@@ -207,7 +208,7 @@ export default function UnitDetailsPage() {
           {/* about */}
           <section>
             <h2 className="mb-3 text-xl font-bold text-brand-ink">{t('about')}</h2>
-            <p className="leading-relaxed text-brand-muted">{unit.description}</p>
+            <RichText text={unit.description} />
           </section>
 
           <Divider />

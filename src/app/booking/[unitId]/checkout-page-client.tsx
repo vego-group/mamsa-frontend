@@ -332,7 +332,7 @@ export function CheckoutPageClient() {
       <aside className="md:order-1">
         <Card className="sticky top-24 space-y-4 p-5">
           <div className="flex items-center gap-3">
-            <img src={unit.imageUrls[0]} alt="" className="h-16 w-16 rounded-lg object-cover" />
+            <img src={unit.images[0]?.thumb} alt="" className="h-16 w-16 rounded-lg object-cover" />
             <div className="text-sm">
               <div className="font-semibold">{unit.title}</div>
               <div className="text-xs text-brand-muted">{unit.city}، {unit.country}</div>

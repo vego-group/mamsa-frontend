@@ -1,7 +1,14 @@
-import type { Unit } from '@/types';
+import type { Unit, UnitImage } from '@/types';
 
 const baseImage = (id: string) =>
   `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=1200&q=80`;
+
+/**
+ * Mock photos have no derivatives, so every size resolves to the one URL —
+ * the same shape the adapter produces for a real photo whose `variants` is null.
+ */
+const mockImages = (...urls: string[]): UnitImage[] =>
+  urls.map((url) => ({ url, thumb: url, card: url, full: url, width: null, height: null }));
 
 const AMENITIES_FULL = [
   { key: 'wifi', labelAr: 'واي فاي' },
@@ -30,8 +37,28 @@ export const MOCK_UNITS: Unit[] = [
     ownerVerified: true,
     ownerAvatarUrl: null,
     title: 'فيلا فاخرة مع إطلالة على البحر',
-    description:
-      'استمتع بالواحة الخاصة على السطح. تتميز هذه الفيلا بتصميم عصري أنيق مع لمسات من اللون الأخضر الزيتوني الهادئ. توفر الفيلا مساحات واسعة ومريحة لجميع أفراد العائلة، مع مسبح خاص وحديقة جميلة. الموقع مثالي للاستمتاع بالهدوء والخصوصية مع سهولة الوصول إلى المرافق الرئيسية في المدينة.',
+    // مثال حيّ على علامات الوصف المدعومة (انظر lib/utils/rich-text.ts) — يظهر في
+    // وضع الـ Mock ليرى الفريق شكل كل عنصر قبل أن يكتب الشركاء أوصافهم.
+    // المسافات البادئة هنا غير مؤثّرة: المحلّل يقصّ أطراف كل سطر.
+    description: `استمتع بالواحة الخاصة على السطح. تتميز هذه الفيلا بتصميم عصري أنيق مع لمسات من اللون الأخضر الزيتوني الهادئ، وتوفر مساحات واسعة ومريحة لجميع أفراد العائلة مع *مسبح خاص* و*حديقة جميلة*.
+
+    ## ما يميّز المكان
+    *إطلالة مباشرة على البحر*
+    *مسبح خاص بالفيلا*
+    *تسجيل دخول ذاتي*
+    *موقف داخل السور*
+
+    ## المساحات
+    - **الدور الأرضي:** مجلس رجال، صالة عائلية، ومطبخ مجهّز بالكامل.
+    - **الدور الأول:** ثلاث غرف نوم، لكل غرفة دورة مياه خاصة.
+    - **السطح:** جلسة خارجية مع شواية وإطلالة على البحر.
+
+    ## طريقة الوصول
+    1. اخرج من بوابة الحي الشمالية.
+    2. اتجه يمينًا لمسافة 400 متر.
+    3. الفيلا على يسارك — رقم 12.
+
+    > تسجيل الدخول بعد الساعة 3 عصرًا، وطلبات الوصول المبكر متاحة حسب التوفّر.`,
     type: 'villa',
     status: 'approved',
     city: 'الرياض',
@@ -45,13 +72,13 @@ export const MOCK_UNITS: Unit[] = [
     beds: 6,
     bathrooms: 3,
     amenities: AMENITIES_FULL,
-    imageUrls: [
+    images: mockImages(
       baseImage('1582268611958-ebfd161ef9cf'),
       baseImage('1613977257363-707ba9348227'),
       baseImage('1567496898669-ee935f5f647a'),
       baseImage('1560448204-e02f11c3d0e2'),
       baseImage('1564013799919-ab600027ffc6'),
-    ],
+    ),
     rating: 4.9,
     reviewCount: 156,
     checkInTime: '15:00',
@@ -87,11 +114,11 @@ export const MOCK_UNITS: Unit[] = [
       { key: 'ac', labelAr: 'تكييف' },
       { key: 'parking', labelAr: 'موقف سيارات' },
     ],
-    imageUrls: [
+    images: mockImages(
       baseImage('1582719478250-c89cae4dc85b'),
       baseImage('1560448204-e02f11c3d0e2'),
       baseImage('1564013799919-ab600027ffc6'),
-    ],
+    ),
     rating: 4.7,
     reviewCount: 42,
     checkInTime: '15:00',
@@ -123,11 +150,11 @@ export const MOCK_UNITS: Unit[] = [
     beds: 5,
     bathrooms: 3,
     amenities: AMENITIES_BASIC,
-    imageUrls: [
+    images: mockImages(
       baseImage('1600585154340-be6161a56a0c'),
       baseImage('1582719478250-c89cae4dc85b'),
       baseImage('1600596542815-ffad4c1539a9'),
-    ],
+    ),
     rating: 4.9,
     reviewCount: 156,
     checkInTime: '15:00',
@@ -158,11 +185,11 @@ export const MOCK_UNITS: Unit[] = [
     beds: 5,
     bathrooms: 3,
     amenities: AMENITIES_FULL,
-    imageUrls: [
+    images: mockImages(
       baseImage('1540541338287-41700207dee6'),
       baseImage('1571896349842-33c89424de2d'),
       baseImage('1601000938259-9e92002320b2'),
-    ],
+    ),
     rating: 4.9,
     reviewCount: 156,
     checkInTime: '15:00',
@@ -192,11 +219,11 @@ export const MOCK_UNITS: Unit[] = [
     beds: 4,
     bathrooms: 3,
     amenities: AMENITIES_BASIC,
-    imageUrls: [
+    images: mockImages(
       baseImage('1568605114967-8130f3a36994'),
       baseImage('1502672260266-1c1ef2d93688'),
       baseImage('1522708323590-d24dbb6b0267'),
-    ],
+    ),
     rating: 4.9,
     reviewCount: 156,
     checkInTime: '15:00',
@@ -226,11 +253,11 @@ export const MOCK_UNITS: Unit[] = [
     beds: 6,
     bathrooms: 3,
     amenities: AMENITIES_FULL,
-    imageUrls: [
+    images: mockImages(
       baseImage('1571003123894-1f0594d2b5d9'),
       baseImage('1564501049412-61c2a3083791'),
       baseImage('1518733057094-95b53143d2a7'),
-    ],
+    ),
     rating: 4.9,
     reviewCount: 156,
     checkInTime: '15:00',
@@ -260,11 +287,11 @@ export const MOCK_UNITS: Unit[] = [
     beds: 6,
     bathrooms: 3,
     amenities: AMENITIES_FULL,
-    imageUrls: [
+    images: mockImages(
       baseImage('1505693416388-ac5ce068fe85'),
       baseImage('1600210492486-724fe5c67fb0'),
       baseImage('1600585154526-990dced4db0d'),
-    ],
+    ),
     rating: 4.9,
     reviewCount: 156,
     checkInTime: '15:00',

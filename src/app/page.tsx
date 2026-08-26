@@ -75,7 +75,7 @@ export default async function HomePage() {
   ).map((r, i) => ({
     ...r,
     label: r.min <= 0 ? t('budgetUnder', { max: r.max }) : t('budgetRange', { min: r.min, max: r.max }),
-    image: r.imageUrl || featured[i % Math.max(featured.length, 1)]?.imageUrls[0] || FALLBACK_IMG,
+    image: r.imageUrl || featured[i % Math.max(featured.length, 1)]?.images[0]?.card || FALLBACK_IMG,
   }));
 
   // Map markers: only real units that actually have coordinates.
@@ -193,7 +193,7 @@ export default async function HomePage() {
             lng: u.longitude,
             city: u.city,
             district: u.district,
-            image: u.imageUrls[0] ?? '',
+            image: u.images[0]?.card ?? '',
             rating: u.rating,
           }))}
         />
