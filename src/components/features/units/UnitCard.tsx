@@ -2,13 +2,14 @@
 
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { Heart, Star, BedDouble, Bath, Users, Wifi } from 'lucide-react';
+import { Heart, BedDouble, Bath, Users, Wifi } from 'lucide-react';
 import type { Unit } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useFavoritesStore } from '@/stores/favorites';
 import { useStayQuery } from '@/stores/search';
+import { UnitRating } from '@/components/features/units/UnitRating';
 import { formatSAR } from '@/lib/utils/format';
 import { cn } from '@/lib/utils/cn';
 
@@ -40,12 +41,14 @@ export function UnitCard({ unit, variant = 'list' }: UnitCardProps) {
             <img
               src={unit.images[0].card}
               alt={unit.title}
+              loading="lazy"
+              decoding="async"
               className="h-full w-full object-cover transition group-hover:scale-105"
             />
           )}
           <button
             onClick={(e) => { e.preventDefault(); toggle(unit.id); }}
-            className="absolute end-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 shadow"
+            className="absolute end-2 top-2 flex h-11 w-11 items-center justify-center rounded-full bg-white/95 shadow"
             aria-label={t('save')}
           >
             <Heart className={cn('h-4 w-4 transition', isFav ? 'fill-status-danger text-status-danger' : 'text-brand-muted')} />
@@ -72,11 +75,12 @@ export function UnitCard({ unit, variant = 'list' }: UnitCardProps) {
               </div>
               <div className="text-[11px] text-brand-muted">{tPricing('inclVatShort')}</div>
             </div>
-            <span className="flex items-center gap-1 text-xs">
-              <Star className="h-3.5 w-3.5 fill-yellow-500 text-yellow-500" />
-              <span className="font-semibold text-brand-ink">{unit.rating}</span>
-              <span className="text-brand-muted">({unit.reviewCount})</span>
-            </span>
+            <UnitRating
+              rating={unit.rating}
+              reviewCount={unit.reviewCount}
+              showCount
+              className="text-xs"
+            />
           </div>
         </div>
       </Card>
@@ -89,11 +93,17 @@ export function UnitCard({ unit, variant = 'list' }: UnitCardProps) {
       <div className="flex flex-col gap-4 p-4 md:flex-row-reverse">
         <div className="relative h-56 w-full overflow-hidden rounded-xl md:h-44 md:w-72">
           {unit.images[0] && (
-            <img src={unit.images[0].card} alt={unit.title} className="h-full w-full object-cover" />
+            <img
+              src={unit.images[0].card}
+              alt={unit.title}
+              loading="lazy"
+              decoding="async"
+              className="h-full w-full object-cover"
+            />
           )}
           <button
             onClick={(e) => { e.preventDefault(); toggle(unit.id); }}
-            className="absolute end-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 shadow"
+            className="absolute end-2 top-2 flex h-11 w-11 items-center justify-center rounded-full bg-white/95 shadow"
             aria-label={t('save')}
           >
             <Heart className={cn('h-4 w-4', isFav ? 'fill-status-danger text-status-danger' : 'text-brand-muted')} />
@@ -105,11 +115,13 @@ export function UnitCard({ unit, variant = 'list' }: UnitCardProps) {
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-brand-ink">{unit.title}</h3>
-              <span className="flex items-center gap-1 text-sm">
-                <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
-                <span className="font-semibold">{unit.rating}</span>
-                <span className="text-brand-muted">({unit.reviewCount})</span>
-              </span>
+              <UnitRating
+                rating={unit.rating}
+                reviewCount={unit.reviewCount}
+                showCount
+                className="text-sm"
+                starClassName="h-4 w-4"
+              />
             </div>
             <p className="text-sm text-brand-muted">{unit.city}، {unit.country}</p>
 

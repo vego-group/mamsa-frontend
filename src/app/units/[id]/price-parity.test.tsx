@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent, act, cleanup } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
+import { format } from 'date-fns';
+import { ar } from 'date-fns/locale';
 import arMessages from '../../../../messages/ar.json';
 import UnitDetailsPage from './page';
 import { mockApi } from '@/lib/api/mock';
@@ -23,10 +25,27 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 
-function isoInDays(days: number): string {
+function inDays(days: number): Date {
   const d = new Date();
   d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  return d;
+}
+
+/**
+ * Picks a stay in the page's own range calendar: open the arrival field, click
+ * arrival, click departure. Offsets stay well inside the two months the panel
+ * shows, so no month has to be paged through.
+ */
+function pickStay(from: number, to: number): void {
+  fireEvent.click(document.querySelector('button[aria-haspopup="dialog"]')!);
+  for (const offset of [from, to]) {
+    const label = format(inDays(offset), 'd MMMM yyyy', { locale: ar });
+    const day = document.querySelector<HTMLButtonElement>(
+      `[role="dialog"] button[aria-label="${label}"]`,
+    );
+    if (!day) throw new Error(`no day button for ${label}`);
+    fireEvent.click(day);
+  }
 }
 
 beforeEach(() => vi.useFakeTimers());
@@ -77,9 +96,11 @@ describe('Price parity — one number from search to tax invoice', () => {
       await vi.advanceTimersByTimeAsync(350);
     });
 
-    const inputs = Array.from(document.querySelectorAll('input[type="date"]'));
-    fireEvent.change(inputs[0]!, { target: { value: isoInDays(30) } });
-    fireEvent.change(inputs[1]!, { target: { value: isoInDays(32) } }); // 2 nights
+    // +9..+12 is U-001's own seeded `pending_payment` fixture (BK-008) and
+    // +14..+16 is the booking the previous test just created — the calendar
+    // now correctly disables both, so this stay has to clear them to land on
+    // a pickable pair of days.
+    pickStay(20, 22); // 2 nights
 
     // Same 2400 the quote/booking/invoice agree on above.
     expect(screen.getByText(formatSAR(2400))).toBeTruthy();

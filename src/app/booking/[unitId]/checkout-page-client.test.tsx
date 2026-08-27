@@ -90,8 +90,6 @@ describe('Checkout — EMAIL_VERIFICATION_REQUIRED recovery', () => {
     // matches the "stale client state" premise this recovery path exists for.
     expect(screen.queryByText('أرسل رمز التحقق')).toBeNull();
 
-    fireEvent.change(screen.getByPlaceholderText('أدخل الاسم الأول'), { target: { value: 'سارة' } });
-    fireEvent.change(screen.getByPlaceholderText('أدخل اسم العائلة'), { target: { value: 'محمد' } });
     fireEvent.click(screen.getByRole('checkbox'));
 
     vi.spyOn(bookingsApi, 'create').mockRejectedValueOnce(
@@ -108,9 +106,7 @@ describe('Checkout — EMAIL_VERIFICATION_REQUIRED recovery', () => {
     expect(screen.getByText('أرسل رمز التحقق')).toBeTruthy();
     // No navigation to the payment page happened.
     expect(pushMock).not.toHaveBeenCalled();
-    // Everything the guest typed survived the round trip.
-    expect((screen.getByPlaceholderText('أدخل الاسم الأول') as HTMLInputElement).value).toBe('سارة');
-    expect((screen.getByPlaceholderText('أدخل اسم العائلة') as HTMLInputElement).value).toBe('محمد');
+    // The one thing the guest can still get wrong survived the round trip.
     expect((screen.getByRole('checkbox') as HTMLInputElement).getAttribute('aria-checked')).toBe('true');
   });
 });
@@ -170,8 +166,6 @@ describe('Checkout — post-booking price switches to the frozen booking respons
     // Before submitting: the page shows the QUOTE's total.
     expect(screen.getAllByText(formatSAR(EXPECTED_QUOTE.gross)).length).toBeGreaterThan(0);
 
-    fireEvent.change(screen.getByPlaceholderText('أدخل الاسم الأول'), { target: { value: 'سارة' } });
-    fireEvent.change(screen.getByPlaceholderText('أدخل اسم العائلة'), { target: { value: 'محمد' } });
     fireEvent.click(screen.getByRole('checkbox'));
 
     // The booking response deliberately differs from the quote above, so we
@@ -196,5 +190,49 @@ describe('Checkout — post-booking price switches to the frozen booking respons
     // The frozen booking numbers now win — the quote's total is gone.
     expect(screen.getAllByText(formatSAR(6000)).length).toBeGreaterThan(0);
     expect(screen.queryByText(formatSAR(EXPECTED_QUOTE.gross))).toBeNull();
+  });
+});
+
+describe('Checkout — the guest is the account holder', () => {
+  it('shows the account details instead of asking for them again', async () => {
+    useAuthStore.setState({
+      user: baseUser({ emailVerified: true, firstName: 'محمد', lastName: 'أحمد' }),
+      isAuthenticated: true,
+    });
+    const { container } = renderCheckout();
+    await waitForUnitToLoad();
+
+    // `POST /bookings` records the signed-in account as the guest and accepts
+    // no separate details — four editable fields were being validated and then
+    // dropped on the floor.
+    expect(screen.queryByPlaceholderText('أدخل الاسم الأول')).toBeNull();
+    expect(screen.queryByPlaceholderText('أدخل اسم العائلة')).toBeNull();
+    expect(container.textContent).toContain('محمد');
+    expect(container.textContent).toContain('أحمد');
+  });
+
+  it('lets the booking through on the agreement alone', async () => {
+    useAuthStore.setState({ user: baseUser({ emailVerified: true }), isAuthenticated: true });
+    renderCheckout();
+    await waitForUnitToLoad();
+
+    // Resolved, not called through: the real mock enforces its own email
+    // verification and its rejection would leak out of the test.
+    const create = vi.spyOn(bookingsApi, 'create').mockResolvedValue(bookingFixture());
+    const button = screen.getByText(/المتابعة إلى الدفع/).closest('button')!;
+
+    // Unticked: refused, and nothing is sent.
+    await act(async () => {
+      fireEvent.click(button);
+      await vi.advanceTimersByTimeAsync(350);
+    });
+    expect(create).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('checkbox'));
+    await act(async () => {
+      fireEvent.click(button);
+      await vi.advanceTimersByTimeAsync(350);
+    });
+    expect(create).toHaveBeenCalled();
   });
 });

@@ -124,7 +124,10 @@
     "nextMonth": "Next month",
     "allCities": "All cities",
     "searchCity": "Search for a city",
-    "noCity": "No city matches that"
+    "noCity": "No city matches that",
+    "searchTitle": "Find your stay",
+    "close": "Close",
+    "guestsCount": "{count} guests"
   },
   "types": {
     "all": "All",
@@ -163,7 +166,8 @@
     "bedrooms": "{count} bedrooms",
     "bathrooms": "{count} bathrooms",
     "perNight": "SAR / night",
-    "viewDetails": "View details"
+    "viewDetails": "View details",
+    "newListing": "New"
   },
   "unitsPage": {
     "stays": "Stays",
@@ -198,11 +202,17 @@
       "rating": "Rating",
       "andUp": "and up",
       "unitType": "Unit type",
-      "amenities": "Amenities"
-    }
+      "amenities": "Amenities",
+      "showAllAmenities": "Show all amenities ({count})",
+      "showFewerAmenities": "Show fewer"
+    },
+    "forStay": "Available for your stay, {start} → {end}",
+    "pickDatesHint": "Pick your dates to see only the units actually available",
+    "showMore": "Show more ({count} more stays)"
   },
   "unit": {
     "pickDates": "Pick check-in and check-out dates",
+    "datesUnavailable": "This unit isn't available for these dates — please pick different ones",
     "featured": "Featured",
     "reviewCount": "{count} reviews",
     "share": "Share",
@@ -232,24 +242,28 @@
     },
     "basedOn": "Based on {count} guest reviews",
     "noReviews": "No reviews yet.",
-    "checkInLabel": "Check-in",
-    "checkOutLabel": "Check-out",
     "guestsLabel": "Guests",
     "guestOption": "{count} guests",
     "nightsLine": "{price} × {nights} nights",
     "bookNow": "Book now",
-    "noChargeYet": "You won't be charged at this stage"
+    "noChargeYet": "You won't be charged at this stage",
+    "newListingTitle": "New to Mamsa",
+    "newListingBody": "No guest reviews yet — be the first to share your stay.",
+    "nightsCount": "{count} nights · VAT included",
+    "pickDatesShort": "Pick dates"
   },
   "gallery": {
     "showAll": "Show all photos ({count})",
     "close": "Close",
     "prev": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "photoOf": "Photo {index} of {count}"
   },
   "map": {
     "empty": "No properties with available locations right now.",
     "sar": "SAR",
-    "perNight": "/ night"
+    "perNight": "/ night",
+    "tapToMove": "Tap to move the map"
   },
   "picks": {
     "title": "Picks for you",
@@ -523,7 +537,9 @@
       "invalidDates": "The booking dates are invalid — please pick your dates again.",
       "unitUnavailable": "This unit isn't available for these dates — please choose different dates.",
       "genericFailed": "Failed to complete the transaction"
-    }
+    },
+    "bookedForAccount": "The booking is issued to the account holder, and the confirmation goes to their email.",
+    "editInAccount": "Edit my details"
   },
   "payment": {
     "title": "Complete your payment",

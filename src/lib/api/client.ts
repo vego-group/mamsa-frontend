@@ -136,7 +136,29 @@ async function forceLogout(): Promise<void> {
  * origin on the API, a SameSite value that survives the payment return, and a
  * re-check of every call site — not just the payment return.
  */
-async function http<T>(path: string, init: RequestInit = {}, isRetry = false): Promise<T> {
+/**
+ * A Laravel paginator's page descriptor. `/units` has always sent one; until
+ * now `http` unwrapped `data` and dropped it on the floor, so the results page
+ * could never see past the first 12 rows.
+ */
+export interface PageMeta {
+  current_page: number;
+  last_page: number;
+  per_page: number;
+  total: number;
+}
+
+/** Pass one to `http` to keep the envelope's `meta` instead of discarding it. */
+export interface MetaSink {
+  meta?: PageMeta;
+}
+
+async function http<T>(
+  path: string,
+  init: RequestInit = {},
+  isRetry = false,
+  sink?: MetaSink,
+): Promise<T> {
   const token = tokenManager.getAccessToken();
   // A multipart body must keep the Content-Type the browser generates — it
   // carries the boundary, and overriding it makes the API read zero fields.
@@ -164,7 +186,7 @@ async function http<T>(path: string, init: RequestInit = {}, isRetry = false): P
     // to renew (guest hitting a protected endpoint).
     if (res.status === 401 && !isRetry && token && path !== '/auth/refresh') {
       const renewed = await refreshAccessToken();
-      if (renewed) return http<T>(path, init, true);
+      if (renewed) return http<T>(path, init, true, sink);
       await forceLogout();
       throw new ApiError(401, 'انتهت جلستك، يرجى تسجيل الدخول مرة أخرى.');
     }
@@ -209,6 +231,7 @@ async function http<T>(path: string, init: RequestInit = {}, isRetry = false): P
   const json: unknown = JSON.parse(text);
   // Most endpoints wrap payloads in `{ success, message, data }`; some return raw.
   if (json && typeof json === 'object' && 'data' in (json as Record<string, unknown>)) {
+    if (sink) sink.meta = (json as { meta?: PageMeta }).meta;
     return (json as { data: T }).data;
   }
   return json as T;
@@ -403,6 +426,17 @@ export interface CheckAvailabilityResult {
 }
 
 /**
+ * A closed span of NIGHTS to grey out in a calendar — both ends inclusive.
+ * Mirrors `GET /units/{id}/blocked-dates` exactly: the night before a stay's
+ * checkout is the last blocked date, the checkout date itself is free (it's
+ * the next guest's changeover day, not a night anyone occupies).
+ */
+export interface BlockedDateRange {
+  start: string;
+  end: string;
+}
+
+/**
  * The live backend has NOT shipped its VAT-inclusive refactor yet — it still
  * sends the VAT-EXCLUSIVE trio `subtotal` + `taxes` = `total`. Those map onto
  * the new names without any arithmetic, because they describe the same three
@@ -428,6 +462,14 @@ function mapQuotePricing(raw: unknown): QuotePricing | null {
   };
 }
 
+/** One page of search results, plus where that page sits in the whole set. */
+export interface UnitsPage {
+  units: Unit[];
+  page: number;
+  lastPage: number;
+  total: number;
+}
+
 const unitFilterToQuery = (f: UnitsFilter): string =>
   qs({
     city: f.city,
@@ -439,9 +481,34 @@ const unitFilterToQuery = (f: UnitsFilter): string =>
     max_price: f.maxPrice,
     min_rating: f.minRating,
     sort: f.sort,
+    page: f.page,
+    per_page: f.perPage,
   });
 
 export const unitsApi = {
+  /**
+   * One page of `/units`, with the paginator's own answer for how many there
+   * are. Callers that only ever want the first page keep using `list`.
+   */
+  listPage: async (filter: UnitsFilter = {}): Promise<UnitsPage> => {
+    if (USE_MOCK) return withLatency(mockApi.units.listPage(filter));
+    const sink: MetaSink = {};
+    const rows = await http<RawUnit[]>(
+      `/units${unitFilterToQuery(filter)}${filterFeatures(filter)}`,
+      {},
+      false,
+      sink,
+    );
+    const units = rows.map(mapUnit);
+    // An endpoint that answers without a paginator is a single complete page.
+    return {
+      units,
+      page: sink.meta?.current_page ?? 1,
+      lastPage: sink.meta?.last_page ?? 1,
+      total: sink.meta?.total ?? units.length,
+    };
+  },
+
   list: (filter: UnitsFilter = {}) =>
     USE_MOCK
       ? withLatency(mockApi.units.list(filter))
@@ -476,6 +543,20 @@ export const unitsApi = {
           available: Boolean(d.available),
           pricing: mapQuotePricing(d.pricing),
         })),
+
+  /**
+   * Nights already spoken for — bookings, partner closures and iCal imports
+   * alike (the API deliberately doesn't say which, so a guest can never read
+   * a unit's occupancy from the calendar). Unauthenticated: a guest browsing
+   * a listing has no token yet. `from`/`to` default to today .. +6 months on
+   * the backend, same as leaving them off here.
+   */
+  getBlockedDates: (id: string, from?: string, to?: string): Promise<BlockedDateRange[]> =>
+    USE_MOCK
+      ? withLatency(mockApi.units.getBlockedDates(id, from, to))
+      : http<{ blocked: BlockedDateRange[] }>(`/units/${id}/blocked-dates${qs({ from, to })}`).then(
+          (d) => d.blocked ?? [],
+        ),
 };
 
 /** features[] is repeatable, so it is appended outside URLSearchParams' set(). */

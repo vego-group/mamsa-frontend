@@ -1,11 +1,13 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
-import { MapPin, MapPinOff, Star } from 'lucide-react';
+import { MapPin, MapPinOff } from 'lucide-react';
 import { useStayQuery } from '@/stores/search';
+import { cn } from '@/lib/utils/cn';
+import { UnitRating } from '@/components/features/units/UnitRating';
 import type { MapUnit } from './LocationMap';
 
 export interface LocationUnit extends MapUnit {
@@ -13,6 +15,8 @@ export interface LocationUnit extends MapUnit {
   district: string;
   image: string;
   rating: number;
+  /** 0 ⇒ nothing has been scored yet, so the card shows a "new" badge. */
+  reviewCount: number;
 }
 
 // Leaflet needs `window`, so the map is client-only (no SSR).
@@ -25,10 +29,30 @@ const LocationMap = dynamic(() => import('./LocationMap'), {
   ),
 });
 
-export function LocationExplorer({ units }: { units: LocationUnit[] }) {
+export function LocationExplorer({
+  units,
+  fullBleed = false,
+}: {
+  units: LocationUnit[];
+  /**
+   * The map IS the page here (the results page's map view), so it gets the
+   * height and the drag straight away. Left off, the map is one section among
+   * many and has to be asked before it takes the guest's swipe.
+   */
+  fullBleed?: boolean;
+}) {
   const t = useTranslations('map');
   const tPricing = useTranslations('pricing');
   const [activeId, setActiveId] = useState<string | null>(units[0]?.id ?? null);
+
+  // Touch screens are the ones whose page scroll the map competes for; a mouse
+  // can drag the map and still scroll the page with the wheel.
+  const [coarse, setCoarse] = useState(false);
+  const [armed, setArmed] = useState(false);
+  useEffect(() => {
+    setCoarse(window.matchMedia('(pointer: coarse)').matches);
+  }, []);
+  const gated = coarse && !fullBleed && !armed;
   // Same stay carry-over as the unit cards — the map is just another way in.
   const stay = useStayQuery();
   const mapUnits = useMemo<MapUnit[]>(
@@ -47,8 +71,10 @@ export function LocationExplorer({ units }: { units: LocationUnit[] }) {
 
   return (
     <div className="grid gap-4 lg:grid-cols-[340px_1fr]">
-      {/* listings sidebar */}
-      <div className="max-h-[460px] space-y-2 overflow-y-auto pl-1">
+      {/* Listings. A column beside the map from `lg` up; below that a strip the
+          guest swipes through, under the map rather than stacked on top of it —
+          which is what "map view" used to show first on a phone. */}
+      <div className="order-2 flex gap-3 overflow-x-auto pb-1 lg:order-1 lg:max-h-[460px] lg:flex-col lg:gap-2 lg:overflow-x-visible lg:overflow-y-auto lg:pl-1">
         {units.map((u) => {
           const active = u.id === activeId;
           return (
@@ -57,13 +83,19 @@ export function LocationExplorer({ units }: { units: LocationUnit[] }) {
               href={`/units/${u.id}${stay}`}
               onMouseEnter={() => setActiveId(u.id)}
               onFocus={() => setActiveId(u.id)}
-              className={`flex gap-3 rounded-xl border bg-white p-2 transition ${
+              className={`flex w-[78%] shrink-0 gap-3 rounded-xl border bg-white p-2 transition sm:w-[46%] lg:w-auto lg:shrink ${
                 active
                   ? 'border-brand-primary shadow-md ring-1 ring-brand-primary/20'
                   : 'border-brand-border hover:shadow-sm'
               }`}
             >
-              <img src={u.image} alt={u.title} className="h-20 w-24 shrink-0 rounded-lg object-cover" />
+              <img
+                src={u.image}
+                alt={u.title}
+                loading="lazy"
+                decoding="async"
+                className="h-20 w-24 shrink-0 rounded-lg object-cover"
+              />
               <div className="min-w-0 flex-1">
                 <p className="line-clamp-1 text-sm font-semibold text-brand-ink">{u.title}</p>
                 <p className="mt-0.5 flex items-center gap-1 text-xs text-brand-muted">
@@ -77,10 +109,12 @@ export function LocationExplorer({ units }: { units: LocationUnit[] }) {
                       {' '}{t('perNight')} · {tPricing('inclVatShort')}
                     </span>
                   </span>
-                  <span className="flex items-center gap-0.5 text-xs text-brand-ink">
-                    <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                    {u.rating}
-                  </span>
+                  <UnitRating
+                    rating={u.rating}
+                    reviewCount={u.reviewCount}
+                    className="text-xs"
+                    starClassName="h-3 w-3"
+                  />
                 </div>
               </div>
             </Link>
@@ -90,8 +124,32 @@ export function LocationExplorer({ units }: { units: LocationUnit[] }) {
 
       {/* map — `isolate z-0` keeps Leaflet's high internal z-indexes from
           painting over the sticky header (z-40). */}
-      <div className="relative z-0 min-h-[320px] overflow-hidden rounded-2xl border border-brand-border isolate md:min-h-[460px]">
-        <LocationMap units={mapUnits} activeId={activeId} onSelect={setActiveId} currencyLabel={t('sar')} />
+      <div
+        className={cn(
+          'relative isolate z-0 order-1 overflow-hidden rounded-2xl border border-brand-border lg:order-2 lg:min-h-[460px]',
+          fullBleed ? 'min-h-[70dvh]' : 'min-h-[320px]',
+        )}
+      >
+        <LocationMap
+          units={mapUnits}
+          activeId={activeId}
+          onSelect={setActiveId}
+          currencyLabel={t('sar')}
+          dragging={!gated}
+        />
+        {gated && (
+          // Transparent on purpose: the pins stay readable and tappable-looking
+          // while the swipe still belongs to the page.
+          <button
+            type="button"
+            onClick={() => setArmed(true)}
+            className="absolute inset-0 z-[400] flex items-end justify-center pb-4"
+          >
+            <span className="rounded-full bg-brand-ink/85 px-4 py-2 text-xs font-medium text-white shadow-lg">
+              {t('tapToMove')}
+            </span>
+          </button>
+        )}
       </div>
     </div>
   );

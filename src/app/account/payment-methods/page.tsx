@@ -10,6 +10,7 @@ import { createCardToken } from '@/lib/payments/moyasar';
 import { formatSAR, formatDate } from '@/lib/utils/format';
 import type { SavedCard, Transaction, TransactionType } from '@/types';
 import { cn } from '@/lib/utils/cn';
+import { SelectField, type SelectOption } from '@/components/ui/select-field';
 
 const BRAND_NAME: Record<SavedCard['brand'], string> = {
   visa: 'VISA',
@@ -18,8 +19,15 @@ const BRAND_NAME: Record<SavedCard['brand'], string> = {
 };
 
 const CURRENT_YEAR = new Date().getFullYear();
-const YEARS = Array.from({ length: 11 }, (_, i) => CURRENT_YEAR + i);
-const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
+/** Expiry options, spelled the way the card prints them: a zero-padded month. */
+const MONTH_OPTIONS: SelectOption[] = Array.from({ length: 12 }, (_, i) => {
+  const mm = String(i + 1).padStart(2, '0');
+  return { value: mm, label: mm };
+});
+const YEAR_OPTIONS: SelectOption[] = Array.from({ length: 11 }, (_, i) => {
+  const yyyy = String(CURRENT_YEAR + i);
+  return { value: yyyy, label: yyyy };
+});
 
 /** Scheme from the leading digits — visa ^4, mastercard ^5[1-5]|^2[2-7], else mada. */
 function detectBrand(digits: string): SavedCard['brand'] {
@@ -424,21 +432,34 @@ function AddCardModal({ onClose, onSaved, t }: { onClose: () => void; onSaved: (
         </div>
 
         <div className="grid grid-cols-3 gap-3">
+          {/* The expiry pair drops down in the site's own list rather than the
+              platform's: the native one rendered a grey system sheet in the
+              middle of a branded card form, and mis-anchored it in RTL. */}
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-brand-ink">{t('expiryMonth')}</label>
-            <select value={month} onChange={(e) => setMonth(e.target.value)} className={inputCls}>
-              {MONTHS.map((m) => (
-                <option key={m} value={String(m).padStart(2, '0')}>{String(m).padStart(2, '0')}</option>
-              ))}
-            </select>
+            <label htmlFor="card-exp-month" className="text-sm font-medium text-brand-ink">
+              {t('expiryMonth')}
+            </label>
+            <SelectField
+              id="card-exp-month"
+              value={month}
+              onChange={setMonth}
+              options={MONTH_OPTIONS}
+              fieldClassName={cn(inputCls, 'flex items-center gap-2')}
+              panelClassName="w-full min-w-[5.5rem]"
+            />
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-brand-ink">{t('expiryYear')}</label>
-            <select value={year} onChange={(e) => setYear(e.target.value)} className={inputCls}>
-              {YEARS.map((y) => (
-                <option key={y} value={String(y)}>{y}</option>
-              ))}
-            </select>
+            <label htmlFor="card-exp-year" className="text-sm font-medium text-brand-ink">
+              {t('expiryYear')}
+            </label>
+            <SelectField
+              id="card-exp-year"
+              value={year}
+              onChange={setYear}
+              options={YEAR_OPTIONS}
+              fieldClassName={cn(inputCls, 'flex items-center gap-2')}
+              panelClassName="w-full min-w-[5.5rem]"
+            />
           </div>
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-brand-ink">CVC</label>
