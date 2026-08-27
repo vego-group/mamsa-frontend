@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
   Heart, Share2, Star, ChevronLeft, MapPin, Users, BedDouble, Bath, DoorOpen,
@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { unitsApi } from '@/lib/api/client';
 import { useFavoritesStore } from '@/stores/favorites';
+import { sanitizeStay, todayISO, useSearchStore } from '@/stores/search';
 import { useAuthStore } from '@/stores/auth';
 import { useUiStore } from '@/stores/ui';
 import { Button } from '@/components/ui/button';
@@ -46,13 +47,14 @@ function ratingKey(r: number): 'exceptional' | 'excellent' | 'veryGood' | 'good'
   return 'good';
 }
 
-export default function UnitDetailsPage() {
+function UnitDetailsView() {
   const t = useTranslations('unit');
   const tCommon = useTranslations('common');
   const tTypes = useTranslations('types');
   const tAmenities = useTranslations('amenities');
   const tPricing = useTranslations('pricing');
   const params = useParams<{ id: string }>();
+  const search = useSearchParams();
   const router = useRouter();
   const [unit, setUnit] = useState<Unit | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -82,6 +84,52 @@ export default function UnitDetailsPage() {
       .finally(() => setLoading(false));
   }, [params.id, attempt]);
 
+  // Open on the stay the guest already picked — on the search bar, on the map,
+  // or on the last listing they looked at — instead of an empty calendar. The
+  // link's own params win when it carries a stay, so a shared or bookmarked
+  // dated URL shows that stay rather than whatever this tab was last browsing.
+  useEffect(() => {
+    const fromLink = {
+      start: search.get('start') ?? search.get('checkIn') ?? '',
+      end: search.get('end') ?? search.get('checkOut') ?? '',
+      guests: Number(search.get('guests') ?? search.get('capacity')) || 1,
+    };
+    const stay = sanitizeStay(fromLink.start ? fromLink : useSearchStore.getState());
+    setCheckIn(stay.start);
+    setCheckOut(stay.end);
+    setGuests(stay.guests);
+  }, [params.id, search]);
+
+  // The guest picker only offers up to `capacity`, so a larger carried-over
+  // party would leave the select showing nothing at all.
+  useEffect(() => {
+    if (unit) setGuests((g) => Math.min(g, unit.capacity));
+  }, [unit]);
+
+  // Publish edits made here too, so moving on to another listing keeps the stay.
+  const pickCheckIn = (v: string) => {
+    setCheckIn(v);
+    useSearchStore.getState().setStay({ start: v });
+  };
+  const pickCheckOut = (v: string) => {
+    setCheckOut(v);
+    useSearchStore.getState().setStay({ end: v });
+  };
+  const pickGuests = (n: number) => {
+    setGuests(n);
+    useSearchStore.getState().setStay({ guests: n });
+  };
+
+  // The fixed mobile book bar owns the screen corner the verification seal
+  // pins itself to, so flag the document while this page is mounted and the
+  // seal lifts clear of the CTA instead of covering it (see globals.css).
+  useEffect(() => {
+    document.body.dataset.mobileActionBar = 'true';
+    return () => {
+      delete document.body.dataset.mobileActionBar;
+    };
+  }, []);
+
   const nights = (() => {
     if (!checkIn || !checkOut) return 0;
     return Math.max(0, Math.round((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000));
@@ -93,10 +141,7 @@ export default function UnitDetailsPage() {
   // Local YYYY-MM-DD "today" — floors the date pickers so past dates can't
   // be picked or typed in. Availability itself is still verified server-side
   // on the checkout page; this is just a UX guard against obviously invalid input.
-  const todayStr = (() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  })();
+  const todayStr = todayISO();
 
   const datesSelected = !!checkIn && !!checkOut && nights >= 1 && checkIn >= todayStr;
 
@@ -116,7 +161,7 @@ export default function UnitDetailsPage() {
   }
 
   if (loading || !unit) {
-    return <div className="container mx-auto p-10 text-center text-brand-muted">{tCommon('loading')}</div>;
+    return <UnitDetailsLoading />;
   }
 
   const isFav = has(unit.id);
@@ -328,7 +373,7 @@ export default function UnitDetailsPage() {
                     value={checkIn}
                     min={todayStr}
                     max={checkOut || undefined}
-                    onChange={(e) => setCheckIn(e.target.value)}
+                    onChange={(e) => pickCheckIn(e.target.value)}
                     className="w-full bg-transparent text-sm text-brand-ink focus:outline-none"
                   />
                 </label>
@@ -338,7 +383,7 @@ export default function UnitDetailsPage() {
                     type="date"
                     value={checkOut}
                     min={checkIn || todayStr}
-                    onChange={(e) => setCheckOut(e.target.value)}
+                    onChange={(e) => pickCheckOut(e.target.value)}
                     className="w-full bg-transparent text-sm text-brand-ink focus:outline-none"
                   />
                 </label>
@@ -347,7 +392,7 @@ export default function UnitDetailsPage() {
                 <span className="block text-[11px] font-medium text-brand-muted">{t('guestsLabel')}</span>
                 <select
                   value={guests}
-                  onChange={(e) => setGuests(Number(e.target.value))}
+                  onChange={(e) => pickGuests(Number(e.target.value))}
                   className="w-full bg-transparent text-sm text-brand-ink focus:outline-none"
                 >
                   {Array.from({ length: unit.capacity }).map((_, i) => (
@@ -402,6 +447,24 @@ export default function UnitDetailsPage() {
         </Button>
       </div>
     </div>
+  );
+}
+
+function UnitDetailsLoading() {
+  const t = useTranslations('common');
+  return <div className="container mx-auto p-10 text-center text-brand-muted">{t('loading')}</div>;
+}
+
+/**
+ * The view reads the stay off the query string, so it needs a Suspense boundary
+ * above it — without one `useSearchParams` opts the whole route out of
+ * server rendering.
+ */
+export default function UnitDetailsPage() {
+  return (
+    <Suspense fallback={<UnitDetailsLoading />}>
+      <UnitDetailsView />
+    </Suspense>
   );
 }
 

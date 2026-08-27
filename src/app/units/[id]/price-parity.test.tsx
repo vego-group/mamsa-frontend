@@ -19,6 +19,7 @@ const UNIT_ID = 'U-001'; // pricePerNight 1200 GROSS in mock data
 
 vi.mock('next/navigation', () => ({
   useParams: () => ({ id: UNIT_ID }),
+  useSearchParams: () => new URLSearchParams(),
   useRouter: () => ({ push: vi.fn() }),
 }));
 

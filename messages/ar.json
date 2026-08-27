@@ -113,16 +113,18 @@
     "guests": "عدد الأشخاص",
     "checkIn": "الوصول",
     "checkOut": "المغادرة",
-    "search": "ابدأ البحث"
-  },
-  "cities": {
-    "riyadh": "الرياض",
-    "jeddah": "جدة",
-    "makkah": "مكة",
-    "madinah": "المدينة",
-    "dammam": "الدمام",
-    "abha": "أبها",
-    "alula": "العلا"
+    "search": "ابدأ البحث",
+    "addDates": "أضف تواريخ",
+    "pickCheckIn": "اختر تاريخ الوصول",
+    "pickCheckOut": "اختر تاريخ المغادرة",
+    "nightsCount": "{count} ليالٍ",
+    "clearDates": "مسح التواريخ",
+    "done": "تم",
+    "prevMonth": "الشهر السابق",
+    "nextMonth": "الشهر التالي",
+    "allCities": "كل المدن",
+    "searchCity": "ابحث عن مدينة",
+    "noCity": "لا توجد مدينة بهذا الاسم"
   },
   "types": {
     "all": "الكل",
@@ -218,7 +220,7 @@
     "about": "حول هذا المسكن",
     "amenitiesTitle": "ما يقدمه هذا المسكن",
     "thingsToKnow": "أشياء يجب معرفتها",
-    "houseRules": "قواعد البيت",
+    "houseRules": "سياسات الإقامة",
     "checkInAfter": "تسجيل الوصول بعد {time}",
     "checkOutBefore": "تسجيل المغادرة قبل {time}",
     "maxCapacity": "السعة القصوى {count} ضيوف",
@@ -270,8 +272,8 @@
     "afterCheckIn": "بعد تاريخ الدخول: الإلغاء غير متاح"
   },
   "home": {
-    "heroTitle": "منصة مَمسَى العقارية",
-    "heroSubtitle": "تصفح الوحدات المتاحة واحجز بكل سهولة عبر منصة مَمسَى العقارية.",
+    "heroTitle": "منصة ممسي الفندقية",
+    "heroSubtitle": "تصفح الوحدات المتاحة واحجز بكل سهولة عبر منصة مَمسَى الفندقية.",
     "categoriesTitle": "",
     "categoriesSubtitle": "",
     "unitCount": "{count} وحدة",
