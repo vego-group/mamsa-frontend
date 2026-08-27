@@ -7,7 +7,7 @@ import { UnitCard } from '@/components/features/units/UnitCard';
 import { TestimonialCarousel } from '@/components/features/home/TestimonialCarousel';
 import { PicksSection } from '@/components/features/home/PicksSection';
 import { LocationExplorer } from '@/components/features/home/LocationExplorer';
-import { contentApi, type UnitCategory, type BudgetRange } from '@/lib/api/client';
+import { contentApi, type BudgetRange } from '@/lib/api/client';
 import type { Unit } from '@/types';
 
 /** Best-effort fetch — never let a backend hiccup break the homepage render. */
@@ -26,8 +26,6 @@ const CATEGORY_IMAGES: Record<string, string> = {
   villa: 'https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=600&q=80',
 };
 const FALLBACK_IMG = CATEGORY_IMAGES.apartment!;
-
-const CATEGORY_TYPES = ['apartment', 'studio', 'villa'] as const;
 
 const BUDGET_FALLBACK = [
   { min: 2000, max: 3000 },
@@ -48,24 +46,15 @@ const HOW_IT_WORKS_ICONS = [
 
 export default async function HomePage() {
   const t = await getTranslations('home');
-  const tPlural = await getTranslations('typesPlural');
   const tCommon = await getTranslations('common');
 
-  const [popular, testimonials, categories, budgets] = await Promise.all([
+  const [popular, testimonials, budgets] = await Promise.all([
     safe(contentApi.popular(), [] as Unit[]),
     safe(contentApi.testimonials(), []),
-    safe(contentApi.categories(), [] as UnitCategory[]),
     safe(contentApi.budgets(), [] as BudgetRange[]),
   ]);
 
   const featured = popular;
-
-  // Always show the 3 supported types in a fixed order; overlay the real
-  // counts + images from the API (falling back to local art if either is missing).
-  const categoryCards = CATEGORY_TYPES.map((type) => {
-    const match = categories.find((c) => c.key === type);
-    return { type, count: match?.count ?? 0, image: match?.imageUrl || CATEGORY_IMAGES[type]! };
-  });
 
   // Budget cards: labels are built from the numeric range (locale-safe) —
   // never from the backend's pre-rendered Arabic label.
@@ -83,8 +72,12 @@ export default async function HomePage() {
 
   return (
     <div>
-      {/* Hero */}
-      <section className="relative isolate overflow-hidden">
+      {/* Hero — the search bar's date calendar opens past the bottom edge, so no
+          `overflow-hidden` (the backdrop is pinned to `inset-0` and has nothing
+          to spill anyway) and a `z-10` that lifts the whole section over the
+          content below, which `isolate` would otherwise let paint straight
+          over the open calendar. Stays under the z-40 header. */}
+      <section className="relative isolate z-10">
         <div
           className="absolute inset-0 -z-10 bg-cover bg-center"
           style={{
@@ -107,31 +100,8 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Categories */}
-      <section className="container mx-auto space-y-6 px-4 py-16">
-        <SectionHeader
-          title={t('categoriesTitle')}
-          subtitle={t('categoriesSubtitle')}
-          href="/units"
-          cta={tCommon('viewAll')}
-        />
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-          {categoryCards.map((c) => (
-            <Link
-              key={c.type}
-              href={`/units?type=${c.type}`}
-              className="group relative h-44 overflow-hidden rounded-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
-            >
-              <img src={c.image} alt={tPlural(c.type)} className="h-full w-full object-cover transition group-hover:scale-110" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-              <div className="absolute bottom-3 end-3 text-white">
-                <div className="text-lg font-bold">{tPlural(c.type)}</div>
-                {c.count > 0 && <div className="text-xs opacity-90">{t('unitCount', { count: c.count })}</div>}
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
+      {/* Picks for you */}
+      <PicksSection showViewAll limit={8} />
 
       {/* Featured / Most requested */}
       {SHOW_PRELAUNCH_HIDDEN_SECTIONS && (
@@ -198,9 +168,6 @@ export default async function HomePage() {
           }))}
         />
       </section>
-
-      {/* Picks for you */}
-      <PicksSection showViewAll limit={8} />
 
       {/* How it works */}
       <section className="bg-brand-cream/50 py-16">

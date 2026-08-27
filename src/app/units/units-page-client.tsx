@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { LayoutGrid, List, Map as MapIcon, SlidersHorizontal, X } from 'lucide-react';
 import { FilterBar } from '@/components/features/units/FilterBar';
 import { SidebarFilters, type SidebarFiltersValue } from '@/components/features/units/SidebarFilters';
+import { SelectField, type SelectOption } from '@/components/ui/select-field';
 import { UnitCard } from '@/components/features/units/UnitCard';
 import { LocationExplorer } from '@/components/features/home/LocationExplorer';
 import { Skeleton } from '@/components/ui/separator';
@@ -69,6 +70,11 @@ export function UnitsPageClient() {
   });
 
   const city = params.get('city') ?? '';
+
+  const sortOptions = useMemo<SelectOption[]>(
+    () => SORT_KEYS.map((k) => ({ value: k, label: t(`sort.${k}`) })),
+    [t],
+  );
 
   useEffect(() => {
     setLoading(true);
@@ -167,18 +173,16 @@ export function UnitsPageClient() {
               </button>
 
               {/* sort */}
-              <div className="relative">
-                <select
-                  value={sort}
-                  onChange={(e) => setSort(e.target.value as SortKey)}
-                  className="appearance-none rounded-full border border-brand-border bg-white py-2 pe-9 ps-4 text-sm text-brand-ink focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
-                  aria-label={t('sortLabel')}
-                >
-                  {SORT_KEYS.map((k) => (
-                    <option key={k} value={k}>{t(`sort.${k}`)}</option>
-                  ))}
-                </select>
-              </div>
+              <SelectField
+                value={sort}
+                onChange={(v) => setSort(v as SortKey)}
+                options={sortOptions}
+                label={t('sortLabel')}
+                fieldClassName="flex items-center gap-2 rounded-full border border-brand-border bg-white px-4 py-2 transition hover:bg-brand-cream/60"
+                // Anchored to its end edge: this control sits at the far end of
+                // the toolbar, so the list has to open inwards to stay on screen.
+                panelClassName="w-56 start-auto end-0"
+              />
 
               {/* view toggle */}
               <div className="flex items-center rounded-full border border-brand-border bg-white p-1">

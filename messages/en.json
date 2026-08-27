@@ -113,16 +113,18 @@
     "guests": "Guests",
     "checkIn": "Check-in",
     "checkOut": "Check-out",
-    "search": "Search"
-  },
-  "cities": {
-    "riyadh": "Riyadh",
-    "jeddah": "Jeddah",
-    "makkah": "Makkah",
-    "madinah": "Madinah",
-    "dammam": "Dammam",
-    "abha": "Abha",
-    "alula": "AlUla"
+    "search": "Search",
+    "addDates": "Add dates",
+    "pickCheckIn": "Select your check-in date",
+    "pickCheckOut": "Select your check-out date",
+    "nightsCount": "{count} nights",
+    "clearDates": "Clear dates",
+    "done": "Done",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month",
+    "allCities": "All cities",
+    "searchCity": "Search for a city",
+    "noCity": "No city matches that"
   },
   "types": {
     "all": "All",
