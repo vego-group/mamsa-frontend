@@ -81,7 +81,7 @@ export function PicksSection({ initialCategory, limit = 8, showViewAll = false }
               onClick={() => setActive(key)}
               aria-pressed={selected}
               className={cn(
-                'inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm transition',
+                'inline-flex min-h-[44px] items-center gap-2 rounded-full border px-4 py-2 text-sm transition',
                 selected
                   ? 'border-brand-primary bg-brand-primary text-white'
                   : 'border-brand-border bg-white text-brand-ink hover:bg-brand-cream/50',

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Star } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -11,6 +12,13 @@ import { formatNumber } from '@/lib/utils/format';
 
 const TYPES = ['all', 'apartment', 'studio', 'villa'] as const;
 const RATINGS = [5, 4, 3, 2, 1] as const;
+
+/**
+ * Amenities shown before the list asks to be expanded. The other nine — pool,
+ * elevator, private beach among them — were simply unreachable: the panel
+ * sliced the catalogue at six and offered no way to see the rest.
+ */
+const AMENITY_PREVIEW = 6;
 
 export interface SidebarFiltersValue {
   priceRange: [number, number];
@@ -29,6 +37,7 @@ export function SidebarFilters({ value, onChange }: SidebarFiltersProps) {
   const tTypes = useTranslations('types');
   const tAmenities = useTranslations('amenities');
   const update = (patch: Partial<SidebarFiltersValue>) => onChange({ ...value, ...patch });
+  const [allAmenities, setAllAmenities] = useState(false);
 
   const toggleAmenity = (key: string) => {
     const next = value.amenities.includes(key)
@@ -68,7 +77,7 @@ export function SidebarFilters({ value, onChange }: SidebarFiltersProps) {
         <Label className="text-sm font-semibold">{t('rating')}</Label>
         <div className="space-y-1.5">
           {RATINGS.map((r) => (
-            <label key={r} className="flex cursor-pointer items-center gap-2 text-sm">
+            <label key={r} className="flex min-h-[40px] cursor-pointer items-center gap-2 text-sm">
               <input
                 type="radio"
                 name="rating"
@@ -92,7 +101,7 @@ export function SidebarFilters({ value, onChange }: SidebarFiltersProps) {
         <Label className="text-sm font-semibold">{t('unitType')}</Label>
         <div className="space-y-1.5">
           {TYPES.map((ty) => (
-            <label key={ty} className="flex cursor-pointer items-center gap-2 text-sm">
+            <label key={ty} className="flex min-h-[40px] cursor-pointer items-center gap-2 text-sm">
               <input
                 type="radio"
                 name="type"
@@ -110,8 +119,8 @@ export function SidebarFilters({ value, onChange }: SidebarFiltersProps) {
       <section className="space-y-2">
         <Label className="text-sm font-semibold">{t('amenities')}</Label>
         <div className="space-y-2">
-          {AMENITIES_CATALOG.slice(0, 6).map((a) => (
-            <label key={a.key} className="flex cursor-pointer items-center gap-2 text-sm">
+          {(allAmenities ? AMENITIES_CATALOG : AMENITIES_CATALOG.slice(0, AMENITY_PREVIEW)).map((a) => (
+            <label key={a.key} className="flex min-h-[40px] cursor-pointer items-center gap-2 text-sm">
               <Checkbox
                 checked={value.amenities.includes(a.key)}
                 onCheckedChange={() => toggleAmenity(a.key)}
@@ -120,6 +129,17 @@ export function SidebarFilters({ value, onChange }: SidebarFiltersProps) {
             </label>
           ))}
         </div>
+        {AMENITIES_CATALOG.length > AMENITY_PREVIEW && (
+          <button
+            type="button"
+            onClick={() => setAllAmenities((v) => !v)}
+            className="min-h-[40px] text-sm font-medium text-brand-primary underline-offset-4 hover:underline"
+          >
+            {allAmenities
+              ? t('showFewerAmenities')
+              : t('showAllAmenities', { count: AMENITIES_CATALOG.length })}
+          </button>
+        )}
       </section>
     </Card>
   );

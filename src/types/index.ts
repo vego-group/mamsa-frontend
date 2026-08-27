@@ -239,6 +239,10 @@ export interface UnitsFilter {
   minRating?: number;
   amenities?: string[];
   sort?: 'price_asc' | 'price_desc' | 'rating' | 'newest';
+  /** 1-based page number. Omit for the first page. */
+  page?: number;
+  /** Rows per page. The API caps this at 50 and defaults to 12. */
+  perPage?: number;
 }
 
 // ============ Saved Cards (mock) ============

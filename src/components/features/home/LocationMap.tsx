@@ -54,11 +54,18 @@ export default function LocationMap({
   activeId,
   onSelect,
   currencyLabel = 'SAR',
+  dragging = true,
 }: {
   units: MapUnit[];
   activeId: string | null;
   onSelect: (id: string) => void;
   currencyLabel?: string;
+  /**
+   * Off until the guest asks for it on a touch screen. A draggable map in the
+   * middle of a scrolling page swallows the swipe meant for the page, and the
+   * guest gets stuck at it.
+   */
+  dragging?: boolean;
 }) {
   const active = units.find((u) => u.id === activeId);
 
@@ -70,6 +77,7 @@ export default function LocationMap({
       maxBounds={SAUDI_BOUNDS}
       maxBoundsViscosity={1}
       scrollWheelZoom={false}
+      dragging={dragging}
       className="h-full w-full"
     >
       <TileLayer

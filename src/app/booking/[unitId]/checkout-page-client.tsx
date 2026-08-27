@@ -6,9 +6,6 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { PhoneInput } from '@/components/ui/phone-input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { CancellationPolicyDisplay } from '@/components/features/booking/CancellationPolicyDisplay';
 import { PriceBreakdown } from '@/components/features/booking/PriceBreakdown';
@@ -61,13 +58,6 @@ export function CheckoutPageClient() {
   // An earlier unpaid booking of ours that holds these dates — offer to pay or manage it.
   const [pendingConflict, setPendingConflict] = useState<Booking | null>(null);
 
-  // Guest details — prefilled from the signed-in account (still editable, in
-  // case the traveller isn't the account holder).
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-
   useEffect(() => {
     setUnitLoadError(false);
     unitsApi
@@ -84,15 +74,6 @@ export function CheckoutPageClient() {
       .then(setQuote)
       .catch(() => setQuoteError(true));
   }, [params.unitId, checkIn, checkOut, datesValid, attempt]);
-
-  // Populate once the account loads, without clobbering anything the user already typed.
-  useEffect(() => {
-    if (!user) return;
-    setFirstName((v) => v || user.firstName);
-    setLastName((v) => v || user.lastName);
-    setEmail((v) => v || (user.email ?? ''));
-    setPhone((v) => v || (user.phone.startsWith('+966') ? user.phone.slice(4) : user.phone));
-  }, [user]);
 
   if (unitLoadError || quoteError) {
     return (
@@ -141,13 +122,11 @@ export function CheckoutPageClient() {
     vat: quotePricing.vat,
   };
 
-  /** Localized message for the first invalid form field, or null when everything checks out. */
-  const validate = (): string | null => {
-    if (!firstName.trim() || !lastName.trim()) return t('errors.name');
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return t('errors.email');
-    if (!agreed) return t('errors.agree');
-    return null;
-  };
+  /**
+   * Only the agreement is the guest's to get wrong now — name, email and phone
+   * come from the account, and the email is separately gated by verification.
+   */
+  const validate = (): string | null => (agreed ? null : t('errors.agree'));
 
   const handleConfirm = async () => {
     // Booking requires an account — route guests to the login dialog instead
@@ -232,33 +211,22 @@ export function CheckoutPageClient() {
           <Row label={t('guests')} value={t('guestCount', { count: guests })} />
         </Card>
 
-        <Card className="space-y-4 p-5">
+        {/* `POST /bookings` records the signed-in account as the guest and
+            accepts no separate guest details (confirmed by the backend on
+            2026-08-27). These were four editable fields whose contents were
+            validated and then dropped on the floor — a guest could carefully
+            type a friend's name and email and the booking would still be
+            issued to themselves. Shown, not asked. */}
+        <Card className="space-y-3 p-5">
           <h2 className="font-semibold">{t('personalInfo')}</h2>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label>{t('firstName')}</Label>
-              <Input placeholder={t('firstNamePlaceholder')} value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>{t('lastName')}</Label>
-              <Input placeholder={t('lastNamePlaceholder')} value={lastName} onChange={(e) => setLastName(e.target.value)} />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label>{t('email')}</Label>
-            <Input
-              type="email"
-              placeholder="example@email.com"
-              dir="ltr"
-              className="text-start"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>{t('phone')}</Label>
-            <PhoneInput placeholder="5XXXXXXXX" dir="ltr" className="text-start" value={phone} onChange={(e) => setPhone(e.target.value)} />
-          </div>
+          <Row label={t('firstName')} value={user?.firstName ?? '—'} />
+          <Row label={t('lastName')} value={user?.lastName ?? '—'} />
+          <Row label={t('email')} value={user?.email ?? '—'} />
+          <Row label={t('phone')} value={user?.phone ?? '—'} />
+          <p className="text-xs leading-relaxed text-brand-muted">{t('bookedForAccount')}</p>
+          <Link href="/account" className="text-xs font-medium text-brand-primary hover:underline">
+            {t('editInAccount')}
+          </Link>
         </Card>
 
         <Card className="space-y-3 p-5">

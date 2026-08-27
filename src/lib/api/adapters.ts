@@ -215,15 +215,31 @@ const FEATURE_KEYS: Record<string, string> = {
   تلفزيون: 'tv',
 };
 
-/** Backend cancellation policy keys → the 3 frontend templates. */
+/**
+ * Backend cancellation policy keys → the 3 frontend templates.
+ *
+ * As of 2026-08-27 the API's vocabulary is exactly `flexible | moderate |
+ * strict` — `cancellation_policy` now carries the *effective* preset (always
+ * equal to `cancellation_policy_details.template`), is never null, and is never
+ * outside those three. The rest of this table is tolerance for stale payloads,
+ * not a live contract.
+ *
+ * `no_cancel` is the one that matters: it was a dead pre-tier enum value the
+ * refund engine never read, and it used to fall through to the default —
+ * quoting a guest *moderate* refund tiers on a booking that would refund
+ * nothing. Anything unrecognised must therefore land on the LEAST generous
+ * template, never the middle one: promising a refund we won't pay is the only
+ * failure here that costs money.
+ */
 const TEMPLATE_MAP: Record<string, CancellationTemplate> = {
   flexible: 'flexible',
   '24_hours': 'flexible',
-  '48_hours': 'moderate',
   moderate: 'moderate',
-  '7_days': 'strict',
+  '48_hours': 'moderate',
   strict: 'strict',
+  '7_days': 'strict',
   non_refundable: 'strict',
+  no_cancel: 'strict',
 };
 
 /**
@@ -250,7 +266,7 @@ const BOOKING_STATUS_MAP: Record<string, BookingStatus> = {
 };
 
 function mapTemplate(policy?: string): CancellationTemplate {
-  return TEMPLATE_MAP[policy ?? ''] ?? 'moderate';
+  return TEMPLATE_MAP[policy ?? ''] ?? 'strict';
 }
 
 /**
