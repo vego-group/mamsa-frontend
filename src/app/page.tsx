@@ -165,6 +165,7 @@ export default async function HomePage() {
             district: u.district,
             image: u.images[0]?.card ?? '',
             rating: u.rating,
+            reviewCount: u.reviewCount,
           }))}
         />
       </section>

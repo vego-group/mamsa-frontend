@@ -93,7 +93,10 @@ export function Header() {
 
         {/* Actions (inline end) */}
         <div className="flex items-center gap-2">
-          <Button asChild variant="default" size="default" className="hidden sm:inline-flex">
+          {/* Shown at every width. Below `sm` it was hidden entirely, so a
+              property owner on a phone — the visitor this button exists for —
+              had no way in short of opening the drawer. */}
+          <Button asChild variant="default" className="h-9 shrink-0 px-3 text-xs sm:h-11 sm:px-5 sm:text-sm">
             <Link href="/host">{t('listProperty')}</Link>
           </Button>
 
@@ -157,7 +160,7 @@ export function Header() {
           {/* Mobile: hamburger */}
           <button
             onClick={() => setMobileOpen(true)}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-brand-border bg-white text-brand-ink transition hover:bg-brand-cream/60 md:hidden"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-brand-border bg-white text-brand-ink transition hover:bg-brand-cream/60 md:hidden"
             aria-label={t('menu')}
           >
             <Menu className="h-5 w-5" />
@@ -239,7 +242,7 @@ function Logo() {
       width={668}
       height={375}
       priority
-      className="h-12 w-auto md:h-14"
+      className="h-10 w-auto sm:h-12 md:h-14"
     />
   );
 }
