@@ -7,8 +7,8 @@ export interface PickCategory {
 }
 
 export const PICK_CATEGORIES: readonly PickCategory[] = [
-  { key: 'villa', Icon: Tent },
   { key: 'studio', Icon: Home },
+  { key: 'villa', Icon: Tent },
   { key: 'apartment', Icon: Building2 },
 ];
 

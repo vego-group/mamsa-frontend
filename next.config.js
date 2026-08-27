@@ -3,6 +3,12 @@ const createNextIntlPlugin = require('next-intl/plugin');
 // Cookie-based i18n (see src/i18n/request.ts) — no locale URL prefixes.
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
+/**
+ * Dev-only path that proxies to the Laravel API through the Next server.
+ * Kept in sync with `DEV_PROXY_PATH` in src/lib/api/client.ts.
+ */
+const DEV_PROXY_PATH = '/api/backend';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -15,6 +21,25 @@ const nextConfig = {
   // Apple Pay domain verification: Apple's crawler fetches this file and
   // rejects redirects or wrong content types. Any future middleware/rewrite
   // must keep /.well-known/* untouched.
+  // Local development only. The API's CORS allowlist holds just the production
+  // origins, so every browser call from localhost — any port — is blocked before
+  // it is sent and surfaces as an opaque `TypeError: Failed to fetch` (raised
+  // with the backend on 2026-08-17, see docs/backend/mamsa-cors-localhost-task.md,
+  // still open). Routing those calls through the Next server makes them
+  // same-origin, so CORS never enters the picture. Deployed builds are untouched:
+  // this rewrite is not emitted for them, and the browser talks to the API direct.
+  async rewrites() {
+    if (process.env.NODE_ENV !== 'development') return [];
+    const api = process.env.NEXT_PUBLIC_API_BASE_URL;
+    if (!api) return [];
+    return [
+      {
+        source: `${DEV_PROXY_PATH}/:path*`,
+        destination: `${api.replace(/\/$/, '')}/:path*`,
+      },
+    ];
+  },
+
   async headers() {
     return [
       {

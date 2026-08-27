@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useFavoritesStore } from '@/stores/favorites';
+import { useStayQuery } from '@/stores/search';
 import { formatSAR } from '@/lib/utils/format';
 import { cn } from '@/lib/utils/cn';
 
@@ -22,6 +23,10 @@ export function UnitCard({ unit, variant = 'list' }: UnitCardProps) {
   const tAmenities = useTranslations('amenities');
   const { has, toggle } = useFavoritesStore();
   const isFav = has(unit.id);
+  // Hand the listing the dates the guest already picked, so its booking widget
+  // opens on their stay instead of an empty calendar.
+  const stay = useStayQuery();
+  const href = `/units/${unit.id}${stay}`;
 
   /** Amenity labels come from the backend in Arabic — translate known keys, pass through the rest. */
   const amenityLabel = (a: Unit['amenities'][number]) =>
@@ -50,7 +55,7 @@ export function UnitCard({ unit, variant = 'list' }: UnitCardProps) {
           )}
         </div>
         <div className="space-y-2 p-4">
-          <Link href={`/units/${unit.id}`} className="block">
+          <Link href={href} className="block">
             <h3 className="line-clamp-1 font-semibold text-brand-ink group-hover:text-brand-primary">{unit.title}</h3>
           </Link>
           <div className="flex flex-wrap gap-2 text-xs text-brand-muted">
@@ -128,7 +133,7 @@ export function UnitCard({ unit, variant = 'list' }: UnitCardProps) {
 
           <div className="flex items-end justify-between">
             <Button asChild variant="default" size="sm">
-              <Link href={`/units/${unit.id}`}>{t('viewDetails')}</Link>
+              <Link href={href}>{t('viewDetails')}</Link>
             </Button>
             <div className="text-end">
               <div>
