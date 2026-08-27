@@ -214,3 +214,69 @@ describe('Search bar — the city list covers the whole Kingdom', () => {
     expect(submitted(container).has('city')).toBe(false);
   });
 });
+
+describe('Search bar on a phone', () => {
+  /**
+   * The one-line trigger that stands in for the whole form below `md`. Matched
+   * on the class text rather than a selector: happy-dom's parser does not take
+   * the escaped colon in `md\:hidden`.
+   */
+  function summary(container: HTMLElement): HTMLButtonElement {
+    return Array.from(container.querySelectorAll('button')).find((b) =>
+      b.className.includes('md:hidden'),
+    )!;
+  }
+
+  /** The full-screen form, portaled onto <body>. */
+  function sheet(): HTMLElement | null {
+    return (
+      Array.from(document.body.querySelectorAll<HTMLElement>('div')).find((d) =>
+        d.className.includes('z-[60]'),
+      ) ?? null
+    );
+  }
+
+  it('collapses to a summary line instead of five stacked rows', () => {
+    const { container } = renderBar();
+    const line = summary(container);
+    expect(line).toBeTruthy();
+    // Nothing picked yet, so it invites dates and states the default party.
+    expect(line.textContent).toContain(arMessages.filter.addDates);
+    expect(line.textContent).toContain(arMessages.filter.allCities);
+  });
+
+  it('reads back the stay once one is picked', () => {
+    const { container } = renderBar();
+    fireEvent.click(dateFields(container)[0]!);
+    fireEvent.click(day(container, 5));
+    fireEvent.click(day(container, 8));
+    expect(summary(container).textContent).not.toContain(arMessages.filter.addDates);
+    expect(summary(container).textContent).toContain(
+      format(inDays(5), 'd MMM', { locale: ar }),
+    );
+  });
+
+  it('opens the full form as a sheet, and closes it again', () => {
+    const { container } = renderBar();
+    expect(sheet()).toBeNull();
+    fireEvent.click(summary(container));
+    expect(sheet()).toBeTruthy();
+
+    const close = sheet()!.querySelector<HTMLButtonElement>(
+      `button[aria-label="${arMessages.filter.close}"]`,
+    )!;
+    fireEvent.click(close);
+    expect(sheet()).toBeNull();
+  });
+
+  it('closes the sheet when the search is submitted', () => {
+    const { container } = renderBar();
+    fireEvent.click(summary(container));
+    const submit = Array.from(sheet()!.querySelectorAll('button')).find(
+      (b) => b.textContent?.trim() === arMessages.filter.search,
+    )!;
+    fireEvent.click(submit);
+    expect(sheet()).toBeNull();
+    expect(push).toHaveBeenCalled();
+  });
+});

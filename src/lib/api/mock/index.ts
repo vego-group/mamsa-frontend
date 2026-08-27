@@ -14,6 +14,7 @@ import { ApiError, ERROR_CODE_MESSAGES } from '../errors';
 import { isValidEmail } from '@/lib/utils/email';
 import type {
   Booking,
+  BookingStatus,
   Review,
   Unit,
   User,
@@ -45,6 +46,50 @@ let bookings: Booking[] = [...MOCK_BOOKINGS];
  * and the flow died with "الحجز غير موجود" right after checkout.
  */
 const findBooking = (id: string): Booking | undefined => bookings.find((b) => b.id === id);
+
+/**
+ * Statuses that still hold a unit's dates. `pending_payment` counts: an unpaid
+ * booking is holding the calendar until it expires, and letting a second guest
+ * through would create exactly the clash checkout exists to prevent.
+ */
+const HOLDING_STATUSES: BookingStatus[] = ['pending_payment', 'confirmed'];
+
+
+/**
+ * Does any live booking overlap [start, end)? Half-open on purpose — a
+ * departure on the day of another guest's arrival is a handover, not a clash.
+ */
+function isUnitBooked(unitId: string, start: string, end: string): boolean {
+  return bookings.some(
+    (b) =>
+      b.unitId === unitId &&
+      HOLDING_STATUSES.includes(b.status) &&
+      b.checkInDate.slice(0, 10) < end &&
+      b.checkOutDate.slice(0, 10) > start,
+  );
+}
+
+/** YYYY-MM-DD shifted by N days — local calendar math, no UTC/timezone drift. */
+function shiftISO(iso: string, days: number): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  const dt = new Date(y!, m! - 1, d! + days);
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+}
+
+/** Collapses touching/overlapping spans, mirroring the real `/blocked-dates` feed. */
+function mergeDateRanges(ranges: { start: string; end: string }[]): { start: string; end: string }[] {
+  const sorted = [...ranges].sort((a, b) => a.start.localeCompare(b.start));
+  const merged: { start: string; end: string }[] = [];
+  for (const r of sorted) {
+    const last = merged[merged.length - 1];
+    if (last && r.start <= shiftISO(last.end, 1)) {
+      if (r.end > last.end) last.end = r.end;
+    } else {
+      merged.push({ ...r });
+    }
+  }
+  return merged;
+}
 let reviews: Review[] = [...MOCK_REVIEWS];
 let currentUser: User | null = null; // null until login
 
@@ -149,6 +194,10 @@ export const mockApi = {
           filter.amenities!.every((a) => u.amenities.some((am) => am.key === a)),
         );
       }
+      // Searching with a stay means searching for units free over it.
+      if (filter.startDate && filter.endDate) {
+        result = result.filter((u) => !isUnitBooked(u.id, filter.startDate!, filter.endDate!));
+      }
 
       switch (filter.sort) {
         case 'price_asc':
@@ -167,6 +216,20 @@ export const mockApi = {
       return ok(result);
     },
 
+    /** Mirrors the API's paginator so the results page behaves the same offline. */
+    listPage: async (filter: UnitsFilter = {}) => {
+      const all = await mockApi.units.list(filter);
+      const perPage = Math.min(Math.max(filter.perPage ?? 12, 1), 50);
+      const lastPage = Math.max(1, Math.ceil(all.length / perPage));
+      const page = Math.min(Math.max(filter.page ?? 1, 1), lastPage);
+      return ok({
+        units: all.slice((page - 1) * perPage, page * perPage),
+        page,
+        lastPage,
+        total: all.length,
+      });
+    },
+
     getById: async (id: string) => {
       const u = findUnitById(id);
       if (!u) return fail('الوحدة غير موجودة');
@@ -181,7 +244,27 @@ export const mockApi = {
       const unit = findUnitById(unitId);
       if (!unit) return fail('الوحدة غير موجودة');
       const nights = diffNights(startDate, endDate);
+      if (isUnitBooked(unitId, startDate, endDate)) return ok({ available: false, pricing: null });
       return ok({ available: true, pricing: computeMockPricing(unit, nights) });
+    },
+
+    /**
+     * Nights already spoken for, as merged inclusive-night spans — mirrors
+     * `GET /units/{id}/blocked-dates`. The checkout date itself is never
+     * included: it's the departing guest's last morning, free for the next
+     * guest's arrival the same day.
+     */
+    getBlockedDates: async (unitId: string, from?: string, to?: string) => {
+      const ranges = bookings
+        .filter((b) => b.unitId === unitId && HOLDING_STATUSES.includes(b.status))
+        .map((b) => ({
+          start: b.checkInDate.slice(0, 10),
+          end: shiftISO(b.checkOutDate.slice(0, 10), -1),
+        }));
+      const merged = mergeDateRanges(ranges).filter(
+        (r) => (!from || r.end >= from) && (!to || r.start <= to),
+      );
+      return ok(merged);
     },
   },
 
@@ -238,6 +321,11 @@ export const mockApi = {
       if (!currentUser?.emailVerified) return failCode(422, 'EMAIL_VERIFICATION_REQUIRED');
       const unit = findUnitById(input.unitId);
       if (!unit) return fail('الوحدة غير موجودة') as Promise<Booking>;
+      // Re-check at creation time, same as the real backend — a prior
+      // `checkAvailability` call is a snapshot, never a hold on the dates.
+      if (isUnitBooked(input.unitId, input.checkInDate, input.checkOutDate)) {
+        return fail('الوحدة محجوزة في هذه الفترة') as Promise<Booking>;
+      }
       const nights = diffNights(input.checkInDate, input.checkOutDate);
       const quote = computeMockPricing(unit, nights);
 

@@ -17,8 +17,19 @@ interface SelectFieldProps {
   value: string;
   onChange: (value: string) => void;
   options: SelectOption[];
-  /** Muted caption in front of the value, e.g. "المدينة". */
-  label: string;
+  /**
+   * Muted caption in front of the value, e.g. "المدينة". Omit it in a form that
+   * already prints its own caption above the field — pair `id` with that
+   * `<label htmlFor>` there, so the trigger keeps an accessible name.
+   */
+  label?: string;
+  /** Ties the trigger to an outside `<label htmlFor>`. */
+  id?: string;
+  /**
+   * The caption's own classes. A crowded toolbar hides it below `md` and keeps
+   * the value, which is the half that says what the control is set to.
+   */
+  labelClassName?: string;
   /** Stands in for the value when nothing is chosen. */
   placeholder?: string;
   /** Present ⇒ the list gets a filter box. Worth it past ~15 options. */
@@ -53,6 +64,8 @@ export function SelectField({
   onChange,
   options,
   label,
+  id,
+  labelClassName,
   placeholder,
   searchPlaceholder,
   emptyLabel,
@@ -156,6 +169,7 @@ export function SelectField({
     <div ref={rootRef} className={cn('relative', className)} onKeyDown={onKeyDown}>
       <button
         type="button"
+        id={id}
         role="combobox"
         aria-haspopup="listbox"
         aria-expanded={open}
@@ -165,7 +179,9 @@ export function SelectField({
       >
         {stacked ? (
           <span className="flex min-w-0 flex-1 flex-col">
-            <span className="text-[11px] font-semibold leading-tight text-brand-ink">{label}</span>
+            {label && (
+              <span className="text-[11px] font-semibold leading-tight text-brand-ink">{label}</span>
+            )}
             <span
               className={cn(
                 'truncate text-sm leading-snug',
@@ -177,7 +193,9 @@ export function SelectField({
           </span>
         ) : (
           <>
-            <span className="shrink-0 text-sm text-brand-muted">{label}</span>
+            {label && (
+              <span className={cn('shrink-0 text-sm text-brand-muted', labelClassName)}>{label}</span>
+            )}
             <span
               className={cn(
                 'min-w-0 flex-1 truncate text-sm',

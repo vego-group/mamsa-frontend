@@ -124,7 +124,10 @@
     "nextMonth": "الشهر التالي",
     "allCities": "كل المدن",
     "searchCity": "ابحث عن مدينة",
-    "noCity": "لا توجد مدينة بهذا الاسم"
+    "noCity": "لا توجد مدينة بهذا الاسم",
+    "searchTitle": "ابحث عن إقامتك",
+    "close": "إغلاق",
+    "guestsCount": "{count} ضيوف"
   },
   "types": {
     "all": "الكل",
@@ -163,7 +166,8 @@
     "bedrooms": "{count} غرف نوم",
     "bathrooms": "{count} حمامات",
     "perNight": "ر.س / ليلة",
-    "viewDetails": "عرض التفاصيل"
+    "viewDetails": "عرض التفاصيل",
+    "newListing": "جديد"
   },
   "unitsPage": {
     "stays": "إقامات",
@@ -198,11 +202,17 @@
       "rating": "التقييم",
       "andUp": "فأكثر",
       "unitType": "نوع الوحدة",
-      "amenities": "المرافق"
-    }
+      "amenities": "المرافق",
+      "showAllAmenities": "عرض كل المرافق ({count})",
+      "showFewerAmenities": "عرض أقل"
+    },
+    "forStay": "متاحة لإقامتك من {start} إلى {end}",
+    "pickDatesHint": "اختر تواريخ إقامتك لعرض الوحدات المتاحة فعلاً",
+    "showMore": "عرض المزيد ({count} إقامة أخرى)"
   },
   "unit": {
     "pickDates": "اختر تاريخ الوصول والمغادرة",
+    "datesUnavailable": "الوحدة غير متاحة لهذه التواريخ، يرجى اختيار تواريخ أخرى",
     "featured": "مميز",
     "reviewCount": "{count} تقييمًا",
     "share": "مشاركة",
@@ -232,24 +242,28 @@
     },
     "basedOn": "بناءً على {count} تقييمًا من النزلاء",
     "noReviews": "لا توجد تقييمات بعد.",
-    "checkInLabel": "تسجيل الوصول",
-    "checkOutLabel": "تسجيل المغادرة",
     "guestsLabel": "الضيوف",
     "guestOption": "{count} ضيف",
     "nightsLine": "{price} × {nights} ليالي",
     "bookNow": "احجز الآن",
-    "noChargeYet": "لن يتم خصم أي مبلغ في هذه المرحلة"
+    "noChargeYet": "لن يتم خصم أي مبلغ في هذه المرحلة",
+    "newListingTitle": "وحدة جديدة على مَمسَى",
+    "newListingBody": "لم يصل أي تقييم بعد — كن أول نزيل يشارك تجربته.",
+    "nightsCount": "{count} ليالٍ · شامل الضريبة",
+    "pickDatesShort": "اختر التواريخ"
   },
   "gallery": {
     "showAll": "عرض كل الصور ({count})",
     "close": "إغلاق",
     "prev": "السابق",
-    "next": "التالي"
+    "next": "التالي",
+    "photoOf": "صورة {index} من {count}"
   },
   "map": {
     "empty": "لا توجد عقارات بمواقع متاحة حاليًا.",
     "sar": "ر.س",
-    "perNight": "/ ليلة"
+    "perNight": "/ ليلة",
+    "tapToMove": "اضغط لتحريك الخريطة"
   },
   "picks": {
     "title": "مختارات لك",
@@ -523,7 +537,9 @@
       "invalidDates": "تواريخ الحجز غير صالحة — اختر التواريخ من جديد.",
       "unitUnavailable": "الوحدة غير متاحة لهذه التواريخ، يرجى اختيار تواريخ أخرى.",
       "genericFailed": "فشل إتمام العملية"
-    }
+    },
+    "bookedForAccount": "الحجز يُسجَّل باسم صاحب الحساب، وتأكيد الحجز يوصل على بريده.",
+    "editInAccount": "تعديل بياناتي"
   },
   "payment": {
     "title": "إتمام الدفع",
