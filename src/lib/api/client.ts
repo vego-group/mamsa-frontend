@@ -46,7 +46,26 @@ import type { RefundPreview } from '@/lib/cancellation/engine';
 import { VAT_RATE, INVOICE_SELLER } from '@/lib/constants/brand';
 
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK !== 'false';
-const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
+const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
+
+/** Dev-only proxy path — kept in sync with `DEV_PROXY_PATH` in next.config.js. */
+const DEV_PROXY_PATH = '/api/backend';
+
+/**
+ * In local development the browser cannot reach the API directly: its CORS
+ * allowlist holds only the production origins, so every client-side call is
+ * blocked on any localhost port and surfaces as an opaque `TypeError: Failed to
+ * fetch` (see docs/backend/mamsa-cors-localhost-task.md). Browser traffic
+ * therefore goes through the Next dev server, which proxies it — same origin,
+ * no preflight. Server-side calls keep the absolute URL: they are not subject
+ * to CORS, and a relative path has nothing to resolve against there.
+ *
+ * Deployed builds are unaffected — both branches collapse to the API URL.
+ */
+const BASE_URL =
+  process.env.NODE_ENV === 'development' && typeof window !== 'undefined' && API_URL
+    ? DEV_PROXY_PATH
+    : API_URL;
 
 // ============ Simulated latency for realistic mock UX ============
 const MOCK_LATENCY_MS = 300;

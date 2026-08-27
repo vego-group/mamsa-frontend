@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { MapPin, MapPinOff, Star } from 'lucide-react';
+import { useStayQuery } from '@/stores/search';
 import type { MapUnit } from './LocationMap';
 
 export interface LocationUnit extends MapUnit {
@@ -28,6 +29,8 @@ export function LocationExplorer({ units }: { units: LocationUnit[] }) {
   const t = useTranslations('map');
   const tPricing = useTranslations('pricing');
   const [activeId, setActiveId] = useState<string | null>(units[0]?.id ?? null);
+  // Same stay carry-over as the unit cards — the map is just another way in.
+  const stay = useStayQuery();
   const mapUnits = useMemo<MapUnit[]>(
     () => units.map(({ id, title, price, lat, lng }) => ({ id, title, price, lat, lng })),
     [units],
@@ -51,7 +54,7 @@ export function LocationExplorer({ units }: { units: LocationUnit[] }) {
           return (
             <Link
               key={u.id}
-              href={`/units/${u.id}`}
+              href={`/units/${u.id}${stay}`}
               onMouseEnter={() => setActiveId(u.id)}
               onFocus={() => setActiveId(u.id)}
               className={`flex gap-3 rounded-xl border bg-white p-2 transition ${
