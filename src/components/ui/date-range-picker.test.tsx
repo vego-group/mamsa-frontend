@@ -42,6 +42,17 @@ function renderPicker(start = '', end = '', blocked?: ReadonlySet<string>) {
   );
 }
 
+/**
+ * Opens the panel on the DEPARTURE field. `onChange` is a bare spy, so a picked
+ * arrival never comes back in as the `start` prop — tests that need a stay in
+ * progress pass `start` to `renderPicker` and open here, rather than clicking
+ * arrival first and waiting for an update the harness cannot produce.
+ */
+function openOnDeparture(container: HTMLElement) {
+  const fields = container.querySelectorAll<HTMLButtonElement>('button[aria-haspopup="dialog"]');
+  fireEvent.click(fields[1]!);
+}
+
 function openCalendar(container: HTMLElement) {
   fireEvent.click(container.querySelector<HTMLButtonElement>('button[aria-haspopup="dialog"]')!);
 }
@@ -148,15 +159,6 @@ describe('blocked dates — nights another guest already holds', () => {
     expect(day(6).disabled).toBe(false);
   });
 
-  // `onChange` is a bare spy here — it never feeds a picked arrival back in
-  // as the `start` prop, so these two open straight on the departure field
-  // with `start` already set, rather than clicking arrival first and relying
-  // on a prop update the harness can't produce.
-  function openOnDeparture(container: HTMLElement) {
-    const fields = container.querySelectorAll<HTMLButtonElement>('button[aria-haspopup="dialog"]');
-    fireEvent.click(fields[1]!);
-  }
-
   it('commits a range that lands entirely clear of the blocked night', () => {
     const { container } = renderPicker(iso(2), '', new Set([iso(5)]));
     openOnDeparture(container);
@@ -169,5 +171,60 @@ describe('blocked dates — nights another guest already holds', () => {
     openOnDeparture(container);
     fireEvent.click(day(7)); // would occupy the blocked night of day 5
     expect(onChange).toHaveBeenCalledWith({ start: iso(7), end: '' });
+  });
+});
+
+/**
+ * The backend's staging fixture, ported: unit 2 carries a confirmed booking of
+ * 2026-10-05 → 10-10, which `blocked-dates` reports as nights 5…9 inclusive.
+ * Both changeover directions are legal server-side, so the calendar has to
+ * offer both — it used to refuse one of them.
+ */
+describe('changeover days — the calendar must agree with the booking endpoint', () => {
+  beforeEach(() => viewport(false));
+
+  /** Nights 5..9 blocked, expressed relative to today so the days stay pickable. */
+  function blockedRun(): Set<string> {
+    return new Set([iso(5), iso(6), iso(7), iso(8), iso(9)]);
+  }
+
+  it('takes a check-out ON the first blocked night — the other guest arrives that day', () => {
+    const { container } = renderPicker(iso(1), '', blockedRun());
+    openOnDeparture(container);
+    // Nights 1..4 are occupied; night 5 belongs to the arriving guest. This was
+    // disabled outright, refusing a stay the API accepts.
+    expect(day(5).disabled).toBe(false);
+    fireEvent.click(day(5));
+    expect(onChange).toHaveBeenLastCalledWith({ start: iso(1), end: iso(5) });
+  });
+
+  it('takes a check-in on the day the blocked run ends', () => {
+    const { container } = renderPicker('', '', blockedRun());
+    openCalendar(container);
+    expect(day(10).disabled).toBe(false);
+    fireEvent.click(day(10));
+    expect(onChange).toHaveBeenLastCalledWith({ start: iso(10), end: '' });
+  });
+
+  it('still refuses a blocked night as an arrival', () => {
+    const { container } = renderPicker('', '', blockedRun());
+    openCalendar(container);
+    expect(day(6).disabled).toBe(true);
+    fireEvent.click(day(6));
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('still refuses a departure that would span the blocked run', () => {
+    const { container } = renderPicker(iso(1), '', blockedRun());
+    openOnDeparture(container);
+    // Day 7 would need nights 5 and 6, which another guest holds.
+    expect(day(7).disabled).toBe(true);
+  });
+
+  it('lets a day past the blocked run start a fresh range instead', () => {
+    const { container } = renderPicker(iso(1), '', blockedRun());
+    openOnDeparture(container);
+    fireEvent.click(day(12));
+    expect(onChange).toHaveBeenLastCalledWith({ start: iso(12), end: '' });
   });
 });

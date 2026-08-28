@@ -347,7 +347,18 @@ export function DateRangePicker({
               {monthCells(addMonths(month, offset)).map((day, i) => {
                 if (!day) return <span key={i} className="h-10" />;
                 const iso = toISO(day);
-                const disabled = iso < min || blockedDates.has(iso);
+                // A departure does not occupy the night it falls on, so the
+                // first blocked night is a legal check-out — the changeover
+                // day belongs to the arriving guest. Disabling it outright
+                // refused a stay the API accepts (booking 10→12 blocks nights
+                // 10-11, yet `01 → 10` is bookable). Any other day is being
+                // read as an arrival, which does occupy its night.
+                const validDeparture =
+                  focus === 'end' &&
+                  Boolean(start) &&
+                  iso > start &&
+                  !firstBlockedBetween(start, iso, blockedDates);
+                const disabled = iso < min || (!validDeparture && blockedDates.has(iso));
                 const spanned = Boolean(rangeEnd) && rangeEnd !== start;
                 const isStart = Boolean(start) && iso === start;
                 const isEnd = spanned && iso === rangeEnd;

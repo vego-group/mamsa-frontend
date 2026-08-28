@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mockApi } from './index';
 
 const UNIT_ID = 'U-001';
@@ -105,5 +105,37 @@ describe('cancellation template mapping fails towards the least generous policy'
     for (const key of ['no_cancel', 'something_new', '']) {
       expect(mapUnit({ id: 1, cancellation_policy: key } as never).cancellationPolicy).toBe('strict');
     }
+  });
+});
+
+describe('fetching units by id — the favourites path', () => {
+  it('returns exactly the units named, in the catalogue’s order', async () => {
+    const picked = await mockApi.units.list({ ids: ['U-003', 'U-001'] });
+    expect(picked.map((u) => u.id)).toEqual(['U-001', 'U-003']);
+  });
+
+  it('answers nothing for an id the catalogue does not publish', async () => {
+    expect(await mockApi.units.list({ ids: ['U-DOES-NOT-EXIST'] })).toEqual([]);
+  });
+
+  it('batches past the API’s ceiling of 50 rather than truncating', async () => {
+    const { unitsApi } = await import('@/lib/api/client');
+    // 120 ids is three calls; the real endpoint answers 422 to 51 in one.
+    const ids = Array.from({ length: 120 }, (_, i) => `U-${String(i).padStart(3, '0')}`);
+    const spy = vi.spyOn(unitsApi, 'list').mockResolvedValue([]);
+    await unitsApi.byIds(ids);
+    expect(spy).toHaveBeenCalledTimes(3);
+    for (const [filter] of spy.mock.calls) {
+      expect(filter!.ids!.length).toBeLessThanOrEqual(50);
+    }
+    spy.mockRestore();
+  });
+
+  it('asks for nothing when there are no favourites', async () => {
+    const { unitsApi } = await import('@/lib/api/client');
+    const spy = vi.spyOn(unitsApi, 'list');
+    expect(await unitsApi.byIds([])).toEqual([]);
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
   });
 });
