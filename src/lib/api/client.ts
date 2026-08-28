@@ -462,6 +462,12 @@ function mapQuotePricing(raw: unknown): QuotePricing | null {
   };
 }
 
+/** A row of `GET /units/sitemap` — nothing but what a sitemap needs. */
+export interface SitemapUnit {
+  id: number;
+  updated_at: string;
+}
+
 /** One page of search results, plus where that page sits in the whole set. */
 export interface UnitsPage {
   units: Unit[];
@@ -494,7 +500,7 @@ export const unitsApi = {
     if (USE_MOCK) return withLatency(mockApi.units.listPage(filter));
     const sink: MetaSink = {};
     const rows = await http<RawUnit[]>(
-      `/units${unitFilterToQuery(filter)}${filterFeatures(filter)}`,
+      `/units${unitFilterToQuery(filter)}${filterFeatures(filter)}${filterIds(filter)}`,
       {},
       false,
       sink,
@@ -512,17 +518,51 @@ export const unitsApi = {
   list: (filter: UnitsFilter = {}) =>
     USE_MOCK
       ? withLatency(mockApi.units.list(filter))
-      : http<RawUnit[]>(`/units${unitFilterToQuery(filter)}${filterFeatures(filter)}`).then((rows) =>
+      : http<RawUnit[]>(
+          `/units${unitFilterToQuery(filter)}${filterFeatures(filter)}${filterIds(filter)}`,
+        ).then((rows) =>
           rows.map(mapUnit),
         ),
 
   getById: (id: string) =>
     USE_MOCK ? withLatency(mockApi.units.getById(id)) : http<RawUnit>(`/units/${id}`).then(mapUnit),
 
+  /**
+   * The named units, in the API's own order. Batched at the endpoint's ceiling
+   * of 50 — asking for more is a 422, not a truncation.
+   *
+   * Replaces "fetch a page and filter it here", which silently lost every
+   * favourite that happened to fall outside page one. Units the backend no
+   * longer publishes stay hidden even when named, so a favourite whose listing
+   * was later rejected does not reappear.
+   */
+  byIds: async (ids: string[]): Promise<Unit[]> => {
+    if (ids.length === 0) return [];
+    const batches: string[][] = [];
+    for (let i = 0; i < ids.length; i += MAX_IDS_PER_CALL) {
+      batches.push(ids.slice(i, i + MAX_IDS_PER_CALL));
+    }
+    const pages = await Promise.all(
+      // `perPage` matches the batch so every id asked for comes back in one page.
+      batches.map((batch) => unitsApi.list({ ids: batch, perPage: MAX_IDS_PER_CALL })),
+    );
+    return pages.flat();
+  },
+
   getFeatured: () =>
     USE_MOCK
       ? withLatency(mockApi.units.getFeatured())
       : http<RawUnit[]>('/units/popular').then((rows) => rows.map(mapUnit)),
+
+  /**
+   * Every indexable unit, id and last-modified only. Unpaginated on purpose:
+   * a sitemap needs one complete pass, and paging it would let the last page
+   * decide whether a unit gets indexed at all.
+   */
+  sitemap: (): Promise<SitemapUnit[]> =>
+    USE_MOCK
+      ? withLatency(mockApi.units.sitemap())
+      : http<SitemapUnit[]>('/units/sitemap'),
 
   getReviews: (id: string) =>
     USE_MOCK
@@ -564,6 +604,15 @@ function filterFeatures(f: UnitsFilter): string {
   if (!f.amenities || f.amenities.length === 0) return '';
   return f.amenities.map((a) => `&features[]=${encodeURIComponent(a)}`).join('');
 }
+
+/** ids[] is repeatable too. */
+function filterIds(f: UnitsFilter): string {
+  if (!f.ids || f.ids.length === 0) return '';
+  return f.ids.map((id) => `&ids[]=${encodeURIComponent(id)}`).join('');
+}
+
+/** The API's ceiling on both `per_page` and the length of `ids[]`. */
+const MAX_IDS_PER_CALL = 50;
 
 // ============ Homepage content ============
 
@@ -963,9 +1012,19 @@ export const reviewsApi = {
           }),
         }).then(mapReview),
 
-  getForBooking: (bookingId: string) =>
-    // No dedicated endpoint; booking detail embeds its review when present.
-    USE_MOCK ? withLatency(mockApi.reviews.getForBooking(bookingId)) : Promise.resolve<Review | null>(null),
+  /**
+   * The review this guest left on this booking, or null when they haven't.
+   *
+   * Not having reviewed yet answers `null` at 200 rather than a 404 — it is an
+   * ordinary state, not a missing resource — so an empty body is a result here,
+   * never an error.
+   */
+  getForBooking: (bookingId: string): Promise<Review | null> =>
+    USE_MOCK
+      ? withLatency(mockApi.reviews.getForBooking(bookingId))
+      : http<Record<string, unknown> | null>(`/bookings/${bookingId}/review`).then((r) =>
+          r ? mapReview(r) : null,
+        ),
 };
 
 // ============ Account ============
