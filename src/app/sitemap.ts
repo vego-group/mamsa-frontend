@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { SITE_URL } from '@/lib/constants/brand';
+import { unitsApi } from '@/lib/api/client';
 
 /**
  * Generates /sitemap.xml (Sitemaps 0.9 protocol) — Next.js App Router
@@ -7,11 +8,11 @@ import { SITE_URL } from '@/lib/constants/brand';
  * and transactional routes (account, bookings, payments) are intentionally
  * excluded and are also disallowed in robots.txt.
  *
- * Dynamic unit detail pages (/units/[id]) are not enumerated here because their
- * ids come from the backend at request time. When a server-side unit catalogue
- * is available, map it into additional entries below.
+ * Unit detail pages come from `GET /units/sitemap` — ids and `updated_at` only,
+ * unpaginated, so every listing gets a chance at being indexed rather than only
+ * whichever page a crawler happened to reach.
  */
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const lastModified = new Date();
 
   const routes: { path: string; priority: number; changeFrequency: MetadataRoute.Sitemap[number]['changeFrequency'] }[] = [
@@ -30,10 +31,26 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: '/policies/terms', priority: 0.4, changeFrequency: 'yearly' },
   ];
 
-  return routes.map(({ path, priority, changeFrequency }) => ({
+  const staticEntries = routes.map(({ path, priority, changeFrequency }) => ({
     url: `${SITE_URL}${path}`,
     lastModified,
     changeFrequency,
     priority,
   }));
+
+  // Best-effort: a backend hiccup must not take the whole sitemap down with it.
+  // A sitemap missing its unit pages still beats a 500 to a crawler.
+  let unitEntries: MetadataRoute.Sitemap = [];
+  try {
+    unitEntries = (await unitsApi.sitemap()).map((u) => ({
+      url: `${SITE_URL}/units/${u.id}`,
+      lastModified: new Date(u.updated_at),
+      changeFrequency: 'weekly' as const,
+      priority: 0.8,
+    }));
+  } catch {
+    unitEntries = [];
+  }
+
+  return [...staticEntries, ...unitEntries];
 }

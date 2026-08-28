@@ -183,6 +183,9 @@ export const mockApi = {
     list: async (filter: UnitsFilter = {}): Promise<Unit[]> => {
       let result = units.filter((u) => u.status === 'approved');
 
+      if (filter.ids && filter.ids.length > 0) {
+        result = result.filter((u) => filter.ids!.includes(u.id));
+      }
       if (filter.city) result = result.filter((u) => u.city.includes(filter.city!));
       if (filter.type && filter.type !== 'all') result = result.filter((u) => u.type === filter.type);
       if (filter.capacity) result = result.filter((u) => u.capacity >= filter.capacity!);
@@ -237,6 +240,13 @@ export const mockApi = {
     },
 
     getFeatured: async () => ok(units.filter((u) => u.isFeatured && u.status === 'approved')),
+
+    sitemap: async () =>
+      ok(
+        units
+          .filter((u) => u.status === 'approved')
+          .map((u) => ({ id: Number(u.id.replace(/\D/g, '')) || 0, updated_at: u.createdAt })),
+      ),
 
     getReviews: async (unitId: string) => ok(reviews.filter((r) => r.unitId === unitId)),
 
