@@ -16,10 +16,22 @@ export default function FavoritesPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    unitsApi.list().then((data) => {
-      setUnits(data.filter((u) => unitIds.includes(u.id)));
-      setLoading(false);
-    });
+    let cancelled = false;
+    setLoading(true);
+    unitsApi
+      .byIds(unitIds)
+      .then((data) => {
+        if (!cancelled) setUnits(data);
+      })
+      .catch(() => {
+        if (!cancelled) setUnits([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [unitIds]);
 
   return (

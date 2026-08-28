@@ -239,6 +239,11 @@ export interface UnitsFilter {
   minRating?: number;
   amenities?: string[];
   sort?: 'price_asc' | 'price_desc' | 'rating' | 'newest';
+  /**
+   * Fetch these units by id. The API caps a single call at 50 and answers 51+
+   * with a 422 rather than truncating, so callers must batch.
+   */
+  ids?: string[];
   /** 1-based page number. Omit for the first page. */
   page?: number;
   /** Rows per page. The API caps this at 50 and defaults to 12. */

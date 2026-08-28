@@ -254,7 +254,16 @@ export function UnitGallery({ images, title }: UnitGalleryProps) {
                     i === lightbox ? 'ring-white' : 'ring-transparent opacity-60 hover:opacity-100',
                   )}
                 >
-                  <img src={img.thumb} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
+                  {/* The API carries no `alt` and none is planned — the partner
+                      form has no field for it — so it is built from the unit's
+                      own name rather than left empty. */}
+                  <img
+                    src={img.thumb}
+                    alt={t('photoOf', { index: i + 1, count })}
+                    loading="lazy"
+                    decoding="async"
+                    className="h-full w-full object-cover"
+                  />
                 </button>
               ))}
             </div>
