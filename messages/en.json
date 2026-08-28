@@ -946,8 +946,8 @@
     "benefitsSubtitle": "Everything you need to manage your property and earn extra income with confidence",
     "benefits": {
       "0": {
-        "title": "Only 2% commission",
-        "body": "Among the lowest in the market — a small percentage of each completed booking, with your earnings paid out safely and quickly after each guest checks out."
+        "title": "10% commission, no other fees",
+        "body": "A single rate on completed bookings — no subscription, no listing fees, and nothing added on top of the price your guest sees. Your earnings transfer after each guest checks out."
       },
       "1": {
         "title": "Host protection",
@@ -1015,7 +1015,7 @@
       },
       "1": {
         "q": "What is Mamsa's commission?",
-        "a": "Our current commission is just 2% of each completed booking — deducted automatically from the booking amount, with no subscription or listing fees."
+        "a": "Our current commission is 10% of each completed booking, deducted automatically from the booking amount. There are no subscription fees, no listing fees, and no service fee added to the price your guest pays."
       },
       "2": {
         "q": "When will my property appear to guests?",
