@@ -1,6 +1,11 @@
 import { Fragment } from 'react';
 import { Check, Info } from 'lucide-react';
-import { parseRichText, type InlineNode, type RichBlock } from '@/lib/utils/rich-text';
+import {
+  detectTextDirection,
+  parseRichText,
+  type InlineNode,
+  type RichBlock,
+} from '@/lib/utils/rich-text';
 import { cn } from '@/lib/utils/cn';
 
 /**
@@ -9,27 +14,61 @@ import { cn } from '@/lib/utils/cn';
  *
  * لا يُمرَّر أي HTML: المحلّل يُخرج عُقدًا نصّية فقط ونحن نبني منها عناصر React،
  * فلا مجال لـ dangerouslySetInnerHTML ولا لحقن سكربت من محتوى الشريك.
+ *
+ * الاتجاه واللغة والخطّ تُشتقّ من النص نفسه لا من لغة الصفحة: الوصف يُخزَّن
+ * بلغة واحدة ويُعرض في الصفحتين، فوصف عربي داخل الصفحة الإنجليزية كان يُصفّ
+ * يسارًا (فتقفز النقطة إلى الطرف الخطأ) ويُرسَم بخطّ Inter الذي لا يحمل حرفًا
+ * عربيًّا أصلًا، فيسقط على خطّ النظام الاحتياطي.
  */
 export function RichText({ text, className }: { text: string; className?: string }) {
-  const blocks = parseRichText(text ?? '');
+  const source = text ?? '';
+  const blocks = parseRichText(source);
   if (!blocks.length) return null;
 
+  const dir = detectTextDirection(source);
+  const rtl = dir === 'rtl';
+
   return (
-    <div className={cn('space-y-4', className)}>
+    <div
+      dir={dir}
+      // lang: للقارئ الصوتي أولًا — ينطق العربية بصوت عربي داخل صفحة إنجليزية.
+      lang={rtl ? 'ar' : 'en'}
+      // flex/gap بدل space-y: يترك للعناوين هامشًا علويًا خاصًّا بها دون أن
+      // تتعارك مع الهوامش التي تحقنها space-y في الأبناء.
+      className={cn('flex flex-col gap-5 text-start', rtl ? 'font-arabic' : 'font-latin', className)}
+    >
       {blocks.map((block, i) => (
-        <Block key={i} block={block} />
+        <Block key={i} block={block} first={i === 0} />
       ))}
     </div>
   );
 }
 
-function Block({ block }: { block: RichBlock }) {
+/** طول العنصر نصًّا — لاختيار تخطيط القائمة، لا للعرض. */
+const inlineLength = (nodes: InlineNode[]) => nodes.reduce((n, node) => n + node.value.length, 0);
+
+/**
+ * قائمة «مضغوطة» = عناصر قصيرة كثيرة (ثلاجة، فرن، مناشف…) تُصفّ في عمودين.
+ * الجُمل الطويلة تبقى عمودًا واحدًا: عمودان منها يُنتجان صفوفًا متفاوتة
+ * الارتفاع وفجوات مقطّعة، وهو أسوأ مما جاءا لإصلاحه.
+ */
+const COMPACT_ITEM_CHARS = 44;
+const isCompactList = (items: InlineNode[][]) =>
+  items.length >= 4 && items.every((item) => inlineLength(item) <= COMPACT_ITEM_CHARS);
+
+function Block({ block, first }: { block: RichBlock; first: boolean }) {
   switch (block.type) {
     case 'heading':
       return (
         // نفس لغة العناوين في صفحات السياسات: شريط أخضر ملاصق لبداية النص
-        // (يمينًا في العربية) — ps/border-s تتقلب مع اتجاه الصفحة تلقائيًا.
-        <h3 className="border-s-[3px] border-brand-primary ps-3 pt-1 text-base font-bold text-brand-ink">
+        // (يمينًا في العربية) — ps/border-s تتقلب مع اتجاه الحاوية تلقائيًا.
+        // هامش علوي يفصل القسم عمّا قبله، إلا أن يكون أول كتلة في الوصف.
+        <h3
+          className={cn(
+            'border-s-[3px] border-brand-primary ps-3.5 text-[15px] font-bold leading-7 text-brand-ink sm:text-base',
+            !first && 'mt-3',
+          )}
+        >
           <Inline nodes={block.content} />
         </h3>
       );
@@ -54,9 +93,9 @@ function Block({ block }: { block: RichBlock }) {
 
     case 'bullets':
       return (
-        <ul className="space-y-2.5">
+        <ul className={cn('grid gap-y-2.5', isCompactList(block.items) && 'gap-x-8 sm:grid-cols-2')}>
           {block.items.map((item, i) => (
-            <li key={i} className="flex items-start gap-3 leading-[1.95] text-brand-muted">
+            <li key={i} className="flex items-start gap-2.5 leading-[1.9] text-brand-muted">
               {/* نقطة داخل هالة كريمية — علامة القائمة الافتراضية أضعف من أن
                   تُرى على نص عربي بهذا الحجم. mt يوازيها مع أول سطر. */}
               <span className="mt-[7px] flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-brand-cream">
@@ -72,7 +111,7 @@ function Block({ block }: { block: RichBlock }) {
 
     case 'steps':
       return (
-        <ol className="space-y-3">
+        <ol className="flex flex-col gap-3">
           {block.items.map((item, i) => (
             <li key={i} className="flex items-start gap-3 leading-[1.95] text-brand-muted">
               {/* أرقام لاتينية عمدًا — نفس قرار العرض في formatSAR/formatDate. */}
