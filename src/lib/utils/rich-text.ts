@@ -44,6 +44,27 @@ const BULLET = /^[-–—•●○*]\s+(.+)$/;
 /** يقبل الأرقام اللاتينية والعربية-الهندية: `1.` و `2)` و `٣-`. */
 const STEP = /^[0-9\u0660-\u0669]{1,2}\s*[.)\-]\s+(.+)$/;
 
+/**
+ * اتجاه نصّ الشريك — يُحسب من غلبة الحروف لا من أول حرف قوي.
+ *
+ * وصف الوحدة يُخزَّن بلغة واحدة (عربية غالبًا) ويُعرض في الصفحة الإنجليزية
+ * كما هو، فلو تُرك لاتجاه الصفحة انقلبت علامات الترقيم إلى الطرف الخطأ وجاءت
+ * نقاط القوائم على يسار سطر عربي.
+ *
+ * ولماذا لا `dir="auto"` من المتصفّح؟ لأنه يحكم بأول حرف قوي في العنصر، فسطر
+ * مثل «WiFi متوفّر في كل الغرف» يُقرأ عنده إنجليزيًّا فينقلب وحده وسط قائمة
+ * عربية. الغلبة تحكم على النص كاملًا فيبقى القسم متّسق الاتجاه.
+ */
+const RTL_LETTERS = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/g;
+const LTR_LETTERS = /[A-Za-z\u00C0-\u024F]/g;
+
+export function detectTextDirection(text: string): 'rtl' | 'ltr' {
+  const rtl = text.match(RTL_LETTERS)?.length ?? 0;
+  const ltr = text.match(LTR_LETTERS)?.length ?? 0;
+  // التعادل (ونصّ الأرقام والرموز وحدها) يبقى على الافتراضي اللاتيني.
+  return rtl > ltr ? 'rtl' : 'ltr';
+}
+
 export function parseInline(src: string): InlineNode[] {
   const nodes: InlineNode[] = [];
   let last = 0;
