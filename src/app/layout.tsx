@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Script from 'next/script';
 import { IBM_Plex_Sans_Arabic, Inter } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages, getTranslations } from 'next-intl/server';
@@ -64,12 +63,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <WebMcpTools />
           </QueryProvider>
         </NextIntlClientProvider>
-        {/* Saudi Business Center "متجر موثّق" verification seal. */}
-        <div className="sbc-verify-seal" data-token="SHVHY2xMRXY2L1MxOEQ0c0tYbmdSZz09" data-position="bottom-left" />
-        <Script
-          src="https://eauthenticate.saudibusiness.gov.sa/EAuthSealApi/seal.js"
-          strategy="afterInteractive"
-        />
       </body>
     </html>
   );

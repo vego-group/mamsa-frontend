@@ -20,6 +20,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { UnitGallery } from '@/components/features/units/UnitGallery';
 import { UnitRating, hasRating } from '@/components/features/units/UnitRating';
+import { ExpandableSection } from '@/components/features/units/ExpandableSection';
 import { DateRangePicker, type DateRange } from '@/components/ui/date-range-picker';
 import { SelectField, type SelectOption } from '@/components/ui/select-field';
 import { LoadError } from '@/components/shared/LoadError';
@@ -172,16 +173,6 @@ function UnitDetailsView() {
     setGuests(n);
     useSearchStore.getState().setStay({ guests: n });
   };
-
-  // The fixed mobile book bar owns the screen corner the verification seal
-  // pins itself to, so flag the document while this page is mounted and the
-  // seal lifts clear of the CTA instead of covering it (see globals.css).
-  useEffect(() => {
-    document.body.dataset.mobileActionBar = 'true';
-    return () => {
-      delete document.body.dataset.mobileActionBar;
-    };
-  }, []);
 
   useEffect(() => {
     if (!sheetOpen) return;
@@ -429,9 +420,12 @@ function UnitDetailsView() {
           <Divider />
 
           {/* about */}
-          <section>
-            <h2 className="mb-3 text-xl font-bold text-brand-ink">{t('about')}</h2>
-            <RichText text={unit.description} />
+          <section className="rounded-2xl border border-brand-border bg-white p-5 sm:p-6">
+            <h2 className="mb-4 text-xl font-bold text-brand-ink">{t('about')}</h2>
+            {/* الوصف نصّ يكتبه الشريك بلغته — قد يطول كثيرًا، فيُقصّ ويُفتح بزرّ. */}
+            <ExpandableSection moreLabel={t('readMore')} lessLabel={t('readLess')}>
+              <RichText text={unit.description} />
+            </ExpandableSection>
           </section>
 
           <Divider />
