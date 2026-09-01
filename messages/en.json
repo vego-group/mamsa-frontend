@@ -51,7 +51,9 @@
     "qrPending": "QR code is being prepared",
     "unavailable": "The tax invoice becomes available once the booking is confirmed",
     "loadFailed": "Couldn't load the tax invoice",
-    "backToBooking": "Back to booking"
+    "backToBooking": "Back to booking",
+    "notYours": "This invoice belongs to a booking on another account.",
+    "notFound": "We couldn't find this booking, so it has no invoice."
   },
   "common": {
     "brandName": "Mamsa",
@@ -65,7 +67,14 @@
     "sar": "SAR",
     "cancel": "Cancel",
     "back": "Back",
-    "close": "Close"
+    "close": "Close",
+    "signIn": "Sign in",
+    "signInRequiredTitle": "Sign in to view this page",
+    "signInRequiredBody": "This page belongs to your account. Sign in with your mobile number and it will open right here.",
+    "forbiddenTitle": "Not available on your account",
+    "forbiddenBody": "This content belongs to another account.",
+    "notFoundTitle": "Not found",
+    "notFoundBody": "We couldn't find what you're looking for."
   },
   "nav": {
     "home": "Home",
@@ -727,7 +736,9 @@
       "3": "The current booking status"
     },
     "cancelNote": "The guest can cancel the booking before the stay date according to the cancellation policy set by management.",
-    "contactNote": "They can reach the service provider from within the booking page through a direct conversation (text and photos)."
+    "contactNote": "They can reach the service provider from within the booking page through a direct conversation (text and photos).",
+    "notYours": "This booking isn't on your account. Check that you signed in with the number you booked with.",
+    "notFound": "We couldn't find this booking — the link may be wrong."
   },
   "account": {
     "quickLinks": {

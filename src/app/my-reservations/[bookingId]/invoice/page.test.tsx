@@ -249,3 +249,25 @@ describe('Tax invoice — only for paid bookings', () => {
     },
   );
 });
+
+describe('Tax invoice — a 401 is a missing session, not a broken invoice', () => {
+  it('asks for the sign-in it needs instead of showing a load failure', async () => {
+    // The "view tax invoice" button in the confirmation email lands here, very
+    // often in a browser with no session.
+    vi.spyOn(bookingsApi, 'getById').mockRejectedValue(new ApiError(401, 'Unauthenticated.'));
+    const getInvoice = vi.spyOn(bookingsApi, 'getInvoice');
+    await renderInvoice();
+
+    expect(screen.getByText(arMessages.common.signInRequiredTitle)).toBeTruthy();
+    expect(screen.queryByText(arMessages.invoice.loadFailed)).toBeNull();
+    expect(screen.queryByText(arMessages.common.loading)).toBeNull();
+    expect(getInvoice).not.toHaveBeenCalled();
+  });
+
+  it('tells a signed-in visitor plainly when the booking is not theirs', async () => {
+    vi.spyOn(bookingsApi, 'getById').mockRejectedValue(new ApiError(403, 'غير مصرح'));
+    await renderInvoice();
+
+    expect(screen.getByText(arMessages.invoice.notYours)).toBeTruthy();
+  });
+});

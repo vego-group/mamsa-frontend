@@ -13,6 +13,9 @@ import { PriceBreakdown } from '@/components/features/booking/PriceBreakdown';
 import { ContactHostDialog } from '@/components/features/booking/ContactHostDialog';
 import { ReviewDialog } from '@/components/features/reviews/ReviewDialog';
 import { bookingsApi, reviewsApi } from '@/lib/api/client';
+import { loadFailureFor, type LoadState } from '@/lib/api/load-state';
+import { LoadStateView } from '@/components/shared/LoadStateView';
+import { useAuthStore } from '@/stores/auth';
 import { formatDate, formatSAR } from '@/lib/utils/format';
 import { downloadBookingConfirmation } from '@/lib/utils/booking-confirmation';
 import { isBookingCancellable } from '@/lib/cancellation/engine';
@@ -32,19 +35,60 @@ export default function BookingDetailsPage() {
   const tInvoice = useTranslations('invoice');
   const tc = useTranslations('common');
   const { bookingId } = useParams<{ bookingId: string }>();
+  // Re-running the fetch on this flag IS the return path after signing in: the
+  // login dialog leaves the person on this URL, the flag flips, the page loads.
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [booking, setBooking] = useState<Booking | null>(null);
   const [review, setReview] = useState<Review | null>(null);
+  const [state, setState] = useState<LoadState>('loading');
+  // Bumping this re-runs the fetch effect — the retry path after a failure.
+  const [attempt, setAttempt] = useState(0);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
 
   useEffect(() => {
     if (!bookingId) return;
-    bookingsApi.getById(bookingId).then(setBooking);
-    reviewsApi.getForBooking(bookingId).then((r) => setReview(r));
-  }, [bookingId]);
+    let cancelled = false;
+    setState('loading');
 
-  if (!booking) return <div className="container mx-auto p-10">{tc('loading')}</div>;
+    bookingsApi
+      .getById(bookingId)
+      .then((b) => {
+        if (cancelled) return;
+        setBooking(b);
+        setState('ready');
+        // The review only decides one button's label, so it is fetched after
+        // the booking lands: a logged-out visit then costs one 401 instead of
+        // two, and a failure here never takes the page down with it.
+        reviewsApi
+          .getForBooking(bookingId)
+          .then((r) => !cancelled && setReview(r))
+          .catch(() => {});
+      })
+      .catch((e) => !cancelled && setState(loadFailureFor(e)));
+
+    return () => {
+      cancelled = true;
+    };
+  }, [bookingId, isAuthenticated, attempt]);
+
+  if (state === 'loading') return <div className="container mx-auto p-10">{tc('loading')}</div>;
+
+  // No session / someone else's booking / no such booking — each of these says
+  // so and offers a way on, instead of sitting on the loading line forever.
+  if (state !== 'ready' || !booking) {
+    return (
+      <div className="container mx-auto px-4 py-16">
+        <LoadStateView
+          state={state === 'ready' ? 'error' : state}
+          onRetry={() => setAttempt((n) => n + 1)}
+          forbiddenMessage={t('notYours')}
+          notFoundMessage={t('notFound')}
+        />
+      </div>
+    );
+  }
   const canCancel = isBookingCancellable(booking, new Date());
   // Prefer the backend-embedded flag; `review` (mock-only endpoint) covers mock mode.
   const hasReview = booking.isReviewed || Boolean(review);
@@ -235,7 +279,9 @@ export default function BookingDetailsPage() {
         bookingId={booking.id}
         open={reviewOpen}
         onClose={() => setReviewOpen(false)}
-        onSubmitted={() => reviewsApi.getForBooking(booking.id).then(setReview)}
+        // Refreshing the review is cosmetic — the dialog already succeeded,
+        // so a failure here must not surface as an uncaught rejection.
+        onSubmitted={() => reviewsApi.getForBooking(booking.id).then(setReview).catch(() => {})}
       />
     </div>
   );
