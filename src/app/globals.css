@@ -106,35 +106,34 @@
 /* ============ Saudi Business Center verified-store seal ============ */
 
 /*
- * The seal is drawn by a third-party script into `.sbc-verify-seal`, which
- * pins itself to the bottom-left corner — exactly where the unit page's fixed
- * mobile book bar lives, so it landed on top of the "احجز الآن" button.
- * Pages that carry such a bar flag the document and the seal lifts clear of
- * it; `!important` is needed because the vendor sets these inline. `bottom`
- * is applied to the placeholder and its direct child so it works whichever
- * one the script chooses to position.
+ * The vendor script draws the seal into `.sbc-verify-seal` and pins it to a
+ * screen corner with inline styles. It belongs in the footer next to the CR
+ * number, not floating over the page, so unpin it here: `!important` is the
+ * only lever against inline styles, and it has to reach the descendants too
+ * because which node the script positions depends on the markup it injects.
  */
-:root {
-  --sbc-seal-lift: 0px;
-}
-
 .sbc-verify-seal,
-.sbc-verify-seal > * {
-  bottom: calc(0.75rem + var(--sbc-seal-lift)) !important;
-  /* Below the header, dialogs, the gallery lightbox and toasts — a trust
-     badge must never sit over the UI the guest is actually using. */
-  z-index: 30 !important;
+.sbc-verify-seal * {
+  position: static !important;
+  inset: auto !important;
+  z-index: auto !important;
+  transform: none !important;
 }
 
-body[data-mobile-action-bar='true'] {
-  --sbc-seal-lift: 5rem;
+.sbc-verify-seal {
+  display: inline-flex !important;
+  align-items: center;
+  margin: 0 !important;
 }
 
-/* The book bar is `md:hidden`, so from `md` up there is nothing to clear. */
-@media (min-width: 768px) {
-  body[data-mobile-action-bar='true'] {
-    --sbc-seal-lift: 0px;
-  }
+/* Whatever the vendor injects — an <img>, a link, an iframe — is sized to sit
+   alongside the CR pill rather than dominate the footer. */
+.sbc-verify-seal img,
+.sbc-verify-seal svg,
+.sbc-verify-seal iframe {
+  height: 2.75rem !important;
+  width: auto !important;
+  max-width: 100% !important;
 }
 
 /* ============ Printable documents (tax invoice) ============ */

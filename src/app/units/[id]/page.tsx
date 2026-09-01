@@ -173,16 +173,6 @@ function UnitDetailsView() {
     useSearchStore.getState().setStay({ guests: n });
   };
 
-  // The fixed mobile book bar owns the screen corner the verification seal
-  // pins itself to, so flag the document while this page is mounted and the
-  // seal lifts clear of the CTA instead of covering it (see globals.css).
-  useEffect(() => {
-    document.body.dataset.mobileActionBar = 'true';
-    return () => {
-      delete document.body.dataset.mobileActionBar;
-    };
-  }, []);
-
   useEffect(() => {
     if (!sheetOpen) return;
     const prev = document.body.style.overflow;
