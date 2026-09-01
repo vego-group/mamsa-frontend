@@ -228,6 +228,8 @@
     "hostCompany": "Verified host · Company",
     "hostIndividual": "Verified host · Individual",
     "about": "About this place",
+    "readMore": "Show more",
+    "readLess": "Show less",
     "amenitiesTitle": "What this place offers",
     "thingsToKnow": "Things to know",
     "houseRules": "House rules",
@@ -930,7 +932,7 @@
     "metaTitle": "List your property — {name}",
     "metaDescription": "List your property on Mamsa and receive bookings with confidence, with guaranteed payouts, protection and full control.",
     "heroBullets": {
-      "0": "Guaranteed, fast payouts after every stay",
+      "0": "Guaranteed monthly payouts to your account",
       "1": "Damage protection so you can host with peace of mind",
       "2": "Full control over pricing, calendar and rules"
     },
@@ -946,8 +948,8 @@
     "benefitsSubtitle": "Everything you need to manage your property and earn extra income with confidence",
     "benefits": {
       "0": {
-        "title": "Only 2% commission",
-        "body": "Among the lowest in the market — a small percentage of each completed booking, with your earnings paid out safely and quickly after each guest checks out."
+        "title": "10% commission, no other fees",
+        "body": "A single rate on completed bookings — no subscription, no listing fees, and nothing added on top of the price your guest sees. Your earnings transfer in one monthly payout."
       },
       "1": {
         "title": "Host protection",
@@ -1015,7 +1017,7 @@
       },
       "1": {
         "q": "What is Mamsa's commission?",
-        "a": "Our current commission is just 2% of each completed booking — deducted automatically from the booking amount, with no subscription or listing fees."
+        "a": "Our current commission is 10% of each completed booking, deducted automatically from the booking amount. There are no subscription fees, no listing fees, and no service fee added to the price your guest pays."
       },
       "2": {
         "q": "When will my property appear to guests?",
@@ -1023,7 +1025,7 @@
       },
       "3": {
         "q": "When do I receive my earnings?",
-        "a": "Your payments are transferred securely after the guest checks out, via the payment method you choose."
+        "a": "Earnings are paid out once a month — your balance is transferred securely to the payout method you choose once it reaches at least SAR 2,000; anything below that rolls over to the next month until it does."
       },
       "4": {
         "q": "Do I control the pricing and availability?",

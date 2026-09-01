@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseRichText, parseInline } from './rich-text';
+import { parseRichText, parseInline, detectTextDirection } from './rich-text';
 
 describe('parseInline', () => {
   it('marks *text* and bolds **text**', () => {
@@ -74,5 +74,25 @@ describe('parseRichText', () => {
   it('returns nothing for empty or whitespace-only text', () => {
     expect(parseRichText('')).toEqual([]);
     expect(parseRichText('   \n\n  ')).toEqual([]);
+  });
+});
+
+describe('detectTextDirection', () => {
+  it('reads an Arabic description as RTL — it is shown inside the English page too', () => {
+    expect(detectTextDirection('شقة فسيحة بغرفة نوم واحدة، وحمام خاص.')).toBe('rtl');
+  });
+
+  it('reads an English description as LTR', () => {
+    expect(detectTextDirection('A spacious one-bedroom apartment with a private bathroom.')).toBe('ltr');
+  });
+
+  it('keeps a mostly-Arabic line RTL even when it opens with a Latin word', () => {
+    // dir="auto" من المتصفّح يحكم بأول حرف قوي، فيقلب هذا السطر وحده وسط قائمة عربية.
+    expect(detectTextDirection('WiFi متوفّر في كل الغرف مع تكييف مركزي')).toBe('rtl');
+  });
+
+  it('falls back to LTR for text with no letters at all', () => {
+    expect(detectTextDirection('263 — 2026/09/01')).toBe('ltr');
+    expect(detectTextDirection('')).toBe('ltr');
   });
 });
