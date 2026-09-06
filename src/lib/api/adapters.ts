@@ -22,9 +22,13 @@ import type {
   RefundRecord,
   SavedCard,
   Transaction,
+  GuestComplaint,
+  GuestComplaintRow,
+  GuestComplaintStatus,
 } from '@/types';
 import type { RefundPreview } from '@/lib/cancellation/engine';
 import { getPolicyByTemplate } from '@/lib/constants/cancellation-policies';
+import { PROPERTY_CHECKOUT_TIME } from '@/lib/constants/brand';
 
 const DEFAULT_COUNTRY = 'السعودية';
 
@@ -199,6 +203,39 @@ export interface RawCancellationPreview {
   reason?: string | null;
 }
 
+// ============ Complaints (wire) ============
+
+/**
+ * `GET /bookings/{id}/complaint` — a guest complaint as `/api/v1` sends it.
+ *
+ * Two things here break the habit of anyone arriving from the admin/partner
+ * dashboards: the keys are snake_case, and `refunded_amount` is RIYALS as a
+ * decimal, not an integer of halalas. `391.30` is 391 riyals and 30 halalas.
+ * The mapper passes it through untouched — no ÷100, no rounding, no
+ * arithmetic of any kind — and the tests pin that.
+ */
+export interface RawGuestComplaint {
+  id: number | string;
+  status: string;
+  description?: string | null;
+  /** Laravel may serialise this as `true`, `1` or `"1"` depending on the cast. */
+  contacted_partner?: boolean | number | string | null;
+  guest_message?: string | null;
+  /** Decimal SAR. A JSON number normally; tolerated as a numeric string. Null until the refund has actually been paid. */
+  refunded_amount?: number | string | null;
+  created_at?: string | null;
+  images?: Array<{ url?: string | null; mime?: string | null }> | null;
+}
+
+/** One row of `GET /user/complaints`. */
+export interface RawGuestComplaintRow {
+  id: number | string;
+  status: string;
+  booking_id: number | string;
+  booking_code?: string | null;
+  created_at?: string | null;
+}
+
 // ============ Lookup tables ============
 
 /** Map common Arabic amenity labels back to icon keys the UI understands. */
@@ -319,8 +356,42 @@ const UNIT_STATUSES: readonly UnitStatus[] = ['draft', 'pending', 'approved', 'r
 const mapUnitStatus = (s?: string): UnitStatus =>
   UNIT_STATUSES.includes(s as UnitStatus) ? (s as UnitStatus) : 'pending';
 
-function hhmm(time?: string, fallback = '00:00'): string {
-  return (time ?? fallback).slice(0, 5);
+/** "HH:mm" out of an API time string ("15:00", "15:00:00"), or null when it isn't one — null, "", a word. */
+function parseHHmm(time: string | null | undefined): string | null {
+  const m = /^(\d{2}):(\d{2})/.exec(time ?? '');
+  return m ? `${m[1]}:${m[2]}` : null;
+}
+
+/** `parseHHmm` with a fallback — for the unit's display hours, where a default is harmless. */
+function hhmm(time: string | null | undefined, fallback: string): string {
+  return parseHHmm(time) ?? fallback;
+}
+
+/**
+ * The unit's check-out hour, carried on the booking because the complaint
+ * window counts 48 hours from it.
+ *
+ * Falling back to 12:00 keeps the booking renderable when the API sends no
+ * hour, but it also hides the problem: a unit that really checks out at 13:00
+ * would close its window an hour early, and all a guest would see is a button
+ * gone sooner than promised. So every fallback is logged with the booking
+ * number and why — the field is either absent from the contract (no unit, or
+ * no `checkout_time` on it) or unreadable on that unit, and each is for the
+ * backend to fix, not for this default to paper over.
+ */
+function mapBookingCheckOutTime(b: RawBooking): string {
+  const parsed = parseHHmm(b.unit?.checkout_time);
+  if (parsed) return parsed;
+  const reason = !b.unit
+    ? 'the booking resource embeds no unit'
+    : b.unit.checkout_time == null || b.unit.checkout_time === ''
+      ? 'unit.checkout_time is missing'
+      : `unit.checkout_time is unreadable: ${JSON.stringify(b.unit.checkout_time)}`;
+  const label = b.reference ? `${b.id} (${b.reference})` : String(b.id);
+  console.warn(
+    `[mapBooking] booking ${label}: ${reason} — assuming check-out at ${PROPERTY_CHECKOUT_TIME}, so the complaint window may close at the wrong hour.`,
+  );
+  return PROPERTY_CHECKOUT_TIME;
 }
 
 // ============ Domain mappers ============
@@ -370,7 +441,7 @@ export function mapUnit(u: RawUnit): Unit {
     rating: Number(u.avg_rating ?? 0),
     reviewCount: Number(u.reviews_count ?? 0),
     checkInTime: hhmm(u.checkin_time, '15:00'),
-    checkOutTime: hhmm(u.checkout_time, '12:00'),
+    checkOutTime: hhmm(u.checkout_time, PROPERTY_CHECKOUT_TIME),
     cancellationPolicy: mapTemplate(u.cancellation_policy),
     cancellationPolicyDetails: mapPolicyDetails(u.cancellation_policy_details),
     createdAt: u.created_at ?? new Date().toISOString(),
@@ -434,6 +505,9 @@ export function mapBooking(b: RawBooking): Booking {
     status: BOOKING_STATUS_MAP[b.status ?? ''] ?? 'confirmed',
     checkInDate: b.start_date,
     checkOutDate: b.end_date,
+    // The unit's own check-out hour — the backend counts the complaint window
+    // from it, so it rides on the booking. Warns whenever it has to assume one.
+    checkOutTime: mapBookingCheckOutTime(b),
     nights: Number(b.nights ?? p.nights ?? 0),
     guests: mapGuests(b),
     // VAT-inclusive. Until the backend ships its refactor it still sends the
@@ -500,6 +574,71 @@ export function mapCancellationPreview(c: RawCancellationPreview): RefundPreview
     rawNotAllowedReason: c.cancellable ? undefined : c.reason ?? undefined,
     daysRemaining: Math.floor(hours / 24),
     hoursRemaining: hours,
+  };
+}
+
+// ============ Complaints ============
+
+const COMPLAINT_STATUSES: readonly GuestComplaintStatus[] = [
+  'submitted',
+  'under_review',
+  'approved',
+  'resolved_refunded',
+  'resolved_rejected',
+];
+
+/**
+ * The five statuses are a closed set today. Should a sixth ever arrive it
+ * lands on `under_review` — the one state that promises nothing: not that
+ * money is coming, not that it has arrived, not that the case is closed.
+ * Never fall back to `approved` or to a `resolved_*` value.
+ */
+export function mapComplaintStatus(s?: string | null): GuestComplaintStatus {
+  return COMPLAINT_STATUSES.includes(s as GuestComplaintStatus)
+    ? (s as GuestComplaintStatus)
+    : 'under_review';
+}
+
+/** `true`, `1`, `"1"` and `"true"` are yes; everything else — including `"0"`, which `Boolean()` would call true — is no. */
+function mapWireBoolean(v: unknown): boolean {
+  return v === true || v === 1 || v === '1' || v === 'true';
+}
+
+/**
+ * Reads a decimal SAR figure exactly as sent. `Number()` is a type change,
+ * not arithmetic: 391.3 stays 391.3, and the string "391.30" becomes 391.3,
+ * which `formatSARExact` renders back as "391.30". Anything that isn't a
+ * finite number is treated as absent rather than shown as NaN or 0 — a wrong
+ * figure on a refund is worse than none.
+ */
+function mapRiyalAmount(v: unknown): number | null {
+  if (v == null || v === '') return null;
+  const n = typeof v === 'number' ? v : Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+export function mapGuestComplaint(c: RawGuestComplaint): GuestComplaint {
+  return {
+    id: String(c.id),
+    status: mapComplaintStatus(c.status),
+    description: c.description ?? '',
+    contactedPartner: mapWireBoolean(c.contacted_partner),
+    guestMessage: c.guest_message ? String(c.guest_message) : null,
+    refundedAmount: mapRiyalAmount(c.refunded_amount),
+    createdAt: c.created_at ?? null,
+    images: (c.images ?? [])
+      .filter((i) => Boolean(i?.url))
+      .map((i) => ({ url: String(i.url), mime: i.mime ?? '' })),
+  };
+}
+
+export function mapGuestComplaintRow(r: RawGuestComplaintRow): GuestComplaintRow {
+  return {
+    id: String(r.id),
+    status: mapComplaintStatus(r.status),
+    bookingId: String(r.booking_id),
+    bookingCode: r.booking_code ? String(r.booking_code) : null,
+    createdAt: r.created_at ?? null,
   };
 }
 

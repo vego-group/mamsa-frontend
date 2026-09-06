@@ -12,6 +12,7 @@ import { CancelBookingDialog } from '@/components/features/booking/CancelBooking
 import { PriceBreakdown } from '@/components/features/booking/PriceBreakdown';
 import { ContactHostDialog } from '@/components/features/booking/ContactHostDialog';
 import { ReviewDialog } from '@/components/features/reviews/ReviewDialog';
+import { BookingComplaintSection } from '@/components/features/complaints/BookingComplaintSection';
 import { bookingsApi, reviewsApi } from '@/lib/api/client';
 import { loadFailureFor, type LoadState } from '@/lib/api/load-state';
 import { LoadStateView } from '@/components/shared/LoadStateView';
@@ -217,6 +218,13 @@ export default function BookingDetailsPage() {
               {t('guestsLine', { count: booking.guests.adults + booking.guests.children })}
             </p>
           </Card>
+
+          {/* A complaint can only be filed on a completed stay. The section owns the
+              48-hour window, the one-per-booking rule and the status view; a stale
+              booking (the API says it isn't completed after all) is refetched here. */}
+          {booking.status === 'completed' && (
+            <BookingComplaintSection booking={booking} onBookingStale={() => setAttempt((n) => n + 1)} />
+          )}
 
           <Card className="space-y-4 p-5">
             <h2 className="font-semibold">{t('bookingDetailsTitle')}</h2>

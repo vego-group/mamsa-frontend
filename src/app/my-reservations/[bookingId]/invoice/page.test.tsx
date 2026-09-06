@@ -26,6 +26,7 @@ function bookingFixture(status: Booking['status'] = 'confirmed'): Booking {
     status,
     checkInDate: '2026-09-10',
     checkOutDate: '2026-09-12',
+    checkOutTime: '12:00',
     nights: 2,
     guests: { adults: 2, children: 0 },
     price: { pricePerNight: 500, nights: 2, gross: 1000, netBase: 869.57, vat: 130.43 },
