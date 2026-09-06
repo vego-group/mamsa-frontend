@@ -740,6 +740,82 @@
     "notYours": "This booking isn't on your account. Check that you signed in with the number you booked with.",
     "notFound": "We couldn't find this booking — the link may be wrong."
   },
+  "complaints": {
+    "sectionTitle": "Complaint about the stay",
+    "sectionIntro": "Had a problem with the unit during your stay? File a complaint with a description and photos; the Mamsa team will review it and get back to you.",
+    "submitButton": "File a complaint",
+    "windowClosed": "The complaint deadline has passed",
+    "windowHint": "Complaints are accepted from the start of the stay until 48 hours after it ends.",
+    "loadFailed": "Couldn't load the complaint.",
+    "form": {
+      "title": "New complaint",
+      "subtitle": "Describe the problem clearly and attach photos if you have them. One complaint per booking; it can't be edited or withdrawn once sent.",
+      "descriptionLabel": "Describe the problem",
+      "descriptionPlaceholder": "Example: the unit doesn't match the listing photos, and the bedroom air conditioner doesn't work...",
+      "descriptionHint": "20 to 2000 characters",
+      "descriptionShort": "Too short — at least 20 characters",
+      "descriptionLong": "Too long — 2000 characters at most",
+      "counter": "{count} / {max}",
+      "contactedLabel": "Did you contact the host about the problem?",
+      "contactedHint": "Not required to file, but it helps the review team.",
+      "yes": "Yes",
+      "no": "No",
+      "contactedRequired": "Choose yes or no",
+      "imagesLabel": "Photos of the problem (optional)",
+      "imagesHint": "Up to 6 photos · JPG, PNG or WebP · 5 MB each at most",
+      "addImages": "Add photos",
+      "imagesCount": "{count} of {max}",
+      "removeImage": "Remove {name}",
+      "imageWrongType": "{name}: unsupported format — attach a JPG, PNG or WebP",
+      "imageTooLarge": "{name}: the photo is over 5 MB",
+      "imagesTooMany": "6 photos at most — {count} of the selected photos weren't added",
+      "submit": "Send complaint",
+      "submitting": "Sending...",
+      "submitFailed": "Couldn't send the complaint, please try again."
+    },
+    "status": {
+      "submitted": "We've received your complaint",
+      "under_review": "Your complaint is under review",
+      "approved": "Approved — refund in progress",
+      "resolved_refunded": "{amount} refunded",
+      "resolved_refundedNoAmount": "Refunded",
+      "resolved_rejected": "Complaint rejected"
+    },
+    "statusBody": {
+      "submitted": "The Mamsa team will review your complaint; you'll get an SMS with any update.",
+      "under_review": "The Mamsa team is reviewing your complaint now; you'll be notified once a decision is made.",
+      "approved": "You'll be notified when the refund is complete.",
+      "resolved_refunded": "The amount was returned to the payment method used for the booking.",
+      "resolved_rejected": "The complaint wasn't accepted after review."
+    },
+    "badge": {
+      "submitted": "Received",
+      "under_review": "Under review",
+      "approved": "Approved",
+      "resolved_refunded": "Refunded",
+      "resolved_rejected": "Rejected"
+    },
+    "decision": "Mamsa's decision",
+    "submittedOn": "Filed on",
+    "contactedPartner": "Host contacted",
+    "contactedYes": "The host was contacted",
+    "contactedNo": "The host wasn't contacted",
+    "descriptionTitle": "Problem description",
+    "attachments": "Attachments",
+    "imagesExpired": "The photo links have expired — reload to view them.",
+    "reloadImages": "Reload photos",
+    "openImage": "Open photo {index}",
+    "supportNote": "A complaint can't be edited or withdrawn once filed. For any question, contact support.",
+    "contactSupport": "Contact support",
+    "list": {
+      "title": "My complaints",
+      "subtitle": "The complaints you've filed on your bookings and where each one stands.",
+      "empty": "No complaints on your account.",
+      "booking": "Booking {code}",
+      "bookingById": "Booking #{id}",
+      "view": "View booking"
+    }
+  },
   "account": {
     "quickLinks": {
       "reservations": "My reservations",

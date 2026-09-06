@@ -22,10 +22,15 @@ import {
   mapTransaction,
   mapCategory,
   mapBudget,
+  mapGuestComplaint,
+  mapGuestComplaintRow,
+  mapComplaintStatus,
   type RawUnit,
   type RawBooking,
   type RawUser,
   type RawCancellationPreview,
+  type RawGuestComplaint,
+  type RawGuestComplaintRow,
   type Offer,
   type Testimonial,
   type UnitCategory,
@@ -41,6 +46,9 @@ import type {
   RefundRecord,
   CancellationPolicy,
   SavedCard,
+  GuestComplaint,
+  GuestComplaintRow,
+  GuestComplaintStatus,
 } from '@/types';
 import type { RefundPreview } from '@/lib/cancellation/engine';
 import { VAT_RATE, INVOICE_SELLER } from '@/lib/constants/brand';
@@ -1024,6 +1032,93 @@ export const reviewsApi = {
       ? withLatency(mockApi.reviews.getForBooking(bookingId))
       : http<Record<string, unknown> | null>(`/bookings/${bookingId}/review`).then((r) =>
           r ? mapReview(r) : null,
+        ),
+};
+
+// ============ Complaints ============
+
+/** What the form hands over — this layer turns it into multipart itself. */
+export interface SubmitComplaintInput {
+  description: string;
+  contactedPartner: boolean;
+  /** Already screened by `screenComplaintImages`: at most 6, each ≤ 5 MB, jpeg/png/webp. */
+  images: File[];
+}
+
+/** The `201` body — the new row's identity only; the full record comes from `getForBooking`. */
+export interface SubmitComplaintResult {
+  id: string;
+  status: GuestComplaintStatus;
+  createdAt: string | null;
+}
+
+/**
+ * Codes the complaint form branches on. The decision is always made on the
+ * code: the Arabic `message` beside it is display copy the backend may
+ * reword, the code it may not.
+ */
+export const COMPLAINT_CODES = {
+  /** 404 on `getForBooking` — an ordinary "nothing here yet", turned into `null` below. */
+  NO_COMPLAINT: 'NO_COMPLAINT',
+  /** 409 — one complaint per booking; show the existing one, not an error. */
+  ALREADY_EXISTS: 'COMPLAINT_ALREADY_EXISTS',
+  /** 422 — the 48 hours after check-out have passed. */
+  WINDOW_CLOSED: 'WINDOW_CLOSED',
+  /** 422 — the stay hasn't started; the button should not have been offered. */
+  WINDOW_NOT_OPEN: 'WINDOW_NOT_OPEN',
+  /** 422 — same: refetch the booking, the status shown was stale. */
+  BOOKING_NOT_COMPLETED: 'BOOKING_NOT_COMPLETED',
+  /** 403 — cannot happen with the right route; show the server's message. */
+  NOT_YOUR_BOOKING: 'NOT_YOUR_BOOKING',
+} as const;
+
+function noComplaintAsNull(e: unknown): null {
+  if (e instanceof ApiError && e.status === 404 && e.code === COMPLAINT_CODES.NO_COMPLAINT) return null;
+  throw e;
+}
+
+export const complaintsApi = {
+  /**
+   * `POST /bookings/{id}/complaint`, multipart because the photos travel with
+   * it. Refusals arrive as `ApiError` carrying one of `COMPLAINT_CODES`, or a
+   * plain 422 with the per-field `errors` bag on `fields`. The route is
+   * throttled at 6 per minute, which `http` surfaces as `RATE_LIMITED`.
+   */
+  submit: (bookingId: string, input: SubmitComplaintInput): Promise<SubmitComplaintResult> => {
+    if (USE_MOCK) return withLatency(mockApi.complaints.submit(bookingId, input));
+    const form = new FormData();
+    form.append('description', input.description);
+    // A multipart field cannot carry a JSON boolean; Laravel's `boolean` rule reads "1"/"0".
+    form.append('contacted_partner', input.contactedPartner ? '1' : '0');
+    for (const file of input.images) form.append('images[]', file);
+    return http<{ id: number | string; status?: string; created_at?: string | null } | null>(
+      `/bookings/${bookingId}/complaint`,
+      { method: 'POST', body: form },
+    ).then((d) => ({
+      id: String(d?.id ?? ''),
+      status: mapComplaintStatus(d?.status ?? 'submitted'),
+      createdAt: d?.created_at ?? null,
+    }));
+  },
+
+  /**
+   * The complaint on a booking, or `null` when there is none — which is how
+   * the booking page chooses between the submit button and the status card.
+   * The image links in the result are signed and expire 15 minutes after THIS
+   * read, so callers refetch for fresh ones rather than keeping the record.
+   */
+  getForBooking: (bookingId: string): Promise<GuestComplaint | null> =>
+    (USE_MOCK
+      ? withLatency(mockApi.complaints.getForBooking(bookingId))
+      : http<RawGuestComplaint>(`/bookings/${bookingId}/complaint`).then(mapGuestComplaint)
+    ).catch(noComplaintAsNull),
+
+  /** `GET /user/complaints` — under `/user`, not `/me`: `/me` is the partner session on the root. */
+  list: (): Promise<GuestComplaintRow[]> =>
+    USE_MOCK
+      ? withLatency(mockApi.complaints.list())
+      : http<RawGuestComplaintRow[] | null>('/user/complaints').then((rows) =>
+          (rows ?? []).map(mapGuestComplaintRow),
         ),
 };
 

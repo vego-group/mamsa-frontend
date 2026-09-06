@@ -9,7 +9,7 @@ import { render, screen, cleanup, act } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import arMessages from '../../../../messages/ar.json';
 import BookingDetailsPage from './page';
-import { bookingsApi, reviewsApi } from '@/lib/api/client';
+import { bookingsApi, reviewsApi, complaintsApi } from '@/lib/api/client';
 import { ApiError } from '@/lib/api/errors';
 import { getPolicyByTemplate } from '@/lib/constants/cancellation-policies';
 import { useAuthStore } from '@/stores/auth';
@@ -34,6 +34,7 @@ function bookingFixture(): Booking {
     status: 'confirmed',
     checkInDate: '2026-09-10',
     checkOutDate: '2026-09-12',
+    checkOutTime: '12:00',
     nights: 2,
     guests: { adults: 2, children: 0 },
     price: { pricePerNight: 500, nights: 2, gross: 1000, netBase: 869.57, vat: 130.43 },
@@ -170,5 +171,42 @@ describe('Booking details — the review is supplementary', () => {
 
     // One 401 per logged-out visit, not two — and nothing rejects unhandled.
     expect(getForBooking).not.toHaveBeenCalled();
+  });
+});
+
+/** YYYY-MM-DD, N days from today (UTC) — the shape bookings carry. */
+function daysFromToday(n: number): string {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+describe('Booking details — a complaint lives on the completed booking', () => {
+  it('offers «تقديم شكوى» on a completed stay still inside its 48-hour window', async () => {
+    useAuthStore.setState({ user: USER, isAuthenticated: true });
+    vi.spyOn(bookingsApi, 'getById').mockResolvedValue({
+      ...bookingFixture(),
+      status: 'completed',
+      checkInDate: daysFromToday(-1),
+      checkOutDate: daysFromToday(0),
+      checkOutTime: '12:00',
+    });
+    vi.spyOn(reviewsApi, 'getForBooking').mockResolvedValue(null);
+    const getComplaint = vi.spyOn(complaintsApi, 'getForBooking').mockResolvedValue(null);
+    await renderPage();
+
+    expect(getComplaint).toHaveBeenCalledWith(BOOKING_ID);
+    expect(screen.getByText(arMessages.complaints.submitButton)).toBeTruthy();
+  });
+
+  it('never asks about a complaint on a booking that is not completed', async () => {
+    useAuthStore.setState({ user: USER, isAuthenticated: true });
+    vi.spyOn(bookingsApi, 'getById').mockResolvedValue(bookingFixture()); // confirmed
+    vi.spyOn(reviewsApi, 'getForBooking').mockResolvedValue(null);
+    const getComplaint = vi.spyOn(complaintsApi, 'getForBooking').mockResolvedValue(null);
+    await renderPage();
+
+    expect(getComplaint).not.toHaveBeenCalled();
+    expect(screen.queryByText(arMessages.complaints.sectionTitle)).toBeNull();
   });
 });
