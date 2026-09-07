@@ -19,6 +19,36 @@ export function formatSARShort(amount: number): string {
   return `${formatted} ${CURRENCY.symbolAr}`;
 }
 
+/**
+ * A settled money figure, shown exactly as the API sent it: always two
+ * decimals, so 391.3 reads "391.30 ر.س" — the same number as on the guest's
+ * bank statement, not a shorter-looking one. This is display formatting only;
+ * nothing is added, subtracted or converted.
+ */
+export function formatSARExact(amount: number): string {
+  const formatted = new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+  return `${formatted} ${CURRENCY.symbolAr}`;
+}
+
+/**
+ * DD/MM/YYYY on the property's calendar (Asia/Riyadh), whatever timezone the
+ * viewer is in. For timestamps: `2026-09-06T21:30:00+00:00` is already the
+ * 7th in Riyadh. A bare `YYYY-MM-DD` has no time to shift — use `formatDate`.
+ */
+export function formatDateRiyadh(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Riyadh',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(d);
+}
+
 /** تنسيق تاريخ ISO إلى DD/MM/YYYY ميلادي */
 export function formatDate(iso: string): string {
   try {

@@ -79,6 +79,15 @@ export const DATE_FORMAT = {
   iso: 'yyyy-MM-dd',
 } as const;
 
+/**
+ * The check-out hour assumed for a unit that sets none: 12:00 noon,
+ * Asia/Riyadh. Units carry their own `checkout_time`, and everything that
+ * counts from the moment of check-out — the 48-hour complaint window — uses
+ * the unit's value off the booking; this is only the fallback the adapters
+ * apply when the API leaves it null. It is not read by the window itself.
+ */
+export const PROPERTY_CHECKOUT_TIME = '12:00';
+
 export const OTP_CONFIG = {
   length: 6,
   expirySeconds: 60,

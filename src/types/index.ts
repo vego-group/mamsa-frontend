@@ -196,6 +196,13 @@ export interface Booking {
   status: BookingStatus;
   checkInDate: string; // ISO yyyy-mm-dd
   checkOutDate: string;
+  /**
+   * The unit's check-out hour, "HH:mm" on Riyadh time — `checkout_time` on the
+   * unit embedded in the booking resource, 12:00 when the unit sets none. The
+   * stay ends at `checkOutDate` + this; the 48-hour complaint window counts
+   * from that instant, so it is carried on the booking rather than looked up.
+   */
+  checkOutTime: string;
   nights: number;
   guests: { adults: number; children: number };
   price: PriceBreakdown;
@@ -210,6 +217,59 @@ export interface Booking {
   isReviewed: boolean;
   createdAt: string;
   cancelledAt?: string;
+}
+
+// ============ Complaints ============
+
+/**
+ * Where a guest's complaint sits, in the order Mamsa moves it. The two
+ * `resolved_*` values are terminal. `approved` means the decision was taken
+ * but the refund is still at the gateway — it can take an hour or more, and
+ * it can fail — so nothing about money is known until `resolved_refunded`.
+ */
+export type GuestComplaintStatus =
+  | 'submitted'
+  | 'under_review'
+  | 'approved'
+  | 'resolved_refunded'
+  | 'resolved_rejected';
+
+export interface GuestComplaintImage {
+  /**
+   * A signed link that expires 15 minutes after the READ that produced it —
+   * not after the upload. Never store it; when it stops resolving, fetch the
+   * complaint again and a fresh one comes back.
+   */
+  url: string;
+  mime: string;
+}
+
+export interface GuestComplaint {
+  id: string;
+  status: GuestComplaintStatus;
+  description: string;
+  /** Whether the guest had already raised the problem with the host — context for the reviewer, never a precondition. */
+  contactedPartner: boolean;
+  /** Mamsa's decision text, the only copy written for the guest. Null until a decision exists. */
+  guestMessage: string | null;
+  /**
+   * SAR as a decimal, exactly as the API sent it (391.3 is three hundred
+   * ninety-one riyals and thirty halalas — this surface never speaks in
+   * halalas). Null until the money has actually moved, i.e. until
+   * `resolved_refunded`; an `approved` complaint carries no figure yet.
+   */
+  refundedAmount: number | null;
+  createdAt: string | null;
+  images: GuestComplaintImage[];
+}
+
+/** One line of the guest's complaint list on the account page. */
+export interface GuestComplaintRow {
+  id: string;
+  status: GuestComplaintStatus;
+  bookingId: string;
+  bookingCode: string | null;
+  createdAt: string | null;
 }
 
 // ============ Reviews ============
