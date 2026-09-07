@@ -27,9 +27,11 @@ import { QRCodeSVG } from 'qrcode.react';
 import { ArrowRight, Printer, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { LoadError } from '@/components/shared/LoadError';
 import { bookingsApi, type TaxInvoice } from '@/lib/api/client';
 import { ApiError } from '@/lib/api/errors';
+import { loadFailureFor, type LoadState } from '@/lib/api/load-state';
+import { LoadStateView } from '@/components/shared/LoadStateView';
+import { useAuthStore } from '@/stores/auth';
 import { formatSAR, formatDate } from '@/lib/utils/format';
 import type { Booking } from '@/types';
 
@@ -40,16 +42,19 @@ export default function InvoicePage() {
   const t = useTranslations('invoice');
   const { bookingId } = useParams<{ bookingId: string }>();
 
+  // Re-running the fetch on this flag IS the return path after signing in: the
+  // login dialog leaves the person on this URL, the flag flips, the page loads.
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [booking, setBooking] = useState<Booking | null>(null);
   const [invoice, setInvoice] = useState<TaxInvoice | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [failed, setFailed] = useState(false);
+  const [state, setState] = useState<LoadState>('loading');
+  // Bumping this re-runs the fetch effect — the retry path after a failure.
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (!bookingId) return;
     let cancelled = false;
-    setLoading(true);
-    setFailed(false);
+    setState('loading');
 
     // The booking is fetched first: its status decides whether an invoice may
     // exist at all, so an unpaid booking never even requests one.
@@ -73,15 +78,17 @@ export default function InvoicePage() {
           if (!notAvailable) throw e;
         }
       })
-      .catch(() => !cancelled && setFailed(true))
-      .finally(() => !cancelled && setLoading(false));
+      .then(() => !cancelled && setState('ready'))
+      // 401/403/404 are answers about this visitor, not faults: no session,
+      // someone else's booking, no such booking. Each gets its own card.
+      .catch((e) => !cancelled && setState(loadFailureFor(e)));
 
     return () => {
       cancelled = true;
     };
-  }, [bookingId]);
+  }, [bookingId, isAuthenticated, attempt]);
 
-  if (loading) {
+  if (state === 'loading') {
     return (
       <div className="container mx-auto flex justify-center px-4 py-24">
         <Loader2 className="h-8 w-8 animate-spin text-brand-primary" />
@@ -89,10 +96,16 @@ export default function InvoicePage() {
     );
   }
 
-  if (failed || !booking) {
+  if (state !== 'ready' || !booking) {
     return (
       <div className="container mx-auto max-w-md px-4 py-16">
-        <LoadError message={t('loadFailed')} onRetry={() => location.reload()} />
+        <LoadStateView
+          state={state === 'ready' ? 'error' : state}
+          onRetry={() => setAttempt((n) => n + 1)}
+          errorMessage={t('loadFailed')}
+          forbiddenMessage={t('notYours')}
+          notFoundMessage={t('notFound')}
+        />
       </div>
     );
   }

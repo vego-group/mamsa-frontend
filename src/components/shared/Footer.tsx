@@ -1,9 +1,9 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import Script from 'next/script';
 import { getTranslations } from 'next-intl/server';
 import { Linkedin, Instagram, Twitter, Facebook, Phone, Mail } from 'lucide-react';
 import { BRAND, SOCIAL_LINKS } from '@/lib/constants/brand';
+import { VerifiedStoreSeal } from './VerifiedStoreSeal';
 
 export async function Footer() {
   const t = await getTranslations('footer');
@@ -95,14 +95,9 @@ export async function Footer() {
           <div className="rounded-full border border-brand-border bg-white/60 px-4 py-2 text-center text-xs text-brand-muted md:text-start">
             {t('cr', { number: BRAND.crNumber })}
           </div>
-          {/* Saudi Business Center "متجر موثّق" seal. The vendor script pins it
-              to a screen corner by default; globals.css unpins it so it sits
-              here beside the CR number, where a trust mark belongs. */}
-          <div className="sbc-verify-seal" data-token="SHVHY2xMRXY2L1MxOEQ0c0tYbmdSZz09" data-position="bottom-left" />
-          <Script
-            src="https://eauthenticate.saudibusiness.gov.sa/EAuthSealApi/seal.js"
-            strategy="lazyOnload"
-          />
+          {/* Saudi Business Center "متجر موثّق" seal, beside the CR number where a
+              trust mark belongs. Hidden on iOS — see VerifiedStoreSeal. */}
+          <VerifiedStoreSeal />
         </div>
       </div>
 

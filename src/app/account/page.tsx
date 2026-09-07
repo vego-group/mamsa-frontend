@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { EmailVerificationCard } from '@/components/account/email-verification';
+import { ComplaintsCard } from '@/components/account/complaints-card';
 import { accountApi, authApi } from '@/lib/api/client';
 import { useAuthStore } from '@/stores/auth';
 import { formatPhoneDisplay } from '@/lib/utils/phone';
@@ -152,6 +153,9 @@ export default function AccountPage() {
       </Card>
 
       {/* NOTE: NO password change section (OTP-only platform) */}
+
+      {/* Complaints filed on the guest's bookings — empty is the normal case. */}
+      <ComplaintsCard className="mb-4" />
 
       {/* Danger zone */}
       <Card className="border-red-200 p-6">

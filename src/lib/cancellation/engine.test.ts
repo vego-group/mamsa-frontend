@@ -23,6 +23,7 @@ function makeBooking(overrides: Partial<Booking> = {}): Booking {
     status: 'confirmed',
     checkInDate: '2026-07-01',
     checkOutDate: '2026-07-05',
+    checkOutTime: '12:00',
     nights: 4,
     guests: { adults: 2, children: 0 },
     price: {

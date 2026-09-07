@@ -26,6 +26,7 @@ function bookingFixture(status: Booking['status'] = 'confirmed'): Booking {
     status,
     checkInDate: '2026-09-10',
     checkOutDate: '2026-09-12',
+    checkOutTime: '12:00',
     nights: 2,
     guests: { adults: 2, children: 0 },
     price: { pricePerNight: 500, nights: 2, gross: 1000, netBase: 869.57, vat: 130.43 },
@@ -248,4 +249,26 @@ describe('Tax invoice — only for paid bookings', () => {
       expect(getInvoice).not.toHaveBeenCalled();
     },
   );
+});
+
+describe('Tax invoice — a 401 is a missing session, not a broken invoice', () => {
+  it('asks for the sign-in it needs instead of showing a load failure', async () => {
+    // The "view tax invoice" button in the confirmation email lands here, very
+    // often in a browser with no session.
+    vi.spyOn(bookingsApi, 'getById').mockRejectedValue(new ApiError(401, 'Unauthenticated.'));
+    const getInvoice = vi.spyOn(bookingsApi, 'getInvoice');
+    await renderInvoice();
+
+    expect(screen.getByText(arMessages.common.signInRequiredTitle)).toBeTruthy();
+    expect(screen.queryByText(arMessages.invoice.loadFailed)).toBeNull();
+    expect(screen.queryByText(arMessages.common.loading)).toBeNull();
+    expect(getInvoice).not.toHaveBeenCalled();
+  });
+
+  it('tells a signed-in visitor plainly when the booking is not theirs', async () => {
+    vi.spyOn(bookingsApi, 'getById').mockRejectedValue(new ApiError(403, 'غير مصرح'));
+    await renderInvoice();
+
+    expect(screen.getByText(arMessages.invoice.notYours)).toBeTruthy();
+  });
 });

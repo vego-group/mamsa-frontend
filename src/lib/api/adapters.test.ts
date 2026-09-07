@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   mapCancellationPreview,
   mapBooking,
@@ -26,6 +26,18 @@ function makePreview(overrides: Partial<RawCancellationPreview> = {}): RawCancel
 function makeRawBooking(overrides: Partial<RawBooking> = {}): RawBooking {
   return { id: 1, start_date: '2026-09-10', end_date: '2026-09-12', ...overrides };
 }
+
+// `mapBooking` warns whenever it has to assume a unit's check-out hour, and
+// most fixtures in this file carry no unit at all. The warning is captured so
+// the run stays readable, and asserted in the one place it is the point.
+beforeEach(() => {
+  vi.spyOn(console, 'warn').mockImplementation(() => {});
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 
 describe('mapCancellationPreview — refund figures', () => {
   it('uses the explicit forfeited amount', () => {
@@ -217,5 +229,70 @@ describe('mapUnit — image derivatives', () => {
       ]),
     );
     expect(unit.images.map((i) => i.url)).toEqual(['https://cdn/cover.jpg', 'https://cdn/second.jpg']);
+  });
+});
+
+describe("mapBooking — the unit's check-out hour", () => {
+  // The complaint window counts 48h from the check-out INSTANT, and the backend
+  // takes that instant from the unit's own `checkout_time` — so the booking has
+  // to carry it, with the same 12:00 fallback `mapUnit` applies to a unit that
+  // sets none. Never a platform constant inside the window itself.
+  function unitWith(checkout_time?: string): RawUnit {
+    return {
+      id: 7,
+      name: 'شقة',
+      type: 'apartment',
+      price: 500,
+      capacity: 2,
+      bedrooms: 1,
+      bathrooms: 1,
+      city: 'الرياض',
+      checkout_time,
+    };
+  }
+
+  it('reads checkout_time off the embedded unit', () => {
+    expect(mapBooking(makeRawBooking({ unit: unitWith('13:00') })).checkOutTime).toBe('13:00');
+  });
+
+  it('trims a seconds-bearing time to HH:mm', () => {
+    expect(mapBooking(makeRawBooking({ unit: unitWith('13:00:00') })).checkOutTime).toBe('13:00');
+  });
+
+  it('falls back to 12:00 when the unit sets none, or no unit is embedded at all', () => {
+    expect(mapBooking(makeRawBooking({ unit: unitWith(undefined) })).checkOutTime).toBe('12:00');
+    expect(mapBooking(makeRawBooking({ unit: unitWith('') })).checkOutTime).toBe('12:00');
+    expect(mapBooking(makeRawBooking({ unit: undefined })).checkOutTime).toBe('12:00');
+  });
+
+  it('falls back rather than pass a malformed hour into the window', () => {
+    expect(mapBooking(makeRawBooking({ unit: unitWith('noon') })).checkOutTime).toBe('12:00');
+  });
+
+  // The fallback keeps the booking renderable, but a unit that really checks
+  // out at 13:00 would then close its complaint window an hour early — and all
+  // a guest sees is a button gone sooner than promised. The warning is the only
+  // way that ever gets traced back to a field missing from the response.
+  it('warns with the booking number, and why, every time it has to assume the hour', () => {
+    mapBooking(makeRawBooking({ id: 4711, reference: 'REF4711', unit: undefined }));
+    mapBooking(makeRawBooking({ id: 4712, unit: unitWith(undefined) }));
+    mapBooking(makeRawBooking({ id: 4713, unit: unitWith('noon') }));
+
+    const warnings = vi.mocked(console.warn).mock.calls.map((call) => String(call[0]));
+    expect(warnings).toHaveLength(3);
+    expect(warnings[0]).toContain('4711');
+    expect(warnings[0]).toContain('REF4711');
+    expect(warnings[0]).toContain('embeds no unit');
+    expect(warnings[1]).toContain('4712');
+    expect(warnings[1]).toContain('checkout_time is missing');
+    expect(warnings[2]).toContain('4713');
+    expect(warnings[2]).toContain('"noon"');
+    expect(warnings[2]).toContain('12:00');
+  });
+
+  it('stays silent when the unit carries its hour', () => {
+    mapBooking(makeRawBooking({ unit: unitWith('13:00') }));
+    mapBooking(makeRawBooking({ unit: unitWith('12:00') }));
+    expect(console.warn).not.toHaveBeenCalled();
   });
 });

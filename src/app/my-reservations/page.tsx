@@ -9,27 +9,34 @@ import { BookingCard } from '@/components/features/booking/BookingCard';
 import { Button } from '@/components/ui/button';
 import { bookingsApi } from '@/lib/api/client';
 import { daysUntilCheckIn } from '@/lib/cancellation/engine';
-import { LoadError } from '@/components/shared/LoadError';
+import { LoadStateView } from '@/components/shared/LoadStateView';
+import { loadFailureFor, type LoadFailure } from '@/lib/api/load-state';
+import { useAuthStore } from '@/stores/auth';
 import { Skeleton } from '@/components/ui/separator';
 import type { Booking } from '@/types';
 
 export default function MyReservationsPage() {
   const t = useTranslations('myReservations');
+  // Re-running the fetch on this flag IS the return path after signing in: the
+  // login dialog leaves the person on this URL, the flag flips, the list loads.
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
+  // Null while the list is loading or loaded; otherwise WHY it failed — a
+  // guest arriving without a session is asked to sign in, not shown a fault.
+  const [failure, setFailure] = useState<LoadFailure | null>(null);
   // Bumping this re-runs the fetch effect — the retry path after a failure.
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     setLoading(true);
-    setLoadError(false);
+    setFailure(null);
     bookingsApi
       .list()
       .then(setBookings)
-      .catch(() => setLoadError(true))
+      .catch((e) => setFailure(loadFailureFor(e)))
       .finally(() => setLoading(false));
-  }, [attempt]);
+  }, [attempt, isAuthenticated]);
 
   // Swap the cancelled booking in place — the useMemo re-categorization moves
   // its card from "upcoming/active" to "cancelled" without a page reload.
@@ -82,9 +89,9 @@ export default function MyReservationsPage() {
               <Skeleton key={i} className="h-44 rounded-2xl" />
             ))}
           </div>
-        ) : loadError ? (
+        ) : failure ? (
           <div className="mt-6">
-            <LoadError onRetry={() => setAttempt((a) => a + 1)} />
+            <LoadStateView state={failure} onRetry={() => setAttempt((a) => a + 1)} />
           </div>
         ) : (
           <>

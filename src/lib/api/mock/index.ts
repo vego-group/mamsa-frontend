@@ -12,6 +12,8 @@ import { previewCancellation, buildRefundRecord } from '@/lib/cancellation/engin
 import { getPolicyByTemplate } from '@/lib/constants/cancellation-policies';
 import { ApiError, ERROR_CODE_MESSAGES } from '../errors';
 import { isValidEmail } from '@/lib/utils/email';
+import { complaintWindowFor } from '@/lib/complaints/window';
+import { COMPLAINT_MAX_IMAGES, checkComplaintDescription } from '@/lib/complaints/rules';
 import type {
   Booking,
   BookingStatus,
@@ -20,6 +22,9 @@ import type {
   User,
   UnitsFilter,
   RefundRecord,
+  GuestComplaint,
+  GuestComplaintRow,
+  GuestComplaintStatus,
 } from '@/types';
 import { diffNights } from '@/lib/utils/format';
 import { quoteFromNightly } from '@/lib/pricing';
@@ -92,6 +97,46 @@ function mergeDateRanges(ranges: { start: string; end: string }[]): { start: str
 }
 let reviews: Review[] = [...MOCK_REVIEWS];
 let currentUser: User | null = null; // null until login
+
+// ============ Complaints (in-memory) ============
+
+/** One complaint per booking — the uniqueness the real backend answers with a 409. */
+interface MockComplaint extends Omit<GuestComplaint, 'images'> {
+  bookingId: string;
+  /** The uploaded files; links are minted from them at read time, like the signed URLs. */
+  files: File[];
+}
+
+// Seeded on the oldest completed fixture so mock mode can show a settled
+// refund. 391.3 is riyals as a decimal — this surface never speaks in halalas.
+let complaints: MockComplaint[] = [
+  {
+    id: '1',
+    bookingId: 'BK-006',
+    status: 'resolved_refunded',
+    description: 'المكيف في غرفة النوم الرئيسية لم يعمل طوال مدة الإقامة رغم إبلاغ المضيف في اليوم الأول.',
+    contactedPartner: true,
+    guestMessage: 'تم التحقق من الشكوى وقبولها، وأُعيد جزء من قيمة الحجز إلى وسيلة الدفع.',
+    refundedAmount: 391.3,
+    createdAt: new Date(Date.now() - 50 * 24 * 60 * 60 * 1000).toISOString(),
+    files: [],
+  },
+];
+let nextComplaintId = 2;
+
+const complaintError = (status: number, code: string, message: string): Promise<never> =>
+  Promise.reject(new ApiError(status, message, code));
+
+/** Role-plays the 15-minute signed links: produced at read time, never stored on the record. */
+function complaintImages(c: MockComplaint): GuestComplaint['images'] {
+  const canLink = typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function';
+  return c.files.map((f) => ({ url: canLink ? URL.createObjectURL(f) : '', mime: f.type }));
+}
+
+function toGuestComplaint(c: MockComplaint): GuestComplaint {
+  const { bookingId: _bookingId, files: _files, ...rest } = c;
+  return { ...rest, images: complaintImages(c) };
+}
 
 // Email-verification session state — a single pending email per (mock) account,
 // mirroring how the real backend would track one outstanding code at a time.
@@ -355,6 +400,7 @@ export const mockApi = {
         status: 'confirmed',
         checkInDate: input.checkInDate,
         checkOutDate: input.checkOutDate,
+        checkOutTime: unit.checkOutTime,
         nights,
         guests: input.guests,
         price: {
@@ -418,6 +464,74 @@ export const mockApi = {
     },
 
     getForBooking: async (bookingId: string) => ok(getReviewForBooking(bookingId) ?? null),
+  },
+
+  complaints: {
+    /**
+     * Mirrors the real route's refusals, code for code, so the form's
+     * branching is exercised offline exactly as it is against staging.
+     */
+    submit: async (
+      bookingId: string,
+      input: { description: string; contactedPartner: boolean; images: File[] },
+    ): Promise<{ id: string; status: GuestComplaintStatus; createdAt: string | null }> => {
+      const b = findBooking(bookingId);
+      if (!b) return fail('الحجز غير موجود') as Promise<never>;
+      if (complaints.some((c) => c.bookingId === bookingId)) {
+        return complaintError(409, 'COMPLAINT_ALREADY_EXISTS', 'توجد شكوى مسجّلة على هذا الحجز بالفعل.');
+      }
+      const window = complaintWindowFor(b, new Date());
+      if (window === 'not_completed') {
+        return complaintError(422, 'BOOKING_NOT_COMPLETED', 'لا يمكن تقديم شكوى إلا على حجز مكتمل.');
+      }
+      if (window === 'not_open') {
+        return complaintError(422, 'WINDOW_NOT_OPEN', 'لم تبدأ مهلة تقديم الشكوى بعد.');
+      }
+      if (window === 'closed') return complaintError(422, 'WINDOW_CLOSED', 'انتهت مهلة تقديم الشكوى.');
+
+      const check = checkComplaintDescription(input.description);
+      if (!check.valid) {
+        const msg =
+          check.problem === 'short' ? 'يجب ألا يقل الوصف عن 20 حرفًا.' : 'يجب ألا يزيد الوصف عن 2000 حرف.';
+        return Promise.reject(new ApiError(422, msg, undefined, undefined, undefined, { description: [msg] }));
+      }
+      if (input.images.length > COMPLAINT_MAX_IMAGES) {
+        const msg = 'الحد الأقصى 6 صور.';
+        return Promise.reject(new ApiError(422, msg, undefined, undefined, undefined, { images: [msg] }));
+      }
+
+      const created: MockComplaint = {
+        id: String(nextComplaintId++),
+        bookingId,
+        status: 'submitted',
+        description: input.description.trim(),
+        contactedPartner: input.contactedPartner,
+        guestMessage: null,
+        refundedAmount: null,
+        createdAt: new Date().toISOString(),
+        files: [...input.images],
+      };
+      complaints = [created, ...complaints];
+      return ok({ id: created.id, status: created.status, createdAt: created.createdAt });
+    },
+
+    /** Rejects with the real route's `NO_COMPLAINT` 404 — the client turns that into `null`. */
+    getForBooking: async (bookingId: string): Promise<GuestComplaint> => {
+      const c = complaints.find((x) => x.bookingId === bookingId);
+      if (!c) return complaintError(404, 'NO_COMPLAINT', 'لا توجد شكوى على هذا الحجز.');
+      return ok(toGuestComplaint(c));
+    },
+
+    list: async (): Promise<GuestComplaintRow[]> =>
+      ok(
+        complaints.map((c) => ({
+          id: c.id,
+          status: c.status,
+          bookingId: c.bookingId,
+          bookingCode: findBooking(c.bookingId)?.code ?? null,
+          createdAt: c.createdAt,
+        })),
+      ),
   },
 
   account: {

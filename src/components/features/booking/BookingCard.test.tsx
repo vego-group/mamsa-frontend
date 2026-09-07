@@ -31,6 +31,7 @@ function makeBooking(overrides: Partial<Booking> = {}): Booking {
     // 9 days out — inside the 14-day window that my-reservations buckets as "active".
     checkInDate: isoInDays(9),
     checkOutDate: isoInDays(12),
+    checkOutTime: '12:00',
     nights: 3,
     guests: { adults: 2, children: 0 },
     price: { pricePerNight: 1000, nights: 3, gross: 3000, netBase: 2608.7, vat: 391.3 },
