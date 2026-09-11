@@ -18,6 +18,7 @@ import { loadFailureFor, type LoadState } from '@/lib/api/load-state';
 import { LoadStateView } from '@/components/shared/LoadStateView';
 import { useAuthStore } from '@/stores/auth';
 import { formatDate, formatSAR } from '@/lib/utils/format';
+import { cancelledByKey } from '@/lib/cancellation/actor';
 import { downloadBookingConfirmation } from '@/lib/utils/booking-confirmation';
 import { isBookingCancellable } from '@/lib/cancellation/engine';
 import { vatPercentLabel } from '@/lib/pricing';
@@ -93,6 +94,8 @@ export default function BookingDetailsPage() {
   const canCancel = isBookingCancellable(booking, new Date());
   // Prefer the backend-embedded flag; `review` (mock-only endpoint) covers mock mode.
   const hasReview = booking.isReviewed || Boolean(review);
+  // `null` names nobody — an actor outside the closed set is never shown as the guest.
+  const actorKey = booking.cancellation ? cancelledByKey(booking.cancellation) : null;
 
   const statusBadge =
     booking.status === 'cancelled' ? <Badge variant="danger">{t('status.cancelled')}</Badge>
@@ -196,15 +199,19 @@ export default function BookingDetailsPage() {
             <img src={booking.unitSnapshot.imageUrl} alt="" className="h-80 w-full object-cover" />
           </div>
 
-          {booking.status === 'cancelled' && booking.refund && (
+          {booking.status === 'cancelled' && booking.cancellation && (
             <Card className="border-red-200 bg-red-50 p-5">
               <div className="mb-2 flex items-center gap-2 font-semibold text-status-danger">
-                <X className="h-4 w-4" /> {t('cancelledBy')}: {booking.refund.cancelledBy === 'customer' ? t('byCustomer') : t('bySystem')}
+                <X className="h-4 w-4" /> {t('cancelledTitle')}
               </div>
               <div className="space-y-1 text-sm text-red-900">
-                {booking.refund.reason && <div>{t('reason')}: {booking.refund.reason}</div>}
+                {actorKey && <div>{t('cancelledBy')}: {t(actorKey)}</div>}
+                {booking.cancellation.reason && <div>{t('reason')}: {booking.cancellation.reason}</div>}
                 {booking.cancelledAt && <div>{t('cancelledAt')}: {formatDate(booking.cancelledAt.slice(0, 10))}</div>}
-                <div>{t('refunded')}: {formatSAR(booking.refund.amount)} ({booking.refund.percent}%)</div>
+                {/* A refund line only when money actually came back — see BookingCancellation.refundedAmount. */}
+                {booking.cancellation.refundedAmount > 0 && (
+                  <div>{t('refunded', { amount: formatSAR(booking.cancellation.refundedAmount) })}</div>
+                )}
               </div>
             </Card>
           )}

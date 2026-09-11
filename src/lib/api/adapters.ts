@@ -19,7 +19,7 @@ import type {
   CancellationTemplate,
   CancellationPolicy,
   CancellationTier,
-  RefundRecord,
+  BookingCancellation,
   SavedCard,
   Transaction,
   GuestComplaint,
@@ -151,13 +151,32 @@ export interface RawBooking {
   status_label?: string;
   notes?: string | null;
   cancelled_at?: string | null;
+  /**
+   * Present on EVERY cancelled booking, whoever cancelled it (confirmed with
+   * the backend 2026-09-11) — so the UI may build the cancelled card on its
+   * presence alone. Since the 2026-09-10 double-sale fix a `cancelled` booking
+   * can have been charged and refunded — `refunded_amount` is what actually
+   * came back, and `0` means the gateway refund failed and an admin is
+   * handling it by hand (NOT "nothing was owed").
+   */
   cancellation?: {
     reason?: string | null;
+    /**
+     * DELIBERATELY NOT WIRED. The backend renders this in one language; this
+     * app is bilingual and its actor label must follow the locale, so the
+     * label comes from our own dictionary keyed on `cancelled_by`. Do not
+     * connect it — that would leave two sources for one string.
+     */
     cancelled_by_label?: string;
+    /** Exactly four values: `customer` (guest), `partner` (host), `admin` and `system` (both the platform). The key to branch on. */
     cancelled_by?: string;
-    refunded_amount?: number;
-    refund_percent?: number;
-    tier_label?: string;
+    cancelled_at?: string | null;
+    /**
+     * Riyals, always a JSON number (the payment relation is eager-loaded on
+     * both guest endpoints). Typed loosely anyway: absent, null and 0 must all
+     * read as the same silence, and a stray string must never become a figure.
+     */
+    refunded_amount?: number | string | null;
   } | null;
   payment?: { method?: string; last4?: string } | null;
   /**
@@ -452,12 +471,24 @@ export function mapUnit(u: RawUnit): Unit {
  * Closed set confirmed by the backend — `customer` = guest, `partner` = host,
  * `admin` = back-office, `system` = automated (e.g. payment expiry). No aliases
  * (`guest`/`host` are explicitly not used), so anything else means the contract
- * changed; fall back to the commonest case rather than render a blank actor.
+ * changed. The fallback is `unknown`, which names nobody — never the guest,
+ * because that would accuse them of a cancellation they did not make.
  */
 const CANCELLED_BY = ['customer', 'partner', 'admin', 'system'] as const;
+type KnownCancelledBy = (typeof CANCELLED_BY)[number];
 
-const mapCancelledBy = (v?: string): RefundRecord['cancelledBy'] =>
-  CANCELLED_BY.includes(v as RefundRecord['cancelledBy']) ? (v as RefundRecord['cancelledBy']) : 'customer';
+const mapCancelledBy = (v?: string): BookingCancellation['cancelledBy'] =>
+  CANCELLED_BY.includes(v as KnownCancelledBy) ? (v as KnownCancelledBy) : 'unknown';
+
+/**
+ * Riyals actually returned. Absent, null, 0, negative and unparseable all read
+ * as 0 — the "no money moved" case — because the UI shows a refund line only
+ * above 0, and a garbage figure must never become a promise to the guest.
+ */
+const mapRefundedAmount = (v: number | string | null | undefined): number => {
+  const n = Number(v ?? 0);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+};
 
 /**
  * `guests` is the total headcount and `guests_detail` the split. When the split
@@ -531,18 +562,16 @@ export function mapBooking(b: RawBooking): Booking {
     payment: b.payment?.method
       ? { method: b.payment.method as PaymentInfo['method'], last4: b.payment.last4 }
       : undefined,
-    refund: b.cancellation
+    cancellation: b.cancellation
       ? {
-          amount: Number(b.cancellation.refunded_amount ?? 0),
-          percent: Number(b.cancellation.refund_percent ?? 0),
-          tierLabel: b.cancellation.tier_label ?? '',
-          refundedAt: b.cancelled_at ?? new Date().toISOString(),
-          reason: b.cancellation.reason ?? undefined,
           cancelledBy: mapCancelledBy(b.cancellation.cancelled_by),
+          reason: b.cancellation.reason || undefined,
+          cancelledAt: b.cancellation.cancelled_at ?? b.cancelled_at ?? undefined,
+          refundedAmount: mapRefundedAmount(b.cancellation.refunded_amount),
         }
       : undefined,
     createdAt: b.created_at ?? new Date().toISOString(),
-    cancelledAt: b.cancelled_at ?? undefined,
+    cancelledAt: b.cancelled_at ?? b.cancellation?.cancelled_at ?? undefined,
   };
 }
 

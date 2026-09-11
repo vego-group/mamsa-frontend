@@ -107,12 +107,59 @@ describe('mapBooking — guests split', () => {
 describe('mapBooking — cancelledBy', () => {
   it.each(['customer', 'partner', 'admin', 'system'] as const)('passes through %s', (who) => {
     const b = mapBooking(makeRawBooking({ cancellation: { cancelled_by: who } }));
-    expect(b.refund?.cancelledBy).toBe(who);
+    expect(b.cancellation?.cancelledBy).toBe(who);
   });
 
-  it('falls back to customer for a value outside the closed set', () => {
-    const b = mapBooking(makeRawBooking({ cancellation: { cancelled_by: 'guest' } }));
-    expect(b.refund?.cancelledBy).toBe('customer');
+  // Never the guest: a default of "customer" would pin a cancellation on
+  // someone who may not have made it.
+  it.each(['guest', '', undefined])('reads %s (outside the closed set) as unknown, not as the guest', (v) => {
+    const b = mapBooking(makeRawBooking({ cancellation: { cancelled_by: v } }));
+    expect(b.cancellation?.cancelledBy).toBe('unknown');
+  });
+});
+
+/**
+ * Since the double-sale fix (2026-09-10) a `cancelled` booking can have been
+ * charged and refunded. `refunded_amount` is what actually came back, and 0
+ * means the gateway refund FAILED with the admin handling it by hand — so the
+ * figure must reach the UI exactly, and anything unusable must read as 0, the
+ * value at which the UI says nothing about money at all.
+ */
+describe('mapBooking — cancellation.refundedAmount', () => {
+  it('passes a positive riyal figure through untouched', () => {
+    const b = mapBooking(makeRawBooking({ cancellation: { cancelled_by: 'system', refunded_amount: 1000 } }));
+    expect(b.cancellation?.refundedAmount).toBe(1000);
+  });
+
+  it('tolerates a numeric string', () => {
+    const b = mapBooking(makeRawBooking({ cancellation: { cancelled_by: 'system', refunded_amount: '391.30' } }));
+    expect(b.cancellation?.refundedAmount).toBe(391.3);
+  });
+
+  it.each([0, null, undefined, 'n/a', -5])('reads %s as 0 — no money moved', (v) => {
+    const b = mapBooking(makeRawBooking({ cancellation: { cancelled_by: 'system', refunded_amount: v } }));
+    expect(b.cancellation?.refundedAmount).toBe(0);
+  });
+
+  it('leaves cancellation undefined on a booking that was never cancelled', () => {
+    expect(mapBooking(makeRawBooking()).cancellation).toBeUndefined();
+  });
+
+  it('keeps the free-text reason as text, and drops an empty one', () => {
+    const withReason = mapBooking(
+      makeRawBooking({ cancellation: { cancelled_by: 'system', reason: 'انتهت مهلة إتمام الدفع' } }),
+    );
+    expect(withReason.cancellation?.reason).toBe('انتهت مهلة إتمام الدفع');
+    const blank = mapBooking(makeRawBooking({ cancellation: { cancelled_by: 'system', reason: '' } }));
+    expect(blank.cancellation?.reason).toBeUndefined();
+  });
+
+  it('takes cancelled_at from the cancellation block when the top-level key is absent', () => {
+    const b = mapBooking(
+      makeRawBooking({ cancellation: { cancelled_by: 'system', cancelled_at: '2026-09-10T08:00:00Z' } }),
+    );
+    expect(b.cancelledAt).toBe('2026-09-10T08:00:00Z');
+    expect(b.cancellation?.cancelledAt).toBe('2026-09-10T08:00:00Z');
   });
 });
 

@@ -212,13 +212,11 @@ export const MOCK_BOOKINGS: Booking[] = [
     payment: { method: 'visa', last4: '4242' },
     policySnapshot: MODERATE_POLICY,
     isReviewed: false,
-    refund: {
-      amount: 2700,
-      percent: 50,
-      tierLabel: 'استرداد جزئي 50%',
-      refundedAt: addDays(-25),
-      reason: 'تغيير في خطط السفر',
+    cancellation: {
       cancelledBy: 'customer',
+      reason: 'تغيير في خطط السفر',
+      cancelledAt: addDays(-25),
+      refundedAmount: 2700,
     },
     createdAt: addDays(-40),
     cancelledAt: addDays(-25),

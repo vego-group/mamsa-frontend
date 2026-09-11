@@ -171,13 +171,33 @@ export interface PriceBreakdown {
   vat: number;
 }
 
-export interface RefundRecord {
-  amount: number;
-  percent: number;
-  tierLabel: string;
-  refundedAt: string;
+/**
+ * Who ended a booking and what came back — the `cancellation` object that is
+ * present on EVERY cancelled booking, whoever cancelled it. `customer` is the
+ * guest, `partner` the host, and `admin` and `system` are both the platform
+ * (back-office by hand, or automated: a payment that timed out, a night that
+ * was sold twice). Branch on `cancelledBy`, never on `reason` — that is free
+ * text the backend may reword at any time.
+ */
+export interface BookingCancellation {
+  /**
+   * `unknown` is the adapter's answer to a value outside the closed set: the
+   * UI then names nobody. It must never default to the guest — that would
+   * accuse them of a cancellation they did not make.
+   */
+  cancelledBy: 'customer' | 'partner' | 'admin' | 'system' | 'unknown';
+  /** Free text — display only, never a condition. */
   reason?: string;
-  cancelledBy: 'customer' | 'partner' | 'admin' | 'system';
+  cancelledAt?: string;
+  /**
+   * Riyals actually returned to the guest. `0` does NOT mean nothing was
+   * owed: it means the automatic refund failed at the gateway and no money
+   * moved, so an admin is handling it by hand. Say nothing about a refund at
+   * all in that case — a "0 refunded" or "processing" line would be a lie.
+   * The adapter folds an absent or null figure into the same 0, so this is
+   * always a number and "silence" has exactly one trigger: `> 0` is false.
+   */
+  refundedAmount: number;
 }
 
 export interface Booking {
@@ -212,7 +232,8 @@ export interface Booking {
    * أي تعديل لاحق من الشريك لا يؤثر على هذا الحجز.
    */
   policySnapshot: CancellationPolicy;
-  refund?: RefundRecord;
+  /** Present once the booking is cancelled. The guest surface has no `refund` object — only this. */
+  cancellation?: BookingCancellation;
   /** Whether the guest has already reviewed this booking (embedded by the backend on the booking resource). */
   isReviewed: boolean;
   createdAt: string;

@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatDate, formatSAR, diffNights } from '@/lib/utils/format';
+import { cancelledByKey } from '@/lib/cancellation/actor';
 import { CancelBookingDialog } from './CancelBookingDialog';
 import { isBookingCancellable } from '@/lib/cancellation/engine';
 
@@ -26,6 +27,8 @@ export function BookingCard({ booking, tabContext, onCancelled }: BookingCardPro
   const canCancel = isBookingCancellable(booking, new Date());
   const nights = diffNights(booking.checkInDate, booking.checkOutDate);
   const guests = booking.guests.adults + booking.guests.children;
+  // `null` names nobody — an actor outside the closed set is never shown as the guest.
+  const actorKey = booking.cancellation ? cancelledByKey(booking.cancellation) : null;
 
   const statusBadge = () => {
     // Status wins over the tab. An unpaid booking is bucketed into upcoming/active
@@ -103,13 +106,16 @@ export function BookingCard({ booking, tabContext, onCancelled }: BookingCardPro
           </div>
         </div>
 
-        {/* Cancellation refund details (only for cancelled tab) */}
-        {booking.status === 'cancelled' && booking.refund && (
+        {/* Cancellation summary (only for cancelled tab) */}
+        {booking.status === 'cancelled' && booking.cancellation && (
           <div className="border-t border-brand-border bg-red-50/50 px-5 py-3 text-xs text-status-danger">
             <div className="flex flex-wrap gap-x-4 gap-y-1">
-              <span>{t('cancelledBy')}: {booking.refund.cancelledBy === 'customer' ? t('byCustomer') : t('bySystem')}</span>
-              {booking.refund.reason && <span>· {t('reason')}: {booking.refund.reason}</span>}
-              <span>· {t('refundedAmount')}: {formatSAR(booking.refund.amount)} ({booking.refund.percent}%)</span>
+              {actorKey && <span>{t('cancelledBy')}: {t(actorKey)}</span>}
+              {booking.cancellation.reason && <span>{t('reason')}: {booking.cancellation.reason}</span>}
+              {/* A refund line only when money actually came back — see BookingCancellation.refundedAmount. */}
+              {booking.cancellation.refundedAmount > 0 && (
+                <span>{t('refunded', { amount: formatSAR(booking.cancellation.refundedAmount) })}</span>
+              )}
             </div>
           </div>
         )}
