@@ -51,9 +51,9 @@ export function CancelBookingDialog({ booking, open, onClose, onCancelled }: Can
     setSubmitting(true);
     setError(null);
     try {
-      const result = await bookingsApi.cancel(booking.id, reason || undefined);
+      const updated = await bookingsApi.cancel(booking.id, reason || undefined);
       onClose();
-      onCancelled?.({ ...result.booking, refund: result.booking.refund ?? result.refund });
+      onCancelled?.(updated);
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : t('cancelFailed'));

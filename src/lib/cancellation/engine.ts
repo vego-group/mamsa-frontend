@@ -13,7 +13,7 @@ import type {
   Booking,
   CancellationPolicy,
   CancellationTier,
-  RefundRecord,
+  BookingCancellation,
 } from '@/types';
 
 // ============ Time helpers (pure) ============
@@ -183,21 +183,21 @@ export function previewCancellation(booking: Booking, requestAt: Date): RefundPr
 }
 
 /**
- * يُولّد سجل الاسترداد النهائي عند تأكيد الإلغاء (FR-046).
- * في الإنتاج: هذا الـ record يُرسل لـ Moyasar refund API.
+ * The `cancellation` block mock mode stamps on a booking it has just
+ * cancelled (FR-046) — the same shape the live booking resource carries. In
+ * mock mode the quoted refund is taken as paid; live, the backend reports
+ * what the gateway actually returned.
  */
-export function buildRefundRecord(
+export function buildCancellation(
   preview: RefundPreview,
-  cancelledBy: RefundRecord['cancelledBy'],
+  cancelledBy: BookingCancellation['cancelledBy'],
   reason?: string,
-): RefundRecord {
+): BookingCancellation {
   return {
-    amount: preview.refundAmount,
-    percent: preview.refundPercent,
-    tierLabel: preview.tier ? `${preview.tier.refundPercent}%` : '',
-    refundedAt: new Date().toISOString(),
     cancelledBy,
     reason,
+    cancelledAt: new Date().toISOString(),
+    refundedAmount: preview.refundAmount,
   };
 }
 

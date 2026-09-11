@@ -43,7 +43,6 @@ import type {
   Review,
   User,
   UnitsFilter,
-  RefundRecord,
   CancellationPolicy,
   SavedCard,
   GuestComplaint,
@@ -804,29 +803,17 @@ export const bookingsApi = {
   /**
    * SRS FR-046: execute cancellation + auto-refund via Moyasar.
    * The `cancel` endpoint returns a cancellation-result object (same shape as
-   * the preview), not the updated booking — so we fetch the booking
-   * separately to fulfil the same `{ booking, refund }` contract mock mode
-   * provides.
+   * the preview), not the updated booking — so the booking is re-fetched. Its
+   * `cancellation` block is the only trustworthy account of what was actually
+   * refunded: the preview is a quote, and the gateway refund can still fail.
    */
-  cancel: (id: string, reason?: string) =>
+  cancel: (id: string, reason?: string): Promise<Booking> =>
     USE_MOCK
       ? withLatency(mockApi.bookings.cancel(id, reason))
       : http<RawCancellationPreview>(`/bookings/${id}/cancel`, {
           method: 'POST',
           body: JSON.stringify({ reason }),
-        }).then(async (result) => {
-          const preview = mapCancellationPreview(result);
-          const booking = await http<RawBooking>(`/bookings/${id}`).then(mapBooking);
-          const refund: RefundRecord = {
-            amount: preview.refundAmount,
-            percent: preview.refundPercent,
-            tierLabel: preview.rawTierLabel ?? '',
-            refundedAt: booking.cancelledAt ?? new Date().toISOString(),
-            reason,
-            cancelledBy: 'customer',
-          };
-          return { booking, refund };
-        }),
+        }).then(() => http<RawBooking>(`/bookings/${id}`).then(mapBooking)),
 };
 
 // ============ Payments ============

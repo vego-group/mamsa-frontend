@@ -647,9 +647,10 @@
     "bookAgain": "احجز مرة أخرى",
     "cancelledBy": "تم الإلغاء بواسطة",
     "byCustomer": "العميل",
-    "bySystem": "النظام",
+    "byPartner": "المضيف",
+    "bySystem": "المنصة",
     "reason": "السبب",
-    "refundedAmount": "المبلغ المسترد"
+    "refunded": "تم رد المبلغ: {amount}"
   },
   "contactHost": {
     "quick": {
@@ -706,12 +707,14 @@
     "writeReview": "كتابة تقييم",
     "reviewed": "تم التقييم",
     "bookAgain": "احجز مرة أخرى",
+    "cancelledTitle": "تم إلغاء هذا الحجز",
     "cancelledBy": "تم الإلغاء بواسطة",
     "byCustomer": "العميل",
-    "bySystem": "النظام",
+    "byPartner": "المضيف",
+    "bySystem": "المنصة",
     "reason": "السبب",
     "cancelledAt": "تاريخ الإلغاء",
-    "refunded": "تم استرداد",
+    "refunded": "تم رد المبلغ: {amount}",
     "guestsLine": "المرافق: {count} ضيوف",
     "bookingDetailsTitle": "تفاصيل الحجز",
     "checkInDate": "تاريخ الوصول",

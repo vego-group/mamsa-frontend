@@ -647,9 +647,10 @@
     "bookAgain": "Book again",
     "cancelledBy": "Cancelled by",
     "byCustomer": "Customer",
-    "bySystem": "System",
+    "byPartner": "The host",
+    "bySystem": "The platform",
     "reason": "Reason",
-    "refundedAmount": "Refunded amount"
+    "refunded": "Amount refunded: {amount}"
   },
   "contactHost": {
     "quick": {
@@ -706,12 +707,14 @@
     "writeReview": "Write a review",
     "reviewed": "Reviewed",
     "bookAgain": "Book again",
+    "cancelledTitle": "This booking has been cancelled",
     "cancelledBy": "Cancelled by",
     "byCustomer": "Customer",
-    "bySystem": "System",
+    "byPartner": "The host",
+    "bySystem": "The platform",
     "reason": "Reason",
     "cancelledAt": "Cancelled on",
-    "refunded": "Refunded",
+    "refunded": "Amount refunded: {amount}",
     "guestsLine": "Occupancy: {count} guests",
     "bookingDetailsTitle": "Booking details",
     "checkInDate": "Check-in date",

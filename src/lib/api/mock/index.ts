@@ -8,7 +8,7 @@ import { MOCK_BOOKINGS } from '@/data/mock/bookings';
 import { MOCK_REVIEWS, getReviewForBooking } from '@/data/mock/reviews';
 import { MOCK_CURRENT_USER, MOCK_SAVED_CARDS, MOCK_TRANSACTIONS } from '@/data/mock/users';
 import { OTP_CONFIG, INVOICE_SELLER, VAT_RATE } from '@/lib/constants/brand';
-import { previewCancellation, buildRefundRecord } from '@/lib/cancellation/engine';
+import { previewCancellation, buildCancellation } from '@/lib/cancellation/engine';
 import { getPolicyByTemplate } from '@/lib/constants/cancellation-policies';
 import { ApiError, ERROR_CODE_MESSAGES } from '../errors';
 import { isValidEmail } from '@/lib/utils/email';
@@ -21,7 +21,6 @@ import type {
   Unit,
   User,
   UnitsFilter,
-  RefundRecord,
   GuestComplaint,
   GuestComplaintRow,
   GuestComplaintStatus,
@@ -425,21 +424,21 @@ export const mockApi = {
       return ok(previewCancellation(b, new Date()));
     },
 
-    cancel: async (id: string, reason?: string): Promise<{ booking: Booking; refund: RefundRecord }> => {
+    cancel: async (id: string, reason?: string): Promise<Booking> => {
       const idx = bookings.findIndex((x) => x.id === id);
       if (idx === -1) return fail('الحجز غير موجود') as Promise<never>;
       const b = bookings[idx]!;
       const preview = previewCancellation(b, new Date());
       if (!preview.isAllowed) return fail('الإلغاء غير مسموح');
-      const refund = buildRefundRecord(preview, 'customer', reason);
+      const cancellation = buildCancellation(preview, 'customer', reason);
       const updated: Booking = {
         ...b,
         status: 'cancelled',
-        refund,
-        cancelledAt: new Date().toISOString(),
+        cancellation,
+        cancelledAt: cancellation.cancelledAt,
       };
       bookings = bookings.map((x) => (x.id === id ? updated : x));
-      return ok({ booking: updated, refund });
+      return ok(updated);
     },
   },
 

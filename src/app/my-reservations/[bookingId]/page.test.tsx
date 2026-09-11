@@ -210,3 +210,41 @@ describe('Booking details — a complaint lives on the completed booking', () =>
     expect(screen.queryByText(arMessages.complaints.sectionTitle)).toBeNull();
   });
 });
+
+/**
+ * Since the double-sale fix (2026-09-10) a cancelled booking can have been
+ * charged and refunded. The card must make clear the booking is over and,
+ * only when money actually came back, say how much. A 0 means the gateway
+ * refund FAILED and an admin is handling it — no refund wording at all then.
+ */
+describe('Booking details — a cancelled booking explains what happened to the money', () => {
+  function cancelledFixture(refundedAmount: number): Booking {
+    return {
+      ...bookingFixture(),
+      status: 'cancelled',
+      cancelledAt: '2026-09-10T08:00:00Z',
+      cancellation: { cancelledBy: 'system', reason: 'انتهت مهلة إتمام الدفع', refundedAmount },
+    };
+  }
+
+  it('shows the refunded amount when money came back', async () => {
+    useAuthStore.setState({ user: USER, isAuthenticated: true });
+    vi.spyOn(bookingsApi, 'getById').mockResolvedValue(cancelledFixture(1000));
+    vi.spyOn(reviewsApi, 'getForBooking').mockResolvedValue(null);
+    await renderPage();
+
+    expect(screen.getByText(arMessages.bookingDetails.cancelledTitle)).toBeTruthy();
+    expect(screen.getByText(new RegExp(arMessages.bookingDetails.bySystem))).toBeTruthy();
+    expect(screen.getByText(/تم رد المبلغ: 1,000/)).toBeTruthy();
+  });
+
+  it('says nothing about a refund when refundedAmount is 0', async () => {
+    useAuthStore.setState({ user: USER, isAuthenticated: true });
+    vi.spyOn(bookingsApi, 'getById').mockResolvedValue(cancelledFixture(0));
+    vi.spyOn(reviewsApi, 'getForBooking').mockResolvedValue(null);
+    await renderPage();
+
+    expect(screen.getByText(arMessages.bookingDetails.cancelledTitle)).toBeTruthy();
+    expect(screen.queryByText(/تم رد المبلغ/)).toBeNull();
+  });
+});

@@ -92,3 +92,53 @@ describe('BookingCard — an unpaid booking is never badged as paid', () => {
     expect(container.querySelector(SUCCESS_BADGE)).toBeTruthy();
   });
 });
+
+/**
+ * Since the double-sale fix (2026-09-10) a cancelled booking can have been
+ * charged and refunded, so the cancelled card is where the guest learns what
+ * happened to their money. Two rules: a refund is mentioned only when money
+ * actually came back (0 means the gateway refund FAILED and an admin is on
+ * it — any refund wording then is a lie), and "who cancelled" comes from the
+ * stable `cancelledBy` enum, never from the free-text reason.
+ */
+describe('BookingCard — the cancelled card and the refunded amount', () => {
+  const REFUND_LINE = /تم رد المبلغ/;
+
+  const cancelledBooking = (cancellation: NonNullable<Booking['cancellation']>): Booking =>
+    makeBooking({
+      status: 'cancelled',
+      checkInDate: isoInDays(-15),
+      checkOutDate: isoInDays(-12),
+      cancelledAt: new Date().toISOString(),
+      cancellation,
+    });
+
+  it('shows the refunded amount when the platform cancelled and money came back', () => {
+    renderCard(
+      cancelledBooking({ cancelledBy: 'system', reason: 'انتهت مهلة إتمام الدفع', refundedAmount: 1000 }),
+      'cancelled',
+    );
+
+    expect(screen.getByText(/تم رد المبلغ: 1,000/)).toBeTruthy();
+    expect(screen.getByText(new RegExp(arMessages.bookingCard.bySystem))).toBeTruthy();
+    expect(screen.getByText(/انتهت مهلة إتمام الدفع/)).toBeTruthy();
+  });
+
+  it('says nothing about a refund at all when refundedAmount is 0', () => {
+    const { container } = renderCard(cancelledBooking({ cancelledBy: 'system', refundedAmount: 0 }), 'cancelled');
+
+    expect(container.textContent ?? '').not.toMatch(REFUND_LINE);
+    // The cancellation itself is still explained.
+    expect(screen.getByText(new RegExp(arMessages.bookingCard.bySystem))).toBeTruthy();
+  });
+
+  it('names the actor from cancelledBy, not from the reason text', () => {
+    renderCard(
+      cancelledBooking({ cancelledBy: 'customer', reason: 'انتهت مهلة إتمام الدفع', refundedAmount: 0 }),
+      'cancelled',
+    );
+
+    expect(screen.getByText(new RegExp(arMessages.bookingCard.byCustomer))).toBeTruthy();
+    expect(screen.queryByText(new RegExp(arMessages.bookingCard.bySystem))).toBeNull();
+  });
+});
