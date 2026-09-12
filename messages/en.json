@@ -806,6 +806,7 @@
     "descriptionTitle": "Problem description",
     "attachments": "Attachments",
     "imagesExpired": "The photo links have expired — reload to view them.",
+    "imagesFailed": "The photos couldn't be loaded.",
     "reloadImages": "Reload photos",
     "openImage": "Open photo {index}",
     "supportNote": "A complaint can't be edited or withdrawn once filed. For any question, contact support.",
