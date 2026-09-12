@@ -215,19 +215,56 @@ describe('BookingComplaintSection — the five states', () => {
     expect(screen.getByText(T.decision)).toBeTruthy();
   });
 
+  // Links are Laravel signed routes: `expires` is unix seconds.
+  const signedLink = (secondsFromNow: number) =>
+    `https://api.mamsaa.com/complaints/12/images/1?expires=${Math.floor(Date.now() / 1000) + secondsFromNow}&signature=abc`;
+
   it('re-reads the complaint when a signed image link has expired', async () => {
+    const url = signedLink(-60);
     const get = vi
       .spyOn(complaintsApi, 'getForBooking')
-      .mockResolvedValue(
-        complaint({ images: [{ url: 'https://s3/signed/1', mime: 'image/jpeg' }] }),
-      );
+      .mockResolvedValue(complaint({ images: [{ url, mime: 'image/jpeg' }] }));
     renderSection();
     await screen.findByText(T.status.submitted);
 
-    fireEvent.error(document.querySelector('img[src="https://s3/signed/1"]')!);
+    fireEvent.error(document.querySelector(`img[src="${url}"]`)!);
+    expect(screen.getByText(T.imagesExpired)).toBeTruthy();
+    expect(screen.queryByText(T.imagesFailed)).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: T.reloadImages }));
 
     await waitFor(() => expect(get).toHaveBeenCalledTimes(2));
+  });
+
+  it('calls a failure on a still-valid link a load failure, not an expiry, and retries', async () => {
+    const url = signedLink(600);
+    const get = vi
+      .spyOn(complaintsApi, 'getForBooking')
+      .mockResolvedValue(complaint({ images: [{ url, mime: 'image/jpeg' }] }));
+    renderSection();
+    await screen.findByText(T.status.submitted);
+
+    // The file host answered 500; the link itself has ten minutes left.
+    fireEvent.error(document.querySelector(`img[src="${url}"]`)!);
+    expect(screen.getByText(T.imagesFailed)).toBeTruthy();
+    expect(screen.queryByText(T.imagesExpired)).toBeNull();
+    expect(screen.queryByRole('button', { name: T.reloadImages })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: arMessages.common.retry }));
+
+    await waitFor(() => expect(get).toHaveBeenCalledTimes(2));
+    // The retry remounts the image, so a second failure is counted afresh.
+    await waitFor(() => expect(document.querySelector(`img[src="${url}"]`)).toBeTruthy());
+  });
+
+  it('never blames a link that carries no expiry at all', async () => {
+    vi.spyOn(complaintsApi, 'getForBooking').mockResolvedValue(
+      complaint({ images: [{ url: 'https://cdn.mamsaa.com/complaints/12/1.jpg', mime: 'image/jpeg' }] }),
+    );
+    renderSection();
+    await screen.findByText(T.status.submitted);
+
+    fireEvent.error(document.querySelector('img[src="https://cdn.mamsaa.com/complaints/12/1.jpg"]')!);
+    expect(screen.getByText(T.imagesFailed)).toBeTruthy();
+    expect(screen.queryByText(T.imagesExpired)).toBeNull();
   });
 });
 
