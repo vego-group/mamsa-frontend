@@ -60,6 +60,7 @@
     "loading": "Loading...",
     "loadFailed": "Couldn't load the data — check your internet connection and try again.",
     "retry": "Try again",
+    "apartmentNo": "Apartment {number}",
     "home": "Home",
     "explore": "Explore",
     "perNight": "/ night",

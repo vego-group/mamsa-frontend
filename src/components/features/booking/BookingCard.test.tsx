@@ -93,6 +93,21 @@ describe('BookingCard — an unpaid booking is never badged as paid', () => {
   });
 });
 
+describe('BookingCard — the door the server allocated', () => {
+  const doorLine = (n: string) => arMessages.common.apartmentNo.replace('{number}', n);
+
+  it('names the door when the booking carries one', () => {
+    const base = makeBooking();
+    renderCard(makeBooking({ unitSnapshot: { ...base.unitSnapshot, apartmentNo: '2' } }), 'active');
+    expect(screen.getByText(new RegExp(doorLine('2')))).toBeTruthy();
+  });
+
+  it('shows no door line for a standalone unit', () => {
+    const { container } = renderCard(makeBooking(), 'active');
+    expect(container.textContent).not.toContain(doorLine('').trim());
+  });
+});
+
 /**
  * Since the double-sale fix (2026-09-10) a cancelled booking can have been
  * charged and refunded, so the cancelled card is where the guest learns what

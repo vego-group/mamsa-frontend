@@ -67,6 +67,16 @@ export default function ConfirmationPage() {
         </div>
 
         <div className="rounded-2xl bg-brand-cream/50 p-5 text-start">
+          {/* The unit the booking holds — in a building, the door the server
+              picked, which may not be the card the guest opened. */}
+          <div className="mb-4 border-b border-brand-border pb-3">
+            <div className="font-semibold text-brand-ink">{booking.unitSnapshot.title}</div>
+            {booking.unitSnapshot.apartmentNo && (
+              <div className="mt-0.5 text-sm text-brand-muted">
+                {tc('apartmentNo', { number: booking.unitSnapshot.apartmentNo })}
+              </div>
+            )}
+          </div>
           <div className="grid grid-cols-2 gap-y-3 text-sm">
             <div>
               <div className="text-brand-muted">{t('bookingCode')}</div>

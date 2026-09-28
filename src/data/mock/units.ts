@@ -305,3 +305,35 @@ export const MOCK_UNITS: Unit[] = [
 export function findUnitById(id: string): Unit | undefined {
   return MOCK_UNITS.find((u) => u.id === id);
 }
+
+/** One door of a building: a unit of its own, listed under the building's card. */
+export interface MockDoor {
+  id: string;
+  apartmentNo?: string;
+}
+
+/**
+ * Buildings, keyed by the card the guest sees. Door 1 is the card itself; the
+ * other doors are units the list never shows. A booking lands on whichever
+ * door is free, so its unit can differ from the card the guest opened.
+ */
+export const MOCK_BUILDINGS: Record<string, MockDoor[]> = {
+  'U-005': [
+    { id: 'U-005', apartmentNo: '1' },
+    { id: 'U-005-2', apartmentNo: '2' },
+    { id: 'U-005-3', apartmentNo: '3' },
+  ],
+};
+
+/** The doors a card sells: its building's, or the card alone with no door number. */
+export function doorsOf(cardId: string): MockDoor[] {
+  return MOCK_BUILDINGS[cardId] ?? [{ id: cardId }];
+}
+
+/** The card a unit is listed under: its building's card, or the unit itself. */
+export function cardIdOf(unitId: string): string {
+  for (const [cardId, doors] of Object.entries(MOCK_BUILDINGS)) {
+    if (doors.some((d) => d.id === unitId)) return cardId;
+  }
+  return unitId;
+}

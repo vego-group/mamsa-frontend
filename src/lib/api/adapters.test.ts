@@ -86,6 +86,38 @@ describe('mapCancellationPreview — refund figures', () => {
   });
 });
 
+/**
+ * In a building the server books whichever door is free, so the unit a booking
+ * shows must come from `booking.unit` — never from the card the guest opened,
+ * and never from the root `unit_id`, which the API sends as null.
+ */
+describe('mapBooking — the unit the server allocated', () => {
+  const allocated = { id: 12, name: 'منتجع العائلة السعيدة', city: 'الرياض' } as RawUnit;
+
+  it('takes the unit from booking.unit even though the root unit_id is null', () => {
+    const b = mapBooking(makeRawBooking({ unit_id: null, unit: allocated }));
+    expect(b.unitId).toBe('12');
+    expect(b.unitSnapshot.title).toBe('منتجع العائلة السعيدة');
+  });
+
+  it('carries apartment_no as the door number', () => {
+    const b = mapBooking(makeRawBooking({ unit: { ...allocated, apartment_no: '2' } }));
+    expect(b.unitSnapshot.apartmentNo).toBe('2');
+  });
+
+  it('reads a numeric apartment_no as text', () => {
+    const b = mapBooking(makeRawBooking({ unit: { ...allocated, apartment_no: 3 as never } }));
+    expect(b.unitSnapshot.apartmentNo).toBe('3');
+  });
+
+  it('has no door number for a standalone unit, an absent key or a blank one', () => {
+    for (const apartment_no of [null, undefined, '', '  ']) {
+      const b = mapBooking(makeRawBooking({ unit: { ...allocated, apartment_no } }));
+      expect(b.unitSnapshot.apartmentNo).toBeUndefined();
+    }
+  });
+});
+
 describe('mapBooking — guests split', () => {
   it('uses guests_detail when present', () => {
     const b = mapBooking(makeRawBooking({ guests: 3, guests_detail: { adults: 2, children: 1 } }));
