@@ -13,6 +13,7 @@
 import { z } from 'zod';
 import { createMcpHandler } from 'mcp-handler';
 import { McpDataError, searchUnits, getUnit, getFeaturedUnits, getUnitReviews } from '@/lib/mcp/units';
+import { unitPath } from '@/lib/listing';
 import type { Unit, Review } from '@/types';
 
 export const runtime = 'nodejs';
@@ -43,7 +44,7 @@ function summarize(u: Unit) {
     rating: u.rating,
     reviewCount: u.reviewCount,
     amenities: u.amenities.map((a) => a.labelAr),
-    url: `${SITE_URL}/units/${u.id}`,
+    url: `${SITE_URL}${unitPath(u)}`,
   };
 }
 

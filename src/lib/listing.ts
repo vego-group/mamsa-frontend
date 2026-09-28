@@ -14,3 +14,12 @@ export function isSameListing(
   if (booking.listingId && unit.listingId) return booking.listingId === unit.listingId;
   return booking.unitId === unit.id;
 }
+
+/**
+ * The unit page for a listing. By `listing_id` — the unit routes accept it —
+ * because a door can close while its building stays on sale, and a link by the
+ * door's id then 404s. The unit id only when there is no listing key.
+ */
+export function unitPath(ref: { id: string; listingId?: string }): string {
+  return `/units/${encodeURIComponent(ref.listingId || ref.id)}`;
+}

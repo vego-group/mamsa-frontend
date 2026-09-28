@@ -93,6 +93,27 @@ describe('BookingCard — an unpaid booking is never badged as paid', () => {
   });
 });
 
+/**
+ * "Book again" reopens the building, not the door the last stay happened to
+ * land on: that door can close while the building stays on sale.
+ */
+describe('BookingCard — book again opens the listing', () => {
+  it('links by the booking’s listing key, not the unit id it was booked on', () => {
+    const { container } = renderCard(
+      makeBooking({
+        status: 'completed',
+        unitId: '40',
+        listingId: '01M19EZRB4ARP4BDGJ4ET7P03F',
+        checkInDate: isoInDays(-10),
+        checkOutDate: isoInDays(-7),
+      }),
+      'completed',
+    );
+    const again = [...container.querySelectorAll('a')].find((a) => a.textContent === arMessages.bookingCard.bookAgain);
+    expect(again?.getAttribute('href')).toBe('/units/01M19EZRB4ARP4BDGJ4ET7P03F');
+  });
+});
+
 describe('BookingCard — the door the server allocated', () => {
   const doorLine = (n: string) => arMessages.common.apartmentNo.replace('{number}', n);
 

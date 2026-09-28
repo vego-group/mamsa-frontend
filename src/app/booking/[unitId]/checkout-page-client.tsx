@@ -19,7 +19,7 @@ import { useUiStore } from '@/stores/ui';
 import { getPolicyByTemplate } from '@/lib/constants/cancellation-policies';
 import { formatSAR, formatDate } from '@/lib/utils/format';
 import { vatPercentLabel } from '@/lib/pricing';
-import { isSameListing } from '@/lib/listing';
+import { isSameListing, unitPath } from '@/lib/listing';
 import type { Unit, Booking, PriceBreakdown as PriceBreakdownData } from '@/types';
 
 export function CheckoutPageClient() {
@@ -107,7 +107,7 @@ export function CheckoutPageClient() {
       <div className="container mx-auto flex flex-col items-center gap-4 px-4 py-16 text-center">
         <p className="text-sm text-brand-muted">{t('errors.invalidDates')}</p>
         <Button asChild>
-          <Link href={`/units/${unit.id}`}>{t('backToUnit')}</Link>
+          <Link href={unitPath(unit)}>{t('backToUnit')}</Link>
         </Button>
       </div>
     );
@@ -123,7 +123,7 @@ export function CheckoutPageClient() {
             falls through to the generic line. */}
         <p className="text-sm text-brand-muted">{resolveErrorMessage(quoteRefusal, t('errors.unitUnavailable'))}</p>
         <Button asChild>
-          <Link href={`/units/${unit.id}`}>{t('backToUnit')}</Link>
+          <Link href={unitPath(unit)}>{t('backToUnit')}</Link>
         </Button>
       </div>
     );

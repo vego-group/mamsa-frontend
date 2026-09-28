@@ -174,6 +174,27 @@ describe('Booking details — the review is supplementary', () => {
   });
 });
 
+describe('Booking details — book again opens the listing', () => {
+  it('links by the booking’s listing key, not the unit id it was booked on', async () => {
+    useAuthStore.setState({ user: USER, isAuthenticated: true });
+    vi.spyOn(bookingsApi, 'getById').mockResolvedValue({
+      ...bookingFixture(),
+      status: 'completed',
+      unitId: '40',
+      listingId: '01M19EZRB4ARP4BDGJ4ET7P03F',
+      // Long past, so the complaint section stays out of it.
+      checkInDate: '2026-01-10',
+      checkOutDate: '2026-01-12',
+    });
+    vi.spyOn(reviewsApi, 'getForBooking').mockResolvedValue(null);
+    vi.spyOn(complaintsApi, 'getForBooking').mockResolvedValue(null);
+    await renderPage();
+
+    const again = screen.getByText(arMessages.bookingDetails.bookAgain).closest('a');
+    expect(again?.getAttribute('href')).toBe('/units/01M19EZRB4ARP4BDGJ4ET7P03F');
+  });
+});
+
 describe('Booking details — the door the server allocated', () => {
   const doorLine = (n: string) => arMessages.common.apartmentNo.replace('{number}', n);
 

@@ -220,6 +220,18 @@ describe('Checkout — a 409 on the dates is an answer, not a failure', () => {
     expect(screen.queryByText(arMessages.common.retry)).toBeNull();
   });
 
+  it('sends the guest back to the listing by its key', async () => {
+    const { MOCK_UNITS } = await import('@/data/mock/units');
+    const card = MOCK_UNITS.find((u) => u.id === UNIT_ID)!;
+    vi.spyOn(unitsApi, 'getById').mockResolvedValue({ ...card, listingId: 'uU-001' });
+    vi.spyOn(unitsApi, 'checkAvailability').mockRejectedValue(permitError());
+    renderCheckout();
+    await waitForUnitToLoad();
+
+    const back = screen.getByText(arMessages.checkout.backToUnit).closest('a');
+    expect(back?.getAttribute('href')).toBe('/units/uU-001');
+  });
+
   it('falls back to the server message for a 409 code the dictionary does not carry', async () => {
     vi.spyOn(unitsApi, 'checkAvailability').mockRejectedValue(
       new ApiError(409, 'الوحدة غير متاحة في هذه الفترة', 'UNIT_UNAVAILABLE'),

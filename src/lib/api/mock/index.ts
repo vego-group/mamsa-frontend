@@ -3,7 +3,7 @@
  * يحاكي سلوك الباك إند على البيانات في data/mock/.
  * يحافظ على state في الذاكرة للجلسة الحالية فقط (sessionStorage معطّل لأنه لا يعمل في artifacts).
  */
-import { MOCK_UNITS, doorsOf, findUnitById, listingIdOf, type MockDoor } from '@/data/mock/units';
+import { MOCK_UNITS, doorsOf, findUnitById, listingIdOf, resolveUnitRef, type MockDoor } from '@/data/mock/units';
 import { MOCK_BOOKINGS } from '@/data/mock/bookings';
 import { MOCK_REVIEWS, getReviewForBooking } from '@/data/mock/reviews';
 import { MOCK_CURRENT_USER, MOCK_SAVED_CARDS, MOCK_TRANSACTIONS } from '@/data/mock/users';
@@ -331,8 +331,8 @@ export const mockApi = {
       });
     },
 
-    getById: async (id: string) => {
-      const u = findUnitById(id);
+    getById: async (ref: string) => {
+      const u = findUnitById(resolveUnitRef(ref));
       if (!u) return fail('الوحدة غير موجودة');
       return ok(asCard(u));
     },
@@ -346,9 +346,13 @@ export const mockApi = {
           .map((u) => ({ id: Number(u.id.replace(/\D/g, '')) || 0, updated_at: u.createdAt })),
       ),
 
-    getReviews: async (unitId: string) => ok(reviews.filter((r) => r.unitId === unitId)),
+    getReviews: async (ref: string) => {
+      const unitId = resolveUnitRef(ref);
+      return ok(reviews.filter((r) => r.unitId === unitId));
+    },
 
-    checkAvailability: async (unitId: string, startDate: string, endDate: string) => {
+    checkAvailability: async (ref: string, startDate: string, endDate: string) => {
+      const unitId = resolveUnitRef(ref);
       const unit = findUnitById(unitId);
       if (!unit) return fail('الوحدة غير موجودة');
       const nights = diffNights(startDate, endDate);
@@ -371,7 +375,8 @@ export const mockApi = {
      * the end of the window, tagged `permit_expiry` and kept out of the merge
      * so the tag survives.
      */
-    getBlockedDates: async (unitId: string, from?: string, to?: string) => {
+    getBlockedDates: async (ref: string, from?: string, to?: string) => {
+      const unitId = resolveUnitRef(ref);
       const [first, ...others] = doorsOf(unitId).map((d) => nightsHeld(d.id));
       const blockedNights = [...first!].filter((n) => others.every((held) => held.has(n)));
       const merged: { start: string; end: string; reason?: 'permit_expiry' }[] = nightsToRanges(

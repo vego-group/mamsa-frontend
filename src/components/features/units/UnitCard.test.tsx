@@ -83,6 +83,19 @@ describe.each(['grid', 'list'] as const)('UnitCard (%s) — unscored listing', (
 });
 
 /**
+ * A card opens its listing by `listing_id`: the door behind it can close while
+ * the building stays on sale, and a link by the door's id would then 404.
+ */
+describe.each(['grid', 'list'] as const)('UnitCard (%s) — links by listing', (variant) => {
+  it('opens the listing by its key, not the unit id', () => {
+    const { container } = renderCard(unit({ id: '30', listingId: '01M19EZRB4ARP4BDGJ4ET7P03F' }), variant);
+    const hrefs = [...container.querySelectorAll('a')].map((a) => a.getAttribute('href'));
+    expect(hrefs.length).toBeGreaterThan(0);
+    for (const href of hrefs) expect(href).toBe('/units/01M19EZRB4ARP4BDGJ4ET7P03F');
+  });
+});
+
+/**
  * A building is one card. It says how many of its doors are free, so the guest
  * knows it is a building, not a single flat.
  */

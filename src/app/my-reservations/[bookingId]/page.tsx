@@ -21,6 +21,7 @@ import { formatDate, formatSAR } from '@/lib/utils/format';
 import { cancelledByKey } from '@/lib/cancellation/actor';
 import { downloadBookingConfirmation } from '@/lib/utils/booking-confirmation';
 import { isBookingCancellable } from '@/lib/cancellation/engine';
+import { unitPath } from '@/lib/listing';
 import { vatPercentLabel } from '@/lib/pricing';
 import type { Booking, PaymentInfo, Review } from '@/types';
 
@@ -187,7 +188,8 @@ export default function BookingDetailsPage() {
 
             {(booking.status === 'completed' || booking.status === 'cancelled') && (
               <Button asChild variant="default" className="w-full" size="sm">
-                <Link href={`/units/${booking.unitId}`}>{t('bookAgain')}</Link>
+                {/* The listing, not the door this stay landed on — that door can close. */}
+                <Link href={unitPath({ id: booking.unitId, listingId: booking.listingId })}>{t('bookAgain')}</Link>
               </Button>
             )}
           </Card>
