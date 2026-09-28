@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { unitsApi } from '@/lib/api/client';
+import { unitPath } from '@/lib/listing';
 import type { Unit } from '@/types';
 
 /**
@@ -51,7 +52,7 @@ const summarize = (u: Unit) => ({
   rating: u.rating,
   reviewCount: u.reviewCount,
   amenities: u.amenities.map((a) => a.labelAr),
-  url: `${window.location.origin}/units/${u.id}`,
+  url: `${window.location.origin}${unitPath(u)}`,
 });
 
 const asNumber = (v: unknown): number | undefined => {

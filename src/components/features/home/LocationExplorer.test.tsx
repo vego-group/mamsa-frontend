@@ -75,6 +75,18 @@ describe('map explorer layout', () => {
   });
 });
 
+describe('map explorer — links by listing', () => {
+  it('opens each listing by its key, and by id only when it has none', () => {
+    const { container } = render(
+      <NextIntlClientProvider locale="ar" messages={arMessages}>
+        <LocationExplorer units={[{ ...UNITS[0]!, id: '30', listingId: '01M19EZRB4ARP4BDGJ4ET7P03F' }, UNITS[1]!]} />
+      </NextIntlClientProvider>,
+    );
+    const hrefs = [...container.querySelectorAll('a')].map((a) => a.getAttribute('href'));
+    expect(hrefs).toEqual(['/units/01M19EZRB4ARP4BDGJ4ET7P03F', '/units/U-2']);
+  });
+});
+
 describe('map explorer — competing with the page for a swipe', () => {
   it('leaves the map draggable where there is a mouse', () => {
     renderExplorer();

@@ -120,6 +120,19 @@ export interface RawUnit {
   reviews_count?: number;
   owner?: RawOwner;
   created_at?: string;
+  /**
+   * A building is one card. `group_size` counts its doors that are approved
+   * and on sale (1 for a standalone unit); `available_count` counts the ones
+   * free — over the searched dates when the list was dated, otherwise overall.
+   */
+  group_size?: number;
+  available_count?: number;
+  /**
+   * The listing's key — the building's, shared by every one of its doors;
+   * `u<id>` for a standalone unit. Also on `booking.unit`. Match a booking to
+   * a card by this, never by unit id. The unit routes do not accept it.
+   */
+  listing_id?: string | null;
 }
 
 export interface RawBooking {
@@ -127,7 +140,17 @@ export interface RawBooking {
   reference?: string;
   user_id?: number | string;
   guest_name?: string | null;
-  unit?: RawUnit;
+  /**
+   * Absent or null on the guest API — the contract says null, staging omits
+   * the key. The booked unit is `unit.id`. Never read.
+   */
+  unit_id?: number | string | null;
+  /**
+   * The unit the server allocated. `apartment_no` rides on this response only
+   * (the list and `/units/{id}` never carry it): the door number in a
+   * building, null for a standalone unit.
+   */
+  unit?: RawUnit & { apartment_no?: string | null };
   start_date: string;
   end_date: string;
   nights?: number;
@@ -426,6 +449,13 @@ function mapImage(i: RawImage): UnitImage {
   };
 }
 
+/** A whole, non-negative count, or undefined — a garbled count must never reach a badge. */
+function optionalCount(v: unknown): number | undefined {
+  if (v == null || v === '') return undefined;
+  const n = Number(v);
+  return Number.isInteger(n) && n >= 0 ? n : undefined;
+}
+
 export function mapUnit(u: RawUnit): Unit {
   const images = [...(u.images ?? [])].sort((a, b) => Number(b.is_main) - Number(a.is_main));
   return {
@@ -464,6 +494,9 @@ export function mapUnit(u: RawUnit): Unit {
     cancellationPolicy: mapTemplate(u.cancellation_policy),
     cancellationPolicyDetails: mapPolicyDetails(u.cancellation_policy_details),
     createdAt: u.created_at ?? new Date().toISOString(),
+    groupSize: optionalCount(u.group_size),
+    availableCount: optionalCount(u.available_count),
+    listingId: u.listing_id ? String(u.listing_id) : undefined,
   };
 }
 
@@ -507,17 +540,23 @@ export function mapBooking(b: RawBooking): Booking {
   const p = b.pricing ?? {};
   const mainRaw = unit?.images?.find((i) => i.is_main) ?? unit?.images?.[0];
   const mainImage = mainRaw ? (mainRaw.variants?.thumb ?? mainRaw.url) : '';
+  // Null (standalone), absent and blank all mean "no door to name".
+  const apartmentNo = unit?.apartment_no == null ? '' : String(unit.apartment_no).trim();
 
   return {
     id: String(b.id),
     code: b.reference ?? '',
+    // From `booking.unit`, never the root `unit_id` (always null): in a
+    // building this is the door the server picked, not the card.
     unitId: unit ? String(unit.id) : '',
+    listingId: unit?.listing_id ? String(unit.listing_id) : undefined,
     unitSnapshot: {
       title: unit?.name ?? '',
       city: unit?.city ?? '',
       country: DEFAULT_COUNTRY,
       imageUrl: mainImage,
       ownerName: unit?.owner?.name ?? '',
+      ...(apartmentNo ? { apartmentNo } : {}),
     },
     userId: b.user_id == null ? 'CURRENT_USER' : String(b.user_id),
     guestName: b.guest_name ?? undefined,

@@ -81,3 +81,54 @@ describe.each(['grid', 'list'] as const)('UnitCard (%s) — unscored listing', (
     expect(container.querySelector('img')?.getAttribute('loading')).toBe('lazy');
   });
 });
+
+/**
+ * A card opens its listing by `listing_id`: the door behind it can close while
+ * the building stays on sale, and a link by the door's id would then 404.
+ */
+describe.each(['grid', 'list'] as const)('UnitCard (%s) — links by listing', (variant) => {
+  it('opens the listing by its key, not the unit id', () => {
+    const { container } = renderCard(unit({ id: '30', listingId: '01M19EZRB4ARP4BDGJ4ET7P03F' }), variant);
+    const hrefs = [...container.querySelectorAll('a')].map((a) => a.getAttribute('href'));
+    expect(hrefs.length).toBeGreaterThan(0);
+    for (const href of hrefs) expect(href).toBe('/units/01M19EZRB4ARP4BDGJ4ET7P03F');
+  });
+});
+
+/**
+ * A building is one card. It says how many of its doors are free, so the guest
+ * knows it is a building, not a single flat.
+ */
+describe.each(['grid', 'list'] as const)('UnitCard (%s) — doors free in a building', (variant) => {
+  const doors = (available: number, total: number) =>
+    arMessages.card.doorsAvailable.replace('{available}', String(available)).replace('{total}', String(total));
+  /** Any rendering of the badge, whatever the numbers. */
+  const anyDoorsBadge = new RegExp(
+    arMessages.card.doorsAvailable.replace('{available}', '\\d+').replace('{total}', '\\d+'),
+  );
+
+  it('says how many of the doors are free when the building has more than one', () => {
+    renderCard(unit({ groupSize: 6, availableCount: 4 }), variant);
+    expect(screen.getByText(doors(4, 6))).toBeTruthy();
+  });
+
+  it('says so even when none is free right now', () => {
+    renderCard(unit({ groupSize: 3, availableCount: 0 }), variant);
+    expect(screen.getByText(doors(0, 3))).toBeTruthy();
+  });
+
+  it('shows no badge on a standalone unit', () => {
+    const { container } = renderCard(unit({ groupSize: 1, availableCount: 1 }), variant);
+    expect(container.textContent).not.toMatch(anyDoorsBadge);
+  });
+
+  it('shows no badge when the API sent no group size', () => {
+    const { container } = renderCard(unit({ availableCount: 1 }), variant);
+    expect(container.textContent).not.toMatch(anyDoorsBadge);
+  });
+
+  it('shows no badge when it knows the size but not how many are free', () => {
+    const { container } = renderCard(unit({ groupSize: 4 }), variant);
+    expect(container.textContent).not.toMatch(anyDoorsBadge);
+  });
+});

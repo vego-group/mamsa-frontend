@@ -60,6 +60,7 @@
     "loading": "Loading...",
     "loadFailed": "Couldn't load the data — check your internet connection and try again.",
     "retry": "Try again",
+    "apartmentNo": "Apartment {number}",
     "home": "Home",
     "explore": "Explore",
     "perNight": "/ night",
@@ -176,7 +177,8 @@
     "bathrooms": "{count} bathrooms",
     "perNight": "SAR / night",
     "viewDetails": "View details",
-    "newListing": "New"
+    "newListing": "New",
+    "doorsAvailable": "{available} of {total} available"
   },
   "unitsPage": {
     "stays": "Stays",
@@ -222,6 +224,7 @@
   "unit": {
     "pickDates": "Pick check-in and check-out dates",
     "datesUnavailable": "This unit isn't available for these dates — please pick different ones",
+    "permitBlockedDay": "This unit can't be booked after this date",
     "featured": "Featured",
     "reviewCount": "{count} reviews",
     "share": "Share",

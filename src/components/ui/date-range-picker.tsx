@@ -58,6 +58,7 @@ export interface DateRange {
 
 /** Stable empty set so an omitted `blockedDates` never forces a re-render. */
 const NO_BLOCKED_DATES: ReadonlySet<string> = new Set();
+const NO_BLOCKED_NOTES: ReadonlyMap<string, string> = new Map();
 
 /**
  * First blocked night strictly between `start` and `end` (both exclusive), or
@@ -86,6 +87,12 @@ interface DateRangePickerProps extends DateRange {
    * these snaps back to starting a fresh range instead of silently spanning it.
    */
   blockedDates?: ReadonlySet<string>;
+  /**
+   * Why a blocked day is blocked, for the days worth explaining. Such a day is
+   * still refused, but pressing it shows the note in the footer instead of
+   * doing nothing. Days left out stay plain disabled buttons.
+   */
+  blockedNotes?: ReadonlyMap<string, string>;
   /** Caption above the date instead of beside it — see `SelectField`. */
   stacked?: boolean;
   /** Class the host bar uses for its own fields, so the trigger blends in. */
@@ -133,6 +140,7 @@ export function DateRangePicker({
   onChange,
   min,
   blockedDates = NO_BLOCKED_DATES,
+  blockedNotes = NO_BLOCKED_NOTES,
   stacked = false,
   fieldClassName,
   dividerClassName,
@@ -149,6 +157,8 @@ export function DateRangePicker({
   const [open, setOpen] = useState(false);
   const [focus, setFocus] = useState<'start' | 'end'>('start');
   const [hover, setHover] = useState('');
+  // The note of the last blocked day pressed; cleared by the next real pick.
+  const [note, setNote] = useState('');
   const [month, setMonth] = useState<Date>(
     () => startOfMonth(fromISO(start) ?? fromISO(min) ?? new Date()),
   );
@@ -198,10 +208,12 @@ export function DateRangePicker({
     const anchor = which === 'end' ? end || start : start;
     setFocus(which);
     setMonth(startOfMonth(fromISO(anchor) ?? fromISO(min) ?? new Date()));
+    setNote('');
     setOpen(true);
   };
 
   const pick = (iso: string) => {
+    setNote('');
     if (focus === 'end' && start && iso > start && !firstBlockedBetween(start, iso, blockedDates)) {
       onChange({ start, end: iso });
       setFocus('start');
@@ -221,6 +233,7 @@ export function DateRangePicker({
     onChange({ start: '', end: '' });
     setFocus('start');
     setHover('');
+    setNote('');
   };
 
   // While the guest hunts for a departure the band follows the cursor, so the
@@ -359,6 +372,9 @@ export function DateRangePicker({
                   iso > start &&
                   !firstBlockedBetween(start, iso, blockedDates);
                 const disabled = iso < min || (!validDeparture && blockedDates.has(iso));
+                // A refused day with something to say stays pressable so the
+                // press can say it — `disabled` would swallow the click.
+                const dayNote = disabled && iso >= min ? blockedNotes.get(iso) : undefined;
                 const spanned = Boolean(rangeEnd) && rangeEnd !== start;
                 const isStart = Boolean(start) && iso === start;
                 const isEnd = spanned && iso === rangeEnd;
@@ -379,12 +395,13 @@ export function DateRangePicker({
                     )}
                     <button
                       type="button"
-                      disabled={disabled}
+                      disabled={disabled && !dayNote}
+                      aria-disabled={dayNote ? true : undefined}
                       aria-pressed={isStart || isEnd}
                       aria-label={format(day, 'd MMMM yyyy', { locale: dfLocale })}
                       onMouseEnter={() => setHover(iso)}
                       onFocus={() => setHover(iso)}
-                      onClick={() => pick(iso)}
+                      onClick={() => (dayNote ? setNote(dayNote) : pick(iso))}
                       className={cn(
                         'relative mx-auto flex h-10 w-10 items-center justify-center rounded-full text-sm text-brand-ink transition',
                         !disabled && 'hover:bg-brand-sage/40',
@@ -404,12 +421,13 @@ export function DateRangePicker({
       </div>
 
       <div className="mt-3 flex items-center justify-between gap-3 border-t border-brand-border pt-3">
-        <span className="text-sm text-brand-muted">
-          {nights > 0
-            ? t('nightsCount', { count: nights })
-            : focus === 'start'
-              ? t('pickCheckIn')
-              : t('pickCheckOut')}
+        <span aria-live="polite" className={cn('text-sm', note ? 'text-status-danger' : 'text-brand-muted')}>
+          {note ||
+            (nights > 0
+              ? t('nightsCount', { count: nights })
+              : focus === 'start'
+                ? t('pickCheckIn')
+                : t('pickCheckOut'))}
         </span>
         <div className="flex items-center gap-2">
           <button

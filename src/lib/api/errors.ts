@@ -37,6 +37,9 @@ export const ERROR_CODE_MESSAGES: Record<string, string> = {
   OTP_EXPIRED: 'انتهت صلاحية الرمز، أعد الإرسال',
   OTP_MAX_ATTEMPTS: 'تجاوزت عدد المحاولات، أعد إرسال رمز جديد',
   EMAIL_VERIFICATION_REQUIRED: 'مطلوب توثيق البريد الإلكتروني قبل إتمام الحجز',
+  // 409 on availability and booking: the stay ends after the unit's permit.
+  // The guest never sees permit data, so the copy speaks of dates only.
+  BOOKING_EXCEEDS_PERMIT_VALIDITY: 'هذه الوحدة غير متاحة للتواريخ المختارة. جرّب تواريخ أقرب.',
 };
 
 /** Resolves a caught error to Arabic display text, preferring the code-based lookup over raw `message`. */

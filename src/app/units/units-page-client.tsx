@@ -196,6 +196,7 @@ export function UnitsPageClient() {
     () =>
       units.map((u) => ({
         id: u.id,
+        listingId: u.listingId,
         title: u.title,
         price: u.pricePerNight,
         lat: u.latitude,

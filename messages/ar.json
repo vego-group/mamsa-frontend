@@ -60,6 +60,7 @@
     "loading": "جاري التحميل...",
     "loadFailed": "تعذّر تحميل البيانات — تحقق من اتصالك بالإنترنت وحاول مجددًا.",
     "retry": "إعادة المحاولة",
+    "apartmentNo": "شقة رقم {number}",
     "home": "الرئيسية",
     "explore": "إكتشف وجهتك",
     "perNight": "/ ليلة",
@@ -176,7 +177,8 @@
     "bathrooms": "{count} حمامات",
     "perNight": "ر.س / ليلة",
     "viewDetails": "عرض التفاصيل",
-    "newListing": "جديد"
+    "newListing": "جديد",
+    "doorsAvailable": "{available} من {total} متاحة"
   },
   "unitsPage": {
     "stays": "إقامات",
@@ -222,6 +224,7 @@
   "unit": {
     "pickDates": "اختر تاريخ الوصول والمغادرة",
     "datesUnavailable": "الوحدة غير متاحة لهذه التواريخ، يرجى اختيار تواريخ أخرى",
+    "permitBlockedDay": "هذه الوحدة غير متاحة للحجز بعد هذا التاريخ",
     "featured": "مميز",
     "reviewCount": "{count} تقييمًا",
     "share": "مشاركة",

@@ -157,6 +157,7 @@ export default async function HomePage() {
         <LocationExplorer
           units={mapUnits.map((u) => ({
             id: u.id,
+            listingId: u.listingId,
             title: u.title,
             price: u.pricePerNight,
             lat: u.latitude,
