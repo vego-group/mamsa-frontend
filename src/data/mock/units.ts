@@ -345,3 +345,16 @@ const BUILDING_LISTING_IDS: Record<string, string> = { 'U-005': '01MOCKBUILDINGU
 export function listingIdOf(unitId: string): string {
   return BUILDING_LISTING_IDS[cardIdOf(unitId)] ?? `u${unitId}`;
 }
+
+/**
+ * What a unit route answers to, as on the real API: a unit id, or a listing
+ * key — a building's (answered by its card) or `u<id>` (that unit). Anything
+ * else comes back unchanged, to miss like any unknown id.
+ */
+export function resolveUnitRef(ref: string): string {
+  for (const [cardId, listingId] of Object.entries(BUILDING_LISTING_IDS)) {
+    if (listingId === ref) return cardId;
+  }
+  if (ref.startsWith('u') && findUnitById(ref.slice(1))) return ref.slice(1);
+  return ref;
+}

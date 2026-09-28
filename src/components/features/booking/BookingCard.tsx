@@ -12,6 +12,7 @@ import { formatDate, formatSAR, diffNights } from '@/lib/utils/format';
 import { cancelledByKey } from '@/lib/cancellation/actor';
 import { CancelBookingDialog } from './CancelBookingDialog';
 import { isBookingCancellable } from '@/lib/cancellation/engine';
+import { unitPath } from '@/lib/listing';
 
 interface BookingCardProps {
   booking: Booking;
@@ -105,7 +106,8 @@ export function BookingCard({ booking, tabContext, onCancelled }: BookingCardPro
                   )
                 ) : tabContext === 'completed' ? (
                   <Button size="sm" variant="sage" asChild>
-                    <Link href={`/units/${booking.unitId}`}>{t('bookAgain')}</Link>
+                    {/* The listing, not the door this stay landed on — that door can close. */}
+                    <Link href={unitPath({ id: booking.unitId, listingId: booking.listingId })}>{t('bookAgain')}</Link>
                   </Button>
                 ) : null}
               </div>

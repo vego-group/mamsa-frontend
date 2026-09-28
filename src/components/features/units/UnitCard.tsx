@@ -11,6 +11,7 @@ import { useFavoritesStore } from '@/stores/favorites';
 import { useStayQuery } from '@/stores/search';
 import { UnitRating } from '@/components/features/units/UnitRating';
 import { formatSAR } from '@/lib/utils/format';
+import { unitPath } from '@/lib/listing';
 import { cn } from '@/lib/utils/cn';
 
 interface UnitCardProps {
@@ -27,7 +28,7 @@ export function UnitCard({ unit, variant = 'list' }: UnitCardProps) {
   // Hand the listing the dates the guest already picked, so its booking widget
   // opens on their stay instead of an empty calendar.
   const stay = useStayQuery();
-  const href = `/units/${unit.id}${stay}`;
+  const href = `${unitPath(unit)}${stay}`;
 
   /** Amenity labels come from the backend in Arabic — translate known keys, pass through the rest. */
   const amenityLabel = (a: Unit['amenities'][number]) =>

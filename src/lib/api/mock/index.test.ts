@@ -115,6 +115,17 @@ describe('mock role-plays a building: the booking lands on a free door', () => {
     expect((await mockApi.bookings.getById('BK-010')).listingId).toBe(card.listingId);
   });
 
+  it('answers the unit routes by listing key too, as the API does', async () => {
+    const key = (await mockApi.units.list({})).find((u) => u.id === BUILDING)!.listingId!;
+    expect((await mockApi.units.getById(key)).id).toBe(BUILDING);
+    expect(await mockApi.units.getBlockedDates(key, '2028-02-01', '2028-02-28')).toEqual(
+      await mockApi.units.getBlockedDates(BUILDING, '2028-02-01', '2028-02-28'),
+    );
+    expect((await mockApi.units.checkAvailability(key, '2028-06-10', '2028-06-12')).available).toBe(true);
+    expect((await mockApi.units.getById('uU-001')).id).toBe('U-001');
+    await expect(mockApi.units.getById('uU-DOES-NOT-EXIST')).rejects.toThrow();
+  });
+
   it('gives a standalone unit u<id> as its listing id', async () => {
     const standalone = (await mockApi.units.list({})).find((u) => u.id === 'U-001')!;
     expect(standalone.listingId).toBe('uU-001');
