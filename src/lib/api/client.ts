@@ -79,8 +79,13 @@ const MOCK_LATENCY_MS = 300;
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function withLatency<T>(promise: Promise<T> | T): Promise<T> {
+  const answer = Promise.resolve(promise);
+  // A mock that rejects has already rejected; mark it handled before the delay
+  // so it isn't reported as unhandled while the caller has yet to see it. The
+  // caller still gets the rejection below.
+  answer.catch(() => {});
   if (USE_MOCK) await delay(MOCK_LATENCY_MS);
-  return promise;
+  return answer;
 }
 
 export { ApiError };
