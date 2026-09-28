@@ -245,6 +245,37 @@ describe('mapUser — role', () => {
   });
 });
 
+/**
+ * A building comes back as one card. `group_size` counts its sellable doors,
+ * `available_count` the ones free (over the searched dates, when dated).
+ */
+describe('mapUnit — building counts', () => {
+  const card = (extra: Record<string, unknown>): RawUnit =>
+    ({ id: 30, name: 'مبنى', type: 'apartment', price: 300, capacity: 2, bedrooms: 1, bathrooms: 1, city: 'الرياض', ...extra }) as RawUnit;
+
+  it('carries group_size and available_count', () => {
+    const u = mapUnit(card({ group_size: 6, available_count: 4 }));
+    expect(u.groupSize).toBe(6);
+    expect(u.availableCount).toBe(4);
+  });
+
+  it('keeps a standalone unit at a group of one', () => {
+    expect(mapUnit(card({ group_size: 1, available_count: 1 })).groupSize).toBe(1);
+  });
+
+  it('leaves both unset when the API sends none, or sends something that is not a count', () => {
+    for (const v of [undefined, null, 'x', -1, 2.5]) {
+      const u = mapUnit(card({ group_size: v, available_count: v }));
+      expect(u.groupSize, String(v)).toBeUndefined();
+      expect(u.availableCount, String(v)).toBeUndefined();
+    }
+  });
+
+  it('reads a zero available_count as zero, not as missing', () => {
+    expect(mapUnit(card({ group_size: 3, available_count: 0 })).availableCount).toBe(0);
+  });
+});
+
 describe('mapUnit — image derivatives', () => {
   const rawUnit = (images: RawUnit['images']): RawUnit => ({
     id: 1,

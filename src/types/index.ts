@@ -117,6 +117,14 @@ export interface Unit {
   /** Present when `status === 'rejected'` — the admin's reason. */
   rejectionReason?: string | null;
   createdAt: string;
+  /**
+   * A building is one card. How many of its doors are approved and on sale —
+   * 1 for a standalone unit. Not the admin's `group.size`, which counts every
+   * door in any state. Absent when the API sent none.
+   */
+  groupSize?: number;
+  /** Of those doors, how many are free — over the searched dates, when the search had any. */
+  availableCount?: number;
 }
 
 // ============ Cancellation Policy ============

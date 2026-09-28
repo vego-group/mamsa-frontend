@@ -177,7 +177,8 @@
     "bathrooms": "{count} bathrooms",
     "perNight": "SAR / night",
     "viewDetails": "View details",
-    "newListing": "New"
+    "newListing": "New",
+    "doorsAvailable": "{available} of {total} available"
   },
   "unitsPage": {
     "stays": "Stays",
