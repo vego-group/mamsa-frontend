@@ -286,6 +286,51 @@ describe('Checkout — a 409 on the dates is an answer, not a failure', () => {
   });
 });
 
+/**
+ * "Unit already booked" is often the guest's own unpaid booking holding the
+ * dates. In a building that booking sits on whichever door was free — not the
+ * card they opened — so it has to be found by listing, not by unit id.
+ */
+describe('Checkout — an unpaid booking on another door of the same building is reused', () => {
+  const BUILDING = '01M19EZRB4ARP4BDGJ4ET7P03F';
+
+  async function refuseAndOffer(pending: Booking) {
+    useAuthStore.setState({ user: baseUser({ emailVerified: true }), isAuthenticated: true });
+    const { MOCK_UNITS } = await import('@/data/mock/units');
+    const card = MOCK_UNITS.find((u) => u.id === UNIT_ID)!;
+    vi.spyOn(unitsApi, 'getById').mockResolvedValue({ ...card, listingId: BUILDING });
+    renderCheckout();
+    await waitForUnitToLoad();
+
+    fireEvent.click(screen.getByRole('checkbox'));
+    vi.spyOn(bookingsApi, 'create').mockRejectedValueOnce(
+      new ApiError(409, 'الوحدة غير متاحة في هذه الفترة', 'UNIT_UNAVAILABLE'),
+    );
+    vi.spyOn(bookingsApi, 'list').mockResolvedValue([pending]);
+
+    const button = screen.getByText(/المتابعة إلى الدفع/).closest('button')!;
+    await act(async () => {
+      fireEvent.click(button);
+      await vi.advanceTimersByTimeAsync(350);
+    });
+  }
+
+  it('sends the guest back to pay for it, even though its unit id is not the card’s', async () => {
+    await refuseAndOffer(
+      bookingFixture({ id: 'BK-DOOR', unitId: 'U-001-2', listingId: BUILDING, status: 'pending_payment' }),
+    );
+    expect(pushMock).toHaveBeenCalledWith('/payment/BK-DOOR');
+  });
+
+  it('leaves an unpaid booking in another listing alone', async () => {
+    await refuseAndOffer(
+      bookingFixture({ id: 'BK-OTHER', unitId: UNIT_ID, listingId: 'u999', status: 'pending_payment' }),
+    );
+    expect(pushMock).not.toHaveBeenCalled();
+    expect(screen.getByText('الوحدة غير متاحة في هذه الفترة')).toBeTruthy();
+  });
+});
+
 describe('Checkout — the guest is the account holder', () => {
   it('shows the account details instead of asking for them again', async () => {
     useAuthStore.setState({

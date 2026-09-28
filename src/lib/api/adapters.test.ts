@@ -276,6 +276,32 @@ describe('mapUnit — building counts', () => {
   });
 });
 
+/**
+ * `listing_id` is the building's key: every door of a building carries the
+ * same value, a standalone unit carries `u<id>`. It rides on the unit and on
+ * `booking.unit`, and it is what a booking is matched to a card by.
+ */
+describe('listing_id — the key a booking and a card share', () => {
+  const raw = { id: 40, name: 'مبنى', type: 'apartment', price: 450, capacity: 2, bedrooms: 1, bathrooms: 1, city: 'الرياض' } as RawUnit;
+
+  it('carries listing_id on the unit', () => {
+    expect(mapUnit({ ...raw, listing_id: '01M19EZRB4ARP4BDGJ4ET7P03F' }).listingId).toBe('01M19EZRB4ARP4BDGJ4ET7P03F');
+  });
+
+  it('carries booking.unit.listing_id on the booking', () => {
+    const b = mapBooking(makeRawBooking({ unit: { ...raw, listing_id: '01M19EZRB4ARP4BDGJ4ET7P03F' } }));
+    expect(b.listingId).toBe('01M19EZRB4ARP4BDGJ4ET7P03F');
+    expect(b.unitId).toBe('40');
+  });
+
+  it('leaves it unset when the API sends none or a blank one', () => {
+    for (const listing_id of [undefined, null, '']) {
+      expect(mapUnit({ ...raw, listing_id } as RawUnit).listingId).toBeUndefined();
+      expect(mapBooking(makeRawBooking({ unit: { ...raw, listing_id } as RawUnit })).listingId).toBeUndefined();
+    }
+  });
+});
+
 describe('mapUnit — image derivatives', () => {
   const rawUnit = (images: RawUnit['images']): RawUnit => ({
     id: 1,

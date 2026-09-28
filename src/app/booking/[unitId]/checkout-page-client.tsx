@@ -19,6 +19,7 @@ import { useUiStore } from '@/stores/ui';
 import { getPolicyByTemplate } from '@/lib/constants/cancellation-policies';
 import { formatSAR, formatDate } from '@/lib/utils/format';
 import { vatPercentLabel } from '@/lib/pricing';
+import { isSameListing } from '@/lib/listing';
 import type { Unit, Booking, PriceBreakdown as PriceBreakdownData } from '@/types';
 
 export function CheckoutPageClient() {
@@ -201,14 +202,18 @@ export function CheckoutPageClient() {
     }
   };
 
-  /** My unpaid pending booking on this unit that overlaps the requested dates, if any. */
+  /**
+   * My unpaid pending booking on this listing that overlaps the requested
+   * dates, if any. By listing, not unit id: in a building it sits on whichever
+   * door was free, not necessarily the card the guest opened.
+   */
   const findMyPendingBooking = async (): Promise<Booking | null> => {
     try {
       const mine = await bookingsApi.list();
       return (
         mine.find(
           (b) =>
-            b.unitId === unit.id &&
+            isSameListing(b, unit) &&
             b.status === 'pending_payment' &&
             b.checkInDate.slice(0, 10) < checkOut &&
             b.checkOutDate.slice(0, 10) > checkIn,
