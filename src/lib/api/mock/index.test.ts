@@ -89,6 +89,54 @@ describe('mock availability reflects bookings that still hold the dates', () => 
   });
 });
 
+/**
+ * U-004 plays a unit whose permit runs out 20 days from today. Relative, so
+ * the cap never drifts into the past and takes the fixture with it.
+ */
+describe('mock role-plays the permit cap the guest API enforces', () => {
+  const PERMIT_UNIT = 'U-004';
+
+  function isoInDays(days: number): string {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  it('blocks from the expiry day itself to the end of the window, tagged permit_expiry', async () => {
+    const blocked = await mockApi.units.getBlockedDates(PERMIT_UNIT, isoInDays(0), isoInDays(60));
+    expect(blocked).toContainEqual({ start: isoInDays(20), end: isoInDays(60), reason: 'permit_expiry' });
+  });
+
+  it('leaves every other span without a reason', async () => {
+    const blocked = await mockApi.units.getBlockedDates(UNIT_ID);
+    expect(blocked.every((r) => !('reason' in r))).toBe(true);
+  });
+
+  it('answers availability past the expiry with 409 BOOKING_EXCEEDS_PERMIT_VALIDITY', async () => {
+    await expect(
+      mockApi.units.checkAvailability(PERMIT_UNIT, isoInDays(18), isoInDays(22)),
+    ).rejects.toMatchObject({ status: 409, code: 'BOOKING_EXCEEDS_PERMIT_VALIDITY' });
+  });
+
+  it('allows a stay that checks out on the expiry day', async () => {
+    const { available } = await mockApi.units.checkAvailability(PERMIT_UNIT, isoInDays(17), isoInDays(20));
+    expect(available).toBe(true);
+  });
+
+  it('refuses the booking itself the same way — the probe and the create agree', async () => {
+    await login();
+    await expect(
+      mockApi.bookings.create({
+        unitId: PERMIT_UNIT,
+        checkInDate: isoInDays(18),
+        checkOutDate: isoInDays(22),
+        guests: { adults: 2, children: 0 },
+        paymentMethod: 'visa',
+      }),
+    ).rejects.toMatchObject({ status: 409, code: 'BOOKING_EXCEEDS_PERMIT_VALIDITY' });
+  });
+});
+
 describe('cancellation template mapping fails towards the least generous policy', () => {
   it('maps the API’s three live keys to themselves', async () => {
     const { mapUnit } = await import('@/lib/api/adapters');

@@ -49,6 +49,8 @@ export function CheckoutPageClient() {
   // never computes money, it only ever renders what the backend returns.
   const [quote, setQuote] = useState<CheckAvailabilityResult | null>(null);
   const [quoteError, setQuoteError] = useState(false);
+  // The 409 that answered the quote, if one did — worded on the unavailable screen.
+  const [quoteRefusal, setQuoteRefusal] = useState<ApiError | null>(null);
   // Once the booking is created, its FROZEN breakdown replaces the pre-booking
   // quote (§1.3) — the authoritative price, immune to any later rate change.
   const [frozenPrice, setFrozenPrice] = useState<PriceBreakdownData | null>(null);
@@ -69,10 +71,22 @@ export function CheckoutPageClient() {
   useEffect(() => {
     if (!datesValid) return;
     setQuoteError(false);
+    setQuoteRefusal(null);
     unitsApi
       .checkAvailability(params.unitId, checkIn, checkOut)
       .then(setQuote)
-      .catch(() => setQuoteError(true));
+      .catch((e) => {
+        // A 409 is the server saying "not these dates" (a clash, a closure, or
+        // the stay ending past the unit's permit) — the same answer as
+        // `available: false`, so it gets the same screen. A retry could only
+        // ever get the same 409 back.
+        if (e instanceof ApiError && e.status === 409) {
+          setQuoteRefusal(e);
+          setQuote({ available: false, pricing: null });
+          return;
+        }
+        setQuoteError(true);
+      });
   }, [params.unitId, checkIn, checkOut, datesValid, attempt]);
 
   if (unitLoadError || quoteError) {
@@ -103,7 +117,9 @@ export function CheckoutPageClient() {
   if (!quote.available || !quote.pricing) {
     return (
       <div className="container mx-auto flex flex-col items-center gap-4 px-4 py-16 text-center">
-        <p className="text-sm text-brand-muted">{t('errors.unitUnavailable')}</p>
+        <p className="text-sm text-brand-muted">
+          {quoteRefusal ? resolveErrorMessage(quoteRefusal, t('errors.unitUnavailable')) : t('errors.unitUnavailable')}
+        </p>
         <Button asChild>
           <Link href={`/units/${unit.id}`}>{t('backToUnit')}</Link>
         </Button>
@@ -177,7 +193,9 @@ export function CheckoutPageClient() {
         return;
       }
       if (mine) setPendingConflict(mine);
-      setError(e instanceof Error ? e.message : t('errors.genericFailed'));
+      // Copy for a known code (e.g. BOOKING_EXCEEDS_PERMIT_VALIDITY) comes from
+      // the dictionary; anything else still shows the server's own message.
+      setError(resolveErrorMessage(e, t('errors.genericFailed')));
       setSubmitting(false);
     }
   };
