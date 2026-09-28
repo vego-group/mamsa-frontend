@@ -117,9 +117,10 @@ export function CheckoutPageClient() {
   if (!quote.available || !quote.pricing) {
     return (
       <div className="container mx-auto flex flex-col items-center gap-4 px-4 py-16 text-center">
-        <p className="text-sm text-brand-muted">
-          {quoteRefusal ? resolveErrorMessage(quoteRefusal, t('errors.unitUnavailable')) : t('errors.unitUnavailable')}
-        </p>
+        {/* Same wording rule as the booking step: dictionary copy by code,
+            then the server's message. `available: false` has no refusal and
+            falls through to the generic line. */}
+        <p className="text-sm text-brand-muted">{resolveErrorMessage(quoteRefusal, t('errors.unitUnavailable'))}</p>
         <Button asChild>
           <Link href={`/units/${unit.id}`}>{t('backToUnit')}</Link>
         </Button>

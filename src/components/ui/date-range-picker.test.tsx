@@ -280,6 +280,26 @@ describe('blocked days that say why', () => {
     expect(panel()?.textContent ?? '').not.toContain(NOTE);
   });
 
+  it('keeps the noted day in the tab order, announced as unavailable rather than removed', () => {
+    const { container } = renderPicker('', '', ...notedRun());
+    openCalendar(container);
+    // `disabled` would drop it from Tab and swallow Enter/Space along with the click.
+    // (happy-dom reports `tabIndex` -1 for any bare button, so the check is on
+    // the attribute; the real Tab order is verified in a browser.)
+    expect(day(6).disabled).toBe(false);
+    expect(day(6).hasAttribute('tabindex')).toBe(false);
+    expect(day(6).getAttribute('aria-disabled')).toBe('true');
+  });
+
+  it('puts the note in a polite live region, so a screen reader reads it out', () => {
+    const { container } = renderPicker('', '', ...notedRun());
+    openCalendar(container);
+    const live = panel()!.querySelector('[aria-live="polite"]');
+    expect(live).toBeTruthy();
+    fireEvent.click(day(6));
+    expect(live!.textContent).toBe(NOTE);
+  });
+
   it('drops the note once the guest picks a day that is free', () => {
     const { container } = renderPicker('', '', ...notedRun());
     openCalendar(container);
