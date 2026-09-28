@@ -62,4 +62,30 @@ describe('printable booking confirmation', () => {
     expect(html).not.toContain('<img src=x');
     expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;');
   });
+
+  it('escapes every server-supplied field, not just the door number', () => {
+    const b = booking();
+    const html = printed({
+      ...b,
+      id: '<i>id</i>',
+      code: '</title><script>alert(1)</script>',
+      unitSnapshot: {
+        ...b.unitSnapshot,
+        title: '<img src=x onerror=alert(2)>',
+        city: '<b>city</b>',
+        country: '<u>country</u>',
+        ownerName: '"><svg onload=alert(3)>',
+      },
+    });
+
+    // (The document's own `<script>` that calls print() is expected; the
+    // injected one is not.)
+    for (const raw of ['<i>id</i>', '<script>alert', '<img src=x', '<b>city</b>', '<u>country</u>', '<svg']) {
+      expect(html).not.toContain(raw);
+    }
+    expect(html).toContain('&lt;img src=x onerror=alert(2)&gt;');
+    expect(html).toContain('&lt;b&gt;city&lt;/b&gt;');
+    expect(html).toContain('&quot;&gt;&lt;svg onload=alert(3)&gt;');
+    expect(html).toContain('&lt;/title&gt;&lt;script&gt;');
+  });
 });
