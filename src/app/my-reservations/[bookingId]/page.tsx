@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { ArrowRight, CreditCard, MessageCircle, Download, FileText, X, ShieldCheck, MapPin, Star } from 'lucide-react';
+import { ArrowRight, CreditCard, MessageCircle, Download, FileText, X, ShieldCheck, MapPin, Star, DoorOpen } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -218,6 +218,11 @@ export default function BookingDetailsPage() {
 
           <Card className="space-y-2 p-5">
             <h1 className="text-xl font-bold">{booking.unitSnapshot.title}</h1>
+            {booking.unitSnapshot.apartmentNo && (
+              <p className="flex items-center gap-1 text-sm text-brand-muted">
+                <DoorOpen className="h-4 w-4" /> {tc('apartmentNo', { number: booking.unitSnapshot.apartmentNo })}
+              </p>
+            )}
             <p className="flex items-center gap-1 text-sm text-brand-muted">
               <MapPin className="h-4 w-4" /> {booking.unitSnapshot.city}، {booking.unitSnapshot.country}
             </p>

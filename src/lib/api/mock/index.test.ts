@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mockApi } from './index';
-import { MOCK_UNITS, findUnitById } from '@/data/mock/units';
+import { MOCK_UNITS, cardIdOf, findUnitById } from '@/data/mock/units';
 import { MOCK_BOOKINGS } from '@/data/mock/bookings';
 
 const UNIT_ID = 'U-001';
@@ -21,9 +21,63 @@ describe('mock fixtures — one unit per id', () => {
   });
 
   it('points every seeded booking at the unit its snapshot describes', () => {
+    // A booking on a building's door describes the building's card.
     for (const b of MOCK_BOOKINGS) {
-      expect(findUnitById(b.unitId)?.title, b.id).toBe(b.unitSnapshot.title);
+      expect(findUnitById(cardIdOf(b.unitId))?.title, b.id).toBe(b.unitSnapshot.title);
     }
+  });
+});
+
+/**
+ * U-005 plays a building of three doors. The card is door 1; a booking lands
+ * on the first door free for the stay, so its unit can differ from the card.
+ * Each test holds its own dates — the in-memory booking list lives for the file.
+ */
+describe('mock role-plays a building: the booking lands on a free door', () => {
+  const BUILDING = 'U-005';
+
+  function book(unitId: string, checkInDate: string, checkOutDate: string) {
+    return mockApi.bookings.create({
+      unitId,
+      checkInDate,
+      checkOutDate,
+      guests: { adults: 2, children: 0 },
+      paymentMethod: 'visa',
+    });
+  }
+
+  it('lands on door 1, the card itself, while it is free', async () => {
+    await login();
+    const b = await book(BUILDING, '2027-08-10', '2027-08-13');
+    expect(b.unitId).toBe('U-005');
+    expect(b.unitSnapshot.apartmentNo).toBe('1');
+  });
+
+  it('lands on the next free door when door 1 is taken — not the card the guest opened', async () => {
+    await login();
+    await book(BUILDING, '2027-09-10', '2027-09-13');
+    const second = await book(BUILDING, '2027-09-10', '2027-09-13');
+    expect(second.unitId).toBe('U-005-2');
+    expect(second.unitSnapshot.apartmentNo).toBe('2');
+    // Still the building the guest chose — only the door differs.
+    expect(second.unitSnapshot.title).toBe(findUnitById(BUILDING)!.title);
+  });
+
+  it('stays bookable while any door is free, and refuses once none is', async () => {
+    await login();
+    await book(BUILDING, '2027-10-10', '2027-10-13');
+    await book(BUILDING, '2027-10-10', '2027-10-13');
+    expect((await mockApi.units.checkAvailability(BUILDING, '2027-10-10', '2027-10-13')).available).toBe(true);
+    await book(BUILDING, '2027-10-10', '2027-10-13');
+    expect((await mockApi.units.checkAvailability(BUILDING, '2027-10-10', '2027-10-13')).available).toBe(false);
+    await expect(book(BUILDING, '2027-10-10', '2027-10-13')).rejects.toThrow();
+  });
+
+  it('gives a standalone unit no door number', async () => {
+    await login();
+    const b = await book('U-003', '2027-11-10', '2027-11-13');
+    expect(b.unitId).toBe('U-003');
+    expect(b.unitSnapshot.apartmentNo).toBeUndefined();
   });
 });
 

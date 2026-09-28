@@ -127,7 +127,14 @@ export interface RawBooking {
   reference?: string;
   user_id?: number | string;
   guest_name?: string | null;
-  unit?: RawUnit;
+  /** Always null on the guest API — the booked unit is `unit.id`. Never read. */
+  unit_id?: number | string | null;
+  /**
+   * The unit the server allocated. `apartment_no` rides on this response only
+   * (the list and `/units/{id}` never carry it): the door number in a
+   * building, null for a standalone unit.
+   */
+  unit?: RawUnit & { apartment_no?: string | null };
   start_date: string;
   end_date: string;
   nights?: number;
@@ -507,10 +514,14 @@ export function mapBooking(b: RawBooking): Booking {
   const p = b.pricing ?? {};
   const mainRaw = unit?.images?.find((i) => i.is_main) ?? unit?.images?.[0];
   const mainImage = mainRaw ? (mainRaw.variants?.thumb ?? mainRaw.url) : '';
+  // Null (standalone), absent and blank all mean "no door to name".
+  const apartmentNo = unit?.apartment_no == null ? '' : String(unit.apartment_no).trim();
 
   return {
     id: String(b.id),
     code: b.reference ?? '',
+    // From `booking.unit`, never the root `unit_id` (always null): in a
+    // building this is the door the server picked, not the card.
     unitId: unit ? String(unit.id) : '',
     unitSnapshot: {
       title: unit?.name ?? '',
@@ -518,6 +529,7 @@ export function mapBooking(b: RawBooking): Booking {
       country: DEFAULT_COUNTRY,
       imageUrl: mainImage,
       ownerName: unit?.owner?.name ?? '',
+      ...(apartmentNo ? { apartmentNo } : {}),
     },
     userId: b.user_id == null ? 'CURRENT_USER' : String(b.user_id),
     guestName: b.guest_name ?? undefined,

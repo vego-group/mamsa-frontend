@@ -203,6 +203,11 @@ export interface BookingCancellation {
 export interface Booking {
   id: string;
   code: string; // e.g. "NXTZ3K8L5Q"
+  /**
+   * The unit the server actually booked — in a building, whichever door was
+   * free, which need not be the card the guest opened. Always read from the
+   * booking, never carried over from the card.
+   */
   unitId: string;
   unitSnapshot: {
     title: string;
@@ -210,6 +215,8 @@ export interface Booking {
     country: string;
     imageUrl: string;
     ownerName: string;
+    /** The door number inside a building. Absent for a standalone unit. */
+    apartmentNo?: string;
   };
   userId: string;
   guestName?: string;

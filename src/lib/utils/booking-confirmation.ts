@@ -1,6 +1,10 @@
 import type { Booking } from '@/types';
 import { formatDate, formatSAR } from './format';
 
+/** For text the partner typed (the door number) before it is written into HTML. */
+const escapeHtml = (s: string) =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
 /**
  * Generates a branded, RTL booking-confirmation document in a new window and
  * triggers the print dialog — the user saves it as a PDF. This renders Arabic
@@ -57,6 +61,7 @@ export function downloadBookingConfirmation(booking: Booking) {
 
     <h2>الإقامة</h2>
     <div class="unit">${booking.unitSnapshot.title}</div>
+    ${booking.unitSnapshot.apartmentNo ? `<div class="muted">شقة رقم ${escapeHtml(booking.unitSnapshot.apartmentNo)}</div>` : ''}
     <div class="muted">${booking.unitSnapshot.city}، ${booking.unitSnapshot.country}</div>
     <div class="muted">المضيف: ${booking.unitSnapshot.ownerName}</div>
 

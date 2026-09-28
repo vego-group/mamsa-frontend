@@ -3,7 +3,7 @@
  * يحاكي سلوك الباك إند على البيانات في data/mock/.
  * يحافظ على state في الذاكرة للجلسة الحالية فقط (sessionStorage معطّل لأنه لا يعمل في artifacts).
  */
-import { MOCK_UNITS, findUnitById } from '@/data/mock/units';
+import { MOCK_UNITS, doorsOf, findUnitById, type MockDoor } from '@/data/mock/units';
 import { MOCK_BOOKINGS } from '@/data/mock/bookings';
 import { MOCK_REVIEWS, getReviewForBooking } from '@/data/mock/reviews';
 import { MOCK_CURRENT_USER, MOCK_SAVED_CARDS, MOCK_TRANSACTIONS } from '@/data/mock/users';
@@ -72,6 +72,14 @@ function isUnitBooked(unitId: string, start: string, end: string): boolean {
       b.checkInDate.slice(0, 10) < end &&
       b.checkOutDate.slice(0, 10) > start,
   );
+}
+
+/**
+ * The first door of a card free over [start, end), or null when every door is
+ * held. A standalone unit is its own single door.
+ */
+function freeDoor(cardId: string, start: string, end: string): MockDoor | null {
+  return doorsOf(cardId).find((d) => !isUnitBooked(d.id, start, end)) ?? null;
 }
 
 /** YYYY-MM-DD shifted by N days — local calendar math, no UTC/timezone drift. */
@@ -267,9 +275,10 @@ export const mockApi = {
           filter.amenities!.every((a) => u.amenities.some((am) => am.key === a)),
         );
       }
-      // Searching with a stay means searching for units free over it.
+      // Searching with a stay means searching for units free over it — for a
+      // building, any one door free is enough.
       if (filter.startDate && filter.endDate) {
-        result = result.filter((u) => !isUnitBooked(u.id, filter.startDate!, filter.endDate!));
+        result = result.filter((u) => freeDoor(u.id, filter.startDate!, filter.endDate!) !== null);
       }
 
       switch (filter.sort) {
@@ -326,7 +335,7 @@ export const mockApi = {
       const nights = diffNights(startDate, endDate);
       const refused = permitRefusal(unitId, endDate);
       if (refused) return refused;
-      if (isUnitBooked(unitId, startDate, endDate)) return ok({ available: false, pricing: null });
+      if (!freeDoor(unitId, startDate, endDate)) return ok({ available: false, pricing: null });
       return ok({ available: true, pricing: computeMockPricing(unit, nights) });
     },
 
@@ -419,7 +428,10 @@ export const mockApi = {
       if (refused) return refused;
       // Re-check at creation time, same as the real backend — a prior
       // `checkAvailability` call is a snapshot, never a hold on the dates.
-      if (isUnitBooked(input.unitId, input.checkInDate, input.checkOutDate)) {
+      // In a building the server picks the first free door, so the booked
+      // unit can differ from the card the guest opened.
+      const door = freeDoor(input.unitId, input.checkInDate, input.checkOutDate);
+      if (!door) {
         return fail('الوحدة محجوزة في هذه الفترة') as Promise<Booking>;
       }
       const nights = diffNights(input.checkInDate, input.checkOutDate);
@@ -429,13 +441,14 @@ export const mockApi = {
       const booking: Booking = {
         id: genId('BK'),
         code: genCode(),
-        unitId: unit.id,
+        unitId: door.id,
         unitSnapshot: {
           title: unit.title,
           city: unit.city,
           country: unit.country,
           imageUrl: unit.images[0]?.thumb ?? '',
           ownerName: unit.ownerName,
+          ...(door.apartmentNo ? { apartmentNo: door.apartmentNo } : {}),
         },
         userId: 'CURRENT_USER',
         status: 'confirmed',

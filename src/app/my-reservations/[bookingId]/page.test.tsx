@@ -174,6 +174,41 @@ describe('Booking details — the review is supplementary', () => {
   });
 });
 
+describe('Booking details — the door the server allocated', () => {
+  const doorLine = (n: string) => arMessages.common.apartmentNo.replace('{number}', n);
+
+  it('names the door when the booking carries one', async () => {
+    useAuthStore.setState({ user: USER, isAuthenticated: true });
+    const fixture = bookingFixture();
+    vi.spyOn(bookingsApi, 'getById').mockResolvedValue({
+      ...fixture,
+      unitId: 'U-005-2',
+      unitSnapshot: { ...fixture.unitSnapshot, apartmentNo: '2' },
+    });
+    vi.spyOn(reviewsApi, 'getForBooking').mockResolvedValue(null);
+    await renderPage();
+
+    expect(screen.getByText(doorLine('2'))).toBeTruthy();
+  });
+
+  it('shows no door line for a standalone unit', async () => {
+    useAuthStore.setState({ user: USER, isAuthenticated: true });
+    vi.spyOn(bookingsApi, 'getById').mockResolvedValue(bookingFixture());
+    vi.spyOn(reviewsApi, 'getForBooking').mockResolvedValue(null);
+    const { container } = render(
+      <NextIntlClientProvider locale="ar" messages={arMessages}>
+        <BookingDetailsPage />
+      </NextIntlClientProvider>,
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(400);
+    });
+
+    expect(screen.getByText('شقة تجريبية')).toBeTruthy();
+    expect(container.textContent).not.toContain(doorLine('').trim());
+  });
+});
+
 /** YYYY-MM-DD, N days from today (UTC) — the shape bookings carry. */
 function daysFromToday(n: number): string {
   const d = new Date();
