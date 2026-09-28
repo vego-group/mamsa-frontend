@@ -197,6 +197,41 @@ describe('Unit details — the stay follows the guest into the listing', () => {
   });
 });
 
+describe('Unit details — nights past the unit’s permit', () => {
+  const PERMIT_NOTE = 'هذه الوحدة غير متاحة للحجز بعد هذا التاريخ';
+
+  /** The calendar's button for a day, inside the open panel. */
+  function dayButton(container: HTMLElement, days: number): HTMLButtonElement {
+    const label = format(inDays(days), 'd MMMM yyyy', { locale: ar });
+    return container.querySelector<HTMLButtonElement>(`[role="dialog"] button[aria-label="${label}"]`)!;
+  }
+
+  async function renderWithFeed() {
+    // One booked span without a reason, and the permit span the API tags.
+    vi.spyOn(unitsApi, 'getBlockedDates').mockResolvedValue([
+      { start: isoInDays(3), end: isoInDays(4) },
+      { start: isoInDays(8), end: isoInDays(30), reason: 'permit_expiry' },
+    ]);
+    const view = renderUnitPage();
+    await waitForUnitToLoad();
+    fireEvent.click(dateFields(view.container)[0]!);
+    return view;
+  }
+
+  it('says the unit cannot be booked past that date when one of those days is pressed', async () => {
+    const { container } = await renderWithFeed();
+    fireEvent.click(dayButton(container, 10));
+    expect(container.textContent).toContain(PERMIT_NOTE);
+  });
+
+  it('leaves a booked night exactly as it was — disabled, with nothing to say', async () => {
+    const { container } = await renderWithFeed();
+    expect(dayButton(container, 3).disabled).toBe(true);
+    fireEvent.click(dayButton(container, 3));
+    expect(container.textContent).not.toContain(PERMIT_NOTE);
+  });
+});
+
 describe('Unit details — a listing no guest has scored yet', () => {
   /**
    * The backend's placeholder zeroes on an otherwise real fixture unit. The

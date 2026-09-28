@@ -103,6 +103,9 @@ function UnitDetailsView() {
   const [unit, setUnit] = useState<Unit | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [blockedDates, setBlockedDates] = useState<ReadonlySet<string>>(new Set());
+  // The subset that is blocked because the unit's permit runs out — the one
+  // kind of blocked night the calendar explains when pressed.
+  const [permitBlockedDates, setPermitBlockedDates] = useState<ReadonlySet<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   // Bumping this re-runs the fetch effect — the retry path after a failure.
@@ -136,6 +139,7 @@ function UnitDetailsView() {
         setUnit(u);
         setReviews(r);
         setBlockedDates(expandBlockedDates(blocked));
+        setPermitBlockedDates(expandBlockedDates(blocked.filter((b) => b.reason === 'permit_expiry')));
       })
       .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
@@ -217,6 +221,11 @@ function UnitDetailsView() {
     [unit?.capacity, t],
   );
 
+  const blockedNotes = useMemo<ReadonlyMap<string, string>>(
+    () => new Map([...permitBlockedDates].map((iso) => [iso, t('permitBlockedDay')])),
+    [permitBlockedDates, t],
+  );
+
   const handleBook = () => {
     if (!unit || !datesSelected) return;
     if (!isAuth) { setSheetOpen(false); openAuth('login'); return; }
@@ -276,6 +285,7 @@ function UnitDetailsView() {
           end={checkOut}
           min={todayStr}
           blockedDates={blockedDates}
+          blockedNotes={blockedNotes}
           onChange={pickStay}
           stacked
           // Both hosts are narrower than the panel: hung from the trailing

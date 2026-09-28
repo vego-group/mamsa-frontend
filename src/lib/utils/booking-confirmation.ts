@@ -2,20 +2,30 @@ import type { Booking } from '@/types';
 import { formatDate, formatSAR } from './format';
 
 /**
+ * Every value below reaches this document from the server — unit name, city,
+ * host and door number are text a partner typed — and is written into HTML
+ * that runs in a window of our origin. Nothing goes in unescaped.
+ */
+const escapeHtml = (s: string) =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+/**
  * Generates a branded, RTL booking-confirmation document in a new window and
  * triggers the print dialog — the user saves it as a PDF. This renders Arabic
  * natively (no font embedding) and needs no PDF dependency.
  */
 export function downloadBookingConfirmation(booking: Booking) {
   const guests = booking.guests.adults + booking.guests.children;
+  const code = escapeHtml(booking.code);
+  const unit = booking.unitSnapshot;
   const row = (label: string, value: string) =>
-    `<tr><td class="lbl">${label}</td><td class="val">${value}</td></tr>`;
+    `<tr><td class="lbl">${escapeHtml(label)}</td><td class="val">${escapeHtml(value)}</td></tr>`;
 
   const html = `<!doctype html>
 <html dir="rtl" lang="ar">
 <head>
 <meta charset="utf-8" />
-<title>تأكيد الحجز ${booking.code}</title>
+<title>تأكيد الحجز ${code}</title>
 <style>
   * { box-sizing: border-box; }
   body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; color: #1F2A24; margin: 0; padding: 32px; }
@@ -49,16 +59,17 @@ export function downloadBookingConfirmation(booking: Booking) {
       </div>
       <div style="text-align:left">
         <div class="doc">رمز التأكيد</div>
-        <div class="code" style="font-size:18px;font-weight:700">${booking.code}</div>
+        <div class="code" style="font-size:18px;font-weight:700">${code}</div>
       </div>
     </div>
 
     <span class="status">حجز مؤكد</span>
 
     <h2>الإقامة</h2>
-    <div class="unit">${booking.unitSnapshot.title}</div>
-    <div class="muted">${booking.unitSnapshot.city}، ${booking.unitSnapshot.country}</div>
-    <div class="muted">المضيف: ${booking.unitSnapshot.ownerName}</div>
+    <div class="unit">${escapeHtml(unit.title)}</div>
+    ${unit.apartmentNo ? `<div class="muted">شقة رقم ${escapeHtml(unit.apartmentNo)}</div>` : ''}
+    <div class="muted">${escapeHtml(unit.city)}، ${escapeHtml(unit.country)}</div>
+    <div class="muted">المضيف: ${escapeHtml(unit.ownerName)}</div>
 
     <h2>تفاصيل الحجز</h2>
     <table>

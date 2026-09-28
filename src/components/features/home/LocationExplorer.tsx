@@ -7,10 +7,13 @@ import Link from 'next/link';
 import { MapPin, MapPinOff } from 'lucide-react';
 import { useStayQuery } from '@/stores/search';
 import { cn } from '@/lib/utils/cn';
+import { unitPath } from '@/lib/listing';
 import { UnitRating } from '@/components/features/units/UnitRating';
 import type { MapUnit } from './LocationMap';
 
 export interface LocationUnit extends MapUnit {
+  /** The listing key the link opens by — see `unitPath`. */
+  listingId?: string;
   city: string;
   district: string;
   image: string;
@@ -80,7 +83,7 @@ export function LocationExplorer({
           return (
             <Link
               key={u.id}
-              href={`/units/${u.id}${stay}`}
+              href={`${unitPath(u)}${stay}`}
               onMouseEnter={() => setActiveId(u.id)}
               onFocus={() => setActiveId(u.id)}
               className={`flex w-[78%] shrink-0 gap-3 rounded-xl border bg-white p-2 transition sm:w-[46%] lg:w-auto lg:shrink ${

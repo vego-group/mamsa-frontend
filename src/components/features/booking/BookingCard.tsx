@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { MapPin, User, CalendarCheck, CalendarX, Users, Ticket, type LucideIcon } from 'lucide-react';
+import { MapPin, User, CalendarCheck, CalendarX, Users, Ticket, DoorOpen, type LucideIcon } from 'lucide-react';
 import type { Booking } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,7 @@ import { formatDate, formatSAR, diffNights } from '@/lib/utils/format';
 import { cancelledByKey } from '@/lib/cancellation/actor';
 import { CancelBookingDialog } from './CancelBookingDialog';
 import { isBookingCancellable } from '@/lib/cancellation/engine';
+import { unitPath } from '@/lib/listing';
 
 interface BookingCardProps {
   booking: Booking;
@@ -23,6 +24,7 @@ interface BookingCardProps {
 
 export function BookingCard({ booking, tabContext, onCancelled }: BookingCardProps) {
   const t = useTranslations('bookingCard');
+  const tc = useTranslations('common');
   const [cancelOpen, setCancelOpen] = useState(false);
   const canCancel = isBookingCancellable(booking, new Date());
   const nights = diffNights(booking.checkInDate, booking.checkOutDate);
@@ -64,6 +66,12 @@ export function BookingCard({ booking, tabContext, onCancelled }: BookingCardPro
                   <MapPin className="h-3.5 w-3.5 shrink-0" />
                   {booking.unitSnapshot.city}، {booking.unitSnapshot.country}
                 </p>
+                {booking.unitSnapshot.apartmentNo && (
+                  <p className="mt-0.5 flex items-center gap-1 text-xs text-brand-muted">
+                    <DoorOpen className="h-3.5 w-3.5 shrink-0" />
+                    {tc('apartmentNo', { number: booking.unitSnapshot.apartmentNo })}
+                  </p>
+                )}
                 <p className="mt-0.5 flex items-center gap-1 text-xs text-brand-muted">
                   <User className="h-3.5 w-3.5 shrink-0" />
                   {t('host')}: {booking.unitSnapshot.ownerName}
@@ -98,7 +106,8 @@ export function BookingCard({ booking, tabContext, onCancelled }: BookingCardPro
                   )
                 ) : tabContext === 'completed' ? (
                   <Button size="sm" variant="sage" asChild>
-                    <Link href={`/units/${booking.unitId}`}>{t('bookAgain')}</Link>
+                    {/* The listing, not the door this stay landed on — that door can close. */}
+                    <Link href={unitPath({ id: booking.unitId, listingId: booking.listingId })}>{t('bookAgain')}</Link>
                   </Button>
                 ) : null}
               </div>

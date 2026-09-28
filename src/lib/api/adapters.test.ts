@@ -86,6 +86,38 @@ describe('mapCancellationPreview — refund figures', () => {
   });
 });
 
+/**
+ * In a building the server books whichever door is free, so the unit a booking
+ * shows must come from `booking.unit` — never from the card the guest opened,
+ * and never from the root `unit_id`, which the API sends as null.
+ */
+describe('mapBooking — the unit the server allocated', () => {
+  const allocated = { id: 12, name: 'منتجع العائلة السعيدة', city: 'الرياض' } as RawUnit;
+
+  it('takes the unit from booking.unit even though the root unit_id is null', () => {
+    const b = mapBooking(makeRawBooking({ unit_id: null, unit: allocated }));
+    expect(b.unitId).toBe('12');
+    expect(b.unitSnapshot.title).toBe('منتجع العائلة السعيدة');
+  });
+
+  it('carries apartment_no as the door number', () => {
+    const b = mapBooking(makeRawBooking({ unit: { ...allocated, apartment_no: '2' } }));
+    expect(b.unitSnapshot.apartmentNo).toBe('2');
+  });
+
+  it('reads a numeric apartment_no as text', () => {
+    const b = mapBooking(makeRawBooking({ unit: { ...allocated, apartment_no: 3 as never } }));
+    expect(b.unitSnapshot.apartmentNo).toBe('3');
+  });
+
+  it('has no door number for a standalone unit, an absent key or a blank one', () => {
+    for (const apartment_no of [null, undefined, '', '  ']) {
+      const b = mapBooking(makeRawBooking({ unit: { ...allocated, apartment_no } }));
+      expect(b.unitSnapshot.apartmentNo).toBeUndefined();
+    }
+  });
+});
+
 describe('mapBooking — guests split', () => {
   it('uses guests_detail when present', () => {
     const b = mapBooking(makeRawBooking({ guests: 3, guests_detail: { adults: 2, children: 1 } }));
@@ -210,6 +242,63 @@ describe('mapUser — role', () => {
   it('ranks admin above partner, and defaults to a plain user', () => {
     expect(mapUser({ ...base, is_admin: true, is_partner: true }).role).toBe('super_admin');
     expect(mapUser(base).role).toBe('user');
+  });
+});
+
+/**
+ * A building comes back as one card. `group_size` counts its sellable doors,
+ * `available_count` the ones free (over the searched dates, when dated).
+ */
+describe('mapUnit — building counts', () => {
+  const card = (extra: Record<string, unknown>): RawUnit =>
+    ({ id: 30, name: 'مبنى', type: 'apartment', price: 300, capacity: 2, bedrooms: 1, bathrooms: 1, city: 'الرياض', ...extra }) as RawUnit;
+
+  it('carries group_size and available_count', () => {
+    const u = mapUnit(card({ group_size: 6, available_count: 4 }));
+    expect(u.groupSize).toBe(6);
+    expect(u.availableCount).toBe(4);
+  });
+
+  it('keeps a standalone unit at a group of one', () => {
+    expect(mapUnit(card({ group_size: 1, available_count: 1 })).groupSize).toBe(1);
+  });
+
+  it('leaves both unset when the API sends none, or sends something that is not a count', () => {
+    for (const v of [undefined, null, 'x', -1, 2.5]) {
+      const u = mapUnit(card({ group_size: v, available_count: v }));
+      expect(u.groupSize, String(v)).toBeUndefined();
+      expect(u.availableCount, String(v)).toBeUndefined();
+    }
+  });
+
+  it('reads a zero available_count as zero, not as missing', () => {
+    expect(mapUnit(card({ group_size: 3, available_count: 0 })).availableCount).toBe(0);
+  });
+});
+
+/**
+ * `listing_id` is the building's key: every door of a building carries the
+ * same value, a standalone unit carries `u<id>`. It rides on the unit and on
+ * `booking.unit`, and it is what a booking is matched to a card by.
+ */
+describe('listing_id — the key a booking and a card share', () => {
+  const raw = { id: 40, name: 'مبنى', type: 'apartment', price: 450, capacity: 2, bedrooms: 1, bathrooms: 1, city: 'الرياض' } as RawUnit;
+
+  it('carries listing_id on the unit', () => {
+    expect(mapUnit({ ...raw, listing_id: '01M19EZRB4ARP4BDGJ4ET7P03F' }).listingId).toBe('01M19EZRB4ARP4BDGJ4ET7P03F');
+  });
+
+  it('carries booking.unit.listing_id on the booking', () => {
+    const b = mapBooking(makeRawBooking({ unit: { ...raw, listing_id: '01M19EZRB4ARP4BDGJ4ET7P03F' } }));
+    expect(b.listingId).toBe('01M19EZRB4ARP4BDGJ4ET7P03F');
+    expect(b.unitId).toBe('40');
+  });
+
+  it('leaves it unset when the API sends none or a blank one', () => {
+    for (const listing_id of [undefined, null, '']) {
+      expect(mapUnit({ ...raw, listing_id } as RawUnit).listingId).toBeUndefined();
+      expect(mapBooking(makeRawBooking({ unit: { ...raw, listing_id } as RawUnit })).listingId).toBeUndefined();
+    }
   });
 });
 

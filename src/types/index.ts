@@ -117,6 +117,20 @@ export interface Unit {
   /** Present when `status === 'rejected'` — the admin's reason. */
   rejectionReason?: string | null;
   createdAt: string;
+  /**
+   * A building is one card. How many of its doors are approved and on sale —
+   * 1 for a standalone unit. Not the admin's `group.size`, which counts every
+   * door in any state. Absent when the API sent none.
+   */
+  groupSize?: number;
+  /** Of those doors, how many are free — over the searched dates, when the search had any. */
+  availableCount?: number;
+  /**
+   * The listing's key: shared by every door of a building, `u<id>` for a
+   * standalone unit. What a booking is matched to this card by — see
+   * `isSameListing`. Not a route: `/units/{listingId}` is a 404.
+   */
+  listingId?: string;
 }
 
 // ============ Cancellation Policy ============
@@ -203,13 +217,22 @@ export interface BookingCancellation {
 export interface Booking {
   id: string;
   code: string; // e.g. "NXTZ3K8L5Q"
+  /**
+   * The unit the server actually booked — in a building, whichever door was
+   * free, which need not be the card the guest opened. Always read from the
+   * booking, never carried over from the card.
+   */
   unitId: string;
+  /** The listing the booked door belongs to (`booking.unit.listing_id`) — see `Unit.listingId`. */
+  listingId?: string;
   unitSnapshot: {
     title: string;
     city: string;
     country: string;
     imageUrl: string;
     ownerName: string;
+    /** The door number inside a building. Absent for a standalone unit. */
+    apartmentNo?: string;
   };
   userId: string;
   guestName?: string;
