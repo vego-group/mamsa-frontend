@@ -231,6 +231,14 @@ describe('Checkout — a 409 on the dates is an answer, not a failure', () => {
     expect(screen.queryByText(arMessages.common.retry)).toBeNull();
   });
 
+  it('keeps the generic line for a plain `available: false`, which carries no code', async () => {
+    vi.spyOn(unitsApi, 'checkAvailability').mockResolvedValue({ available: false, pricing: null });
+    renderCheckout();
+    await waitForUnitToLoad();
+
+    expect(screen.getByText(arMessages.checkout.errors.unitUnavailable)).toBeTruthy();
+  });
+
   it('still offers a retry when availability fails for any other reason', async () => {
     vi.spyOn(unitsApi, 'checkAvailability').mockRejectedValue(new ApiError(500, 'Server Error'));
     renderCheckout();
@@ -256,6 +264,25 @@ describe('Checkout — a 409 on the dates is an answer, not a failure', () => {
     expect(screen.getByText(PERMIT_COPY)).toBeTruthy();
     expect(screen.queryByText(SERVER_COPY)).toBeNull();
     expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the server message on the booking step too — both steps word it the same way', async () => {
+    renderCheckout();
+    await waitForUnitToLoad();
+
+    fireEvent.click(screen.getByRole('checkbox'));
+    vi.spyOn(bookingsApi, 'create').mockRejectedValueOnce(
+      new ApiError(409, 'الوحدة غير متاحة في هذه الفترة', 'UNIT_UNAVAILABLE'),
+    );
+    vi.spyOn(bookingsApi, 'list').mockResolvedValue([]);
+
+    const button = screen.getByText(/المتابعة إلى الدفع/).closest('button')!;
+    await act(async () => {
+      fireEvent.click(button);
+      await vi.advanceTimersByTimeAsync(350);
+    });
+
+    expect(screen.getByText('الوحدة غير متاحة في هذه الفترة')).toBeTruthy();
   });
 });
 
