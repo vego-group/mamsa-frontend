@@ -3,7 +3,7 @@
  * يحاكي سلوك الباك إند على البيانات في data/mock/.
  * يحافظ على state في الذاكرة للجلسة الحالية فقط (sessionStorage معطّل لأنه لا يعمل في artifacts).
  */
-import { MOCK_UNITS, doorsOf, findUnitById, type MockDoor } from '@/data/mock/units';
+import { MOCK_UNITS, doorsOf, findUnitById, listingIdOf, type MockDoor } from '@/data/mock/units';
 import { MOCK_BOOKINGS } from '@/data/mock/bookings';
 import { MOCK_REVIEWS, getReviewForBooking } from '@/data/mock/reviews';
 import { MOCK_CURRENT_USER, MOCK_SAVED_CARDS, MOCK_TRANSACTIONS } from '@/data/mock/users';
@@ -42,7 +42,8 @@ const EMAIL_MAX_ATTEMPTS = 5;
 
 // ============ In-memory state ============
 let units: Unit[] = [...MOCK_UNITS];
-let bookings: Booking[] = [...MOCK_BOOKINGS];
+// Every booking carries its listing, as `booking.unit.listing_id` always does on the real API.
+let bookings: Booking[] = MOCK_BOOKINGS.map((b) => ({ ...b, listingId: listingIdOf(b.unitId) }));
 
 /**
  * Look-ups MUST go through the live session list, not `findBookingById` from
@@ -90,7 +91,7 @@ function freeDoor(cardId: string, start: string, end: string): MockDoor | null {
 function asCard(u: Unit, start?: string, end?: string): Unit {
   const doors = doorsOf(u.id);
   const free = start && end ? doors.filter((d) => !isUnitBooked(d.id, start, end)).length : doors.length;
-  return { ...u, groupSize: doors.length, availableCount: free };
+  return { ...u, groupSize: doors.length, availableCount: free, listingId: listingIdOf(u.id) };
 }
 
 /** YYYY-MM-DD shifted by N days — local calendar math, no UTC/timezone drift. */
@@ -459,6 +460,7 @@ export const mockApi = {
         id: genId('BK'),
         code: genCode(),
         unitId: door.id,
+        listingId: listingIdOf(door.id),
         unitSnapshot: {
           title: unit.title,
           city: unit.city,

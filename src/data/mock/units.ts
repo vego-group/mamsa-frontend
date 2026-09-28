@@ -337,3 +337,11 @@ export function cardIdOf(unitId: string): string {
   }
   return unitId;
 }
+
+/** Each building's `listing_id` — a ULID on the real API, one per building. */
+const BUILDING_LISTING_IDS: Record<string, string> = { 'U-005': '01MOCKBUILDINGU005XXXXXXXXX' };
+
+/** The listing a unit belongs to: its building's key, or `u<id>` for a standalone unit. */
+export function listingIdOf(unitId: string): string {
+  return BUILDING_LISTING_IDS[cardIdOf(unitId)] ?? `u${unitId}`;
+}

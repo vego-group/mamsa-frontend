@@ -125,6 +125,12 @@ export interface Unit {
   groupSize?: number;
   /** Of those doors, how many are free — over the searched dates, when the search had any. */
   availableCount?: number;
+  /**
+   * The listing's key: shared by every door of a building, `u<id>` for a
+   * standalone unit. What a booking is matched to this card by — see
+   * `isSameListing`. Not a route: `/units/{listingId}` is a 404.
+   */
+  listingId?: string;
 }
 
 // ============ Cancellation Policy ============
@@ -217,6 +223,8 @@ export interface Booking {
    * booking, never carried over from the card.
    */
   unitId: string;
+  /** The listing the booked door belongs to (`booking.unit.listing_id`) — see `Unit.listingId`. */
+  listingId?: string;
   unitSnapshot: {
     title: string;
     city: string;

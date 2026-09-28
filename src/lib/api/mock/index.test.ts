@@ -103,6 +103,23 @@ describe('mock role-plays a building: the booking lands on a free door', () => {
     expect(blocked).toEqual([{ start: '2028-02-10', end: '2028-02-12' }]);
   });
 
+  it('gives the card and every booking on its doors one listing id', async () => {
+    await login();
+    const card = (await mockApi.units.list({})).find((u) => u.id === BUILDING)!;
+    await book(BUILDING, '2028-03-10', '2028-03-13');
+    const onDoor2 = await book(BUILDING, '2028-03-10', '2028-03-13');
+    expect(card.listingId).toBeTruthy();
+    expect(onDoor2.unitId).toBe('U-005-2');
+    expect(onDoor2.listingId).toBe(card.listingId);
+    // Seeded bookings carry it too — the real API always sends it.
+    expect((await mockApi.bookings.getById('BK-010')).listingId).toBe(card.listingId);
+  });
+
+  it('gives a standalone unit u<id> as its listing id', async () => {
+    const standalone = (await mockApi.units.list({})).find((u) => u.id === 'U-001')!;
+    expect(standalone.listingId).toBe('uU-001');
+  });
+
   it('gives a standalone unit no door number', async () => {
     await login();
     const b = await book('U-003', '2027-11-10', '2027-11-13');

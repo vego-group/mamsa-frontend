@@ -127,6 +127,12 @@ export interface RawUnit {
    */
   group_size?: number;
   available_count?: number;
+  /**
+   * The listing's key — the building's, shared by every one of its doors;
+   * `u<id>` for a standalone unit. Also on `booking.unit`. Match a booking to
+   * a card by this, never by unit id. The unit routes do not accept it.
+   */
+  listing_id?: string | null;
 }
 
 export interface RawBooking {
@@ -487,6 +493,7 @@ export function mapUnit(u: RawUnit): Unit {
     createdAt: u.created_at ?? new Date().toISOString(),
     groupSize: optionalCount(u.group_size),
     availableCount: optionalCount(u.available_count),
+    listingId: u.listing_id ? String(u.listing_id) : undefined,
   };
 }
 
@@ -539,6 +546,7 @@ export function mapBooking(b: RawBooking): Booking {
     // From `booking.unit`, never the root `unit_id` (always null): in a
     // building this is the door the server picked, not the card.
     unitId: unit ? String(unit.id) : '',
+    listingId: unit?.listing_id ? String(unit.listing_id) : undefined,
     unitSnapshot: {
       title: unit?.name ?? '',
       city: unit?.city ?? '',
