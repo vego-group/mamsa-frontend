@@ -441,6 +441,18 @@ export interface CheckAvailabilityResult {
 export interface BlockedDateRange {
   start: string;
   end: string;
+  /**
+   * Set on one span only: the nights past the unit's permit, from the expiry
+   * day to the end of the window. Bookings and closures come back without it.
+   */
+  reason?: 'permit_expiry';
+}
+
+/** Keeps `reason` only when it is one the calendar knows; anything else is a plain blocked span. */
+function mapBlockedRange(raw: { start: string; end: string; reason?: unknown }): BlockedDateRange {
+  return raw.reason === 'permit_expiry'
+    ? { start: raw.start, end: raw.end, reason: 'permit_expiry' }
+    : { start: raw.start, end: raw.end };
 }
 
 /**
@@ -594,16 +606,17 @@ export const unitsApi = {
   /**
    * Nights already spoken for — bookings, partner closures and iCal imports
    * alike (the API deliberately doesn't say which, so a guest can never read
-   * a unit's occupancy from the calendar). Unauthenticated: a guest browsing
+   * a unit's occupancy from the calendar). The one exception is the span past
+   * the unit's permit, tagged `permit_expiry`. Unauthenticated: a guest browsing
    * a listing has no token yet. `from`/`to` default to today .. +6 months on
    * the backend, same as leaving them off here.
    */
   getBlockedDates: (id: string, from?: string, to?: string): Promise<BlockedDateRange[]> =>
     USE_MOCK
       ? withLatency(mockApi.units.getBlockedDates(id, from, to))
-      : http<{ blocked: BlockedDateRange[] }>(`/units/${id}/blocked-dates${qs({ from, to })}`).then(
-          (d) => d.blocked ?? [],
-        ),
+      : http<{ blocked?: { start: string; end: string; reason?: unknown }[] }>(
+          `/units/${id}/blocked-dates${qs({ from, to })}`,
+        ).then((d) => (d.blocked ?? []).map(mapBlockedRange)),
 };
 
 /** features[] is repeatable, so it is appended outside URLSearchParams' set(). */

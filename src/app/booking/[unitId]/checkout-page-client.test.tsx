@@ -4,7 +4,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import arMessages from '../../../../messages/ar.json';
 import { CheckoutPageClient } from './checkout-page-client';
 import { useAuthStore } from '@/stores/auth';
-import { bookingsApi } from '@/lib/api/client';
+import { bookingsApi, unitsApi } from '@/lib/api/client';
 import { ApiError } from '@/lib/api/errors';
 import { getPolicyByTemplate } from '@/lib/constants/cancellation-policies';
 import { formatSAR } from '@/lib/utils/format';
@@ -191,6 +191,71 @@ describe('Checkout — post-booking price switches to the frozen booking respons
     // The frozen booking numbers now win — the quote's total is gone.
     expect(screen.getAllByText(formatSAR(6000)).length).toBeGreaterThan(0);
     expect(screen.queryByText(formatSAR(EXPECTED_QUOTE.gross))).toBeNull();
+  });
+});
+
+/**
+ * The server answers "not these dates" with a 409 on both steps. The text comes
+ * from the code dictionary; the server's own message only fills in for a code
+ * the dictionary does not know.
+ */
+describe('Checkout — a 409 on the dates is an answer, not a failure', () => {
+  const PERMIT_COPY = 'هذه الوحدة غير متاحة للتواريخ المختارة. جرّب تواريخ أقرب.';
+  const SERVER_COPY = 'تصريح هذه الوحدة لا يغطي هذه التواريخ';
+  const permitError = () => new ApiError(409, SERVER_COPY, 'BOOKING_EXCEEDS_PERMIT_VALIDITY');
+
+  beforeEach(() => {
+    useAuthStore.setState({ user: baseUser({ emailVerified: true }), isAuthenticated: true });
+  });
+
+  it('shows the unavailable screen with the dictionary copy when availability says the permit ends first', async () => {
+    vi.spyOn(unitsApi, 'checkAvailability').mockRejectedValue(permitError());
+    renderCheckout();
+    await waitForUnitToLoad();
+
+    expect(screen.getByText(PERMIT_COPY)).toBeTruthy();
+    expect(screen.queryByText(SERVER_COPY)).toBeNull();
+    expect(screen.getByText(arMessages.checkout.backToUnit)).toBeTruthy();
+    // A retry could only ever get the same 409 back.
+    expect(screen.queryByText(arMessages.common.retry)).toBeNull();
+  });
+
+  it('falls back to the server message for a 409 code the dictionary does not carry', async () => {
+    vi.spyOn(unitsApi, 'checkAvailability').mockRejectedValue(
+      new ApiError(409, 'الوحدة غير متاحة في هذه الفترة', 'UNIT_UNAVAILABLE'),
+    );
+    renderCheckout();
+    await waitForUnitToLoad();
+
+    expect(screen.getByText('الوحدة غير متاحة في هذه الفترة')).toBeTruthy();
+    expect(screen.queryByText(arMessages.common.retry)).toBeNull();
+  });
+
+  it('still offers a retry when availability fails for any other reason', async () => {
+    vi.spyOn(unitsApi, 'checkAvailability').mockRejectedValue(new ApiError(500, 'Server Error'));
+    renderCheckout();
+    await waitForUnitToLoad();
+
+    expect(screen.getByText(arMessages.common.retry)).toBeTruthy();
+  });
+
+  it('shows the dictionary copy when the booking itself is refused for the permit', async () => {
+    renderCheckout();
+    await waitForUnitToLoad();
+
+    fireEvent.click(screen.getByRole('checkbox'));
+    vi.spyOn(bookingsApi, 'create').mockRejectedValueOnce(permitError());
+    vi.spyOn(bookingsApi, 'list').mockResolvedValue([]);
+
+    const button = screen.getByText(/المتابعة إلى الدفع/).closest('button')!;
+    await act(async () => {
+      fireEvent.click(button);
+      await vi.advanceTimersByTimeAsync(350);
+    });
+
+    expect(screen.getByText(PERMIT_COPY)).toBeTruthy();
+    expect(screen.queryByText(SERVER_COPY)).toBeNull();
+    expect(pushMock).not.toHaveBeenCalled();
   });
 });
 

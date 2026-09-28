@@ -27,6 +27,7 @@ import type {
 } from '@/types';
 import { diffNights } from '@/lib/utils/format';
 import { quoteFromNightly } from '@/lib/pricing';
+import { todayISO } from '@/stores/search';
 
 // Matches the backend's OTP_FIXED_CODE convention for staging, so the same code
 // works whether you're pointed at the local mock or a staging backend.
@@ -78,6 +79,31 @@ function shiftISO(iso: string, days: number): string {
   const [y, m, d] = iso.split('-').map(Number);
   const dt = new Date(y!, m! - 1, d! + days);
   return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * Permit expiry per unit, in days from today — server-side data the guest API
+ * never sends. Relative so the cap stays in the calendar's view instead of
+ * drifting into the past. Units not listed have no expiry, so no cap.
+ */
+const PERMIT_EXPIRES_IN_DAYS: Record<string, number> = { 'U-004': 20 };
+
+function permitExpiresAt(unitId: string): string | null {
+  const days = PERMIT_EXPIRES_IN_DAYS[unitId];
+  return days == null ? null : shiftISO(todayISO(), days);
+}
+
+/**
+ * The backend's rule: a stay may check out ON the expiry day, never after it.
+ * Availability and booking both answer with this, so the probe and the create
+ * never disagree.
+ */
+function permitRefusal(unitId: string, endDate: string): Promise<never> | null {
+  const expiresAt = permitExpiresAt(unitId);
+  if (!expiresAt || endDate <= expiresAt) return null;
+  return Promise.reject(
+    new ApiError(409, 'تصريح هذه الوحدة لا يغطي هذه التواريخ', 'BOOKING_EXCEEDS_PERMIT_VALIDITY'),
+  );
 }
 
 /** Collapses touching/overlapping spans, mirroring the real `/blocked-dates` feed. */
@@ -298,6 +324,8 @@ export const mockApi = {
       const unit = findUnitById(unitId);
       if (!unit) return fail('الوحدة غير موجودة');
       const nights = diffNights(startDate, endDate);
+      const refused = permitRefusal(unitId, endDate);
+      if (refused) return refused;
       if (isUnitBooked(unitId, startDate, endDate)) return ok({ available: false, pricing: null });
       return ok({ available: true, pricing: computeMockPricing(unit, nights) });
     },
@@ -307,6 +335,10 @@ export const mockApi = {
      * `GET /units/{id}/blocked-dates`. The checkout date itself is never
      * included: it's the departing guest's last morning, free for the next
      * guest's arrival the same day.
+     *
+     * A unit with a permit expiry also gets one span from the expiry day to
+     * the end of the window, tagged `permit_expiry` and kept out of the merge
+     * so the tag survives.
      */
     getBlockedDates: async (unitId: string, from?: string, to?: string) => {
       const ranges = bookings
@@ -315,9 +347,17 @@ export const mockApi = {
           start: b.checkInDate.slice(0, 10),
           end: shiftISO(b.checkOutDate.slice(0, 10), -1),
         }));
-      const merged = mergeDateRanges(ranges).filter(
-        (r) => (!from || r.end >= from) && (!to || r.start <= to),
-      );
+      const merged: { start: string; end: string; reason?: 'permit_expiry' }[] = mergeDateRanges(
+        ranges,
+      ).filter((r) => (!from || r.end >= from) && (!to || r.start <= to));
+
+      const expiresAt = permitExpiresAt(unitId);
+      // The backend's default window runs six months out.
+      const windowEnd = to ?? shiftISO(todayISO(), 183);
+      if (expiresAt && expiresAt <= windowEnd) {
+        const start = from && from > expiresAt ? from : expiresAt;
+        merged.push({ start, end: windowEnd, reason: 'permit_expiry' });
+      }
       return ok(merged);
     },
   },
@@ -375,6 +415,8 @@ export const mockApi = {
       if (!currentUser?.emailVerified) return failCode(422, 'EMAIL_VERIFICATION_REQUIRED');
       const unit = findUnitById(input.unitId);
       if (!unit) return fail('الوحدة غير موجودة') as Promise<Booking>;
+      const refused = permitRefusal(input.unitId, input.checkOutDate);
+      if (refused) return refused;
       // Re-check at creation time, same as the real backend — a prior
       // `checkAvailability` call is a snapshot, never a hold on the dates.
       if (isUnitBooked(input.unitId, input.checkInDate, input.checkOutDate)) {

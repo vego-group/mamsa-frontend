@@ -34,10 +34,22 @@ function viewport(narrow: boolean) {
 
 const onChange = vi.fn();
 
-function renderPicker(start = '', end = '', blocked?: ReadonlySet<string>) {
+function renderPicker(
+  start = '',
+  end = '',
+  blocked?: ReadonlySet<string>,
+  notes?: ReadonlyMap<string, string>,
+) {
   return render(
     <NextIntlClientProvider locale="ar" messages={arMessages}>
-      <DateRangePicker start={start} end={end} min={iso(0)} onChange={onChange} blockedDates={blocked} />
+      <DateRangePicker
+        start={start}
+        end={end}
+        min={iso(0)}
+        onChange={onChange}
+        blockedDates={blocked}
+        blockedNotes={notes}
+      />
     </NextIntlClientProvider>,
   );
 }
@@ -226,5 +238,54 @@ describe('changeover days — the calendar must agree with the booking endpoint'
     openOnDeparture(container);
     fireEvent.click(day(12));
     expect(onChange).toHaveBeenLastCalledWith({ start: iso(12), end: '' });
+  });
+});
+
+/**
+ * Days past a unit's permit are blocked like booked ones, but a guest pressing
+ * one should learn why rather than get a button that does nothing.
+ */
+describe('blocked days that say why', () => {
+  beforeEach(() => viewport(false));
+
+  const NOTE = 'هذه الوحدة غير متاحة للحجز بعد هذا التاريخ';
+
+  /** Nights 5..9 blocked; each carries the note. */
+  function notedRun(): [Set<string>, Map<string, string>] {
+    const days = [iso(5), iso(6), iso(7), iso(8), iso(9)];
+    return [new Set(days), new Map(days.map((d) => [d, NOTE]))];
+  }
+
+  it('shows the note when a noted blocked day is pressed, and picks nothing', () => {
+    const { container } = renderPicker('', '', ...notedRun());
+    openCalendar(container);
+    fireEvent.click(day(6));
+    expect(panel()!.textContent).toContain(NOTE);
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('keeps a blocked day without a note disabled and silent', () => {
+    const [blocked] = notedRun();
+    const { container } = renderPicker('', '', blocked, new Map());
+    openCalendar(container);
+    expect(day(6).disabled).toBe(true);
+    expect(panel()!.textContent).not.toContain(NOTE);
+  });
+
+  it('still takes the first noted day as a check-out — leaving on the expiry day is allowed', () => {
+    const { container } = renderPicker(iso(1), '', ...notedRun());
+    openOnDeparture(container);
+    fireEvent.click(day(5));
+    expect(onChange).toHaveBeenLastCalledWith({ start: iso(1), end: iso(5) });
+    expect(panel()?.textContent ?? '').not.toContain(NOTE);
+  });
+
+  it('drops the note once the guest picks a day that is free', () => {
+    const { container } = renderPicker('', '', ...notedRun());
+    openCalendar(container);
+    fireEvent.click(day(6));
+    fireEvent.click(day(2));
+    expect(onChange).toHaveBeenLastCalledWith({ start: iso(2), end: '' });
+    expect(panel()!.textContent).not.toContain(NOTE);
   });
 });
