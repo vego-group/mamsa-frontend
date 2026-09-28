@@ -88,7 +88,7 @@ export const MOCK_UNITS: Unit[] = [
     createdAt: '2026-01-15T08:30:00Z',
   },
   {
-    id: 'U-002',
+    id: 'U-007',
     ownerId: 'P-003',
     ownerName: 'فيلا كود',
     ownerType: 'company',

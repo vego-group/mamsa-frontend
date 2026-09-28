@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mockApi } from './index';
+import { MOCK_UNITS, findUnitById } from '@/data/mock/units';
+import { MOCK_BOOKINGS } from '@/data/mock/bookings';
 
 const UNIT_ID = 'U-001';
 
@@ -10,6 +12,19 @@ async function login() {
 
 afterEach(async () => {
   await mockApi.auth.logout();
+});
+
+describe('mock fixtures — one unit per id', () => {
+  it('gives every unit its own id', () => {
+    const ids = MOCK_UNITS.map((u) => u.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('points every seeded booking at the unit its snapshot describes', () => {
+    for (const b of MOCK_BOOKINGS) {
+      expect(findUnitById(b.unitId)?.title, b.id).toBe(b.unitSnapshot.title);
+    }
+  });
 });
 
 describe('mock pricing stays in sync between the quote and booking-creation endpoints', () => {
