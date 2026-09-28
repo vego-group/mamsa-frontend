@@ -140,7 +140,10 @@ export interface RawBooking {
   reference?: string;
   user_id?: number | string;
   guest_name?: string | null;
-  /** Always null on the guest API — the booked unit is `unit.id`. Never read. */
+  /**
+   * Absent or null on the guest API — the contract says null, staging omits
+   * the key. The booked unit is `unit.id`. Never read.
+   */
   unit_id?: number | string | null;
   /**
    * The unit the server allocated. `apartment_no` rides on this response only
