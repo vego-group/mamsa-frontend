@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { Heart, BedDouble, Bath, Users, Wifi } from 'lucide-react';
+import { Heart, BedDouble, Bath, Users, Wifi, Building2 } from 'lucide-react';
 import type { Unit } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -33,6 +33,17 @@ export function UnitCard({ unit, variant = 'list' }: UnitCardProps) {
   const amenityLabel = (a: Unit['amenities'][number]) =>
     tAmenities.has(a.key) ? tAmenities(a.key) : a.labelAr;
 
+  // A building is one card: say how many of its doors are free. Only when it
+  // has more than one door and the API said how many are free — a standalone
+  // unit, or a count we don't have, gets no badge rather than a made-up one.
+  const doorsBadge =
+    unit.groupSize != null && unit.groupSize > 1 && unit.availableCount != null ? (
+      <Badge variant="default" className="gap-1">
+        <Building2 className="h-3 w-3" />
+        {t('doorsAvailable', { available: unit.availableCount, total: unit.groupSize })}
+      </Badge>
+    ) : null;
+
   if (variant === 'grid') {
     return (
       <Card className="group overflow-hidden transition hover:shadow-md">
@@ -61,6 +72,7 @@ export function UnitCard({ unit, variant = 'list' }: UnitCardProps) {
           <Link href={href} className="block">
             <h3 className="line-clamp-1 font-semibold text-brand-ink group-hover:text-brand-primary">{unit.title}</h3>
           </Link>
+          {doorsBadge}
           <div className="flex flex-wrap gap-2 text-xs text-brand-muted">
             <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {t('guests', { count: unit.capacity })}</span>
             <span className="flex items-center gap-1"><BedDouble className="h-3 w-3" /> {t('rooms', { count: unit.bedrooms })}</span>
@@ -124,6 +136,7 @@ export function UnitCard({ unit, variant = 'list' }: UnitCardProps) {
               />
             </div>
             <p className="text-sm text-brand-muted">{unit.city}، {unit.country}</p>
+            {doorsBadge && <div className="pt-0.5">{doorsBadge}</div>}
 
             <div className="flex flex-wrap items-center gap-3 pt-1 text-sm text-brand-muted">
               <span>{t('guests', { count: unit.capacity })}</span>

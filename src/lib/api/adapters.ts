@@ -120,6 +120,13 @@ export interface RawUnit {
   reviews_count?: number;
   owner?: RawOwner;
   created_at?: string;
+  /**
+   * A building is one card. `group_size` counts its doors that are approved
+   * and on sale (1 for a standalone unit); `available_count` counts the ones
+   * free — over the searched dates when the list was dated, otherwise overall.
+   */
+  group_size?: number;
+  available_count?: number;
 }
 
 export interface RawBooking {
@@ -433,6 +440,13 @@ function mapImage(i: RawImage): UnitImage {
   };
 }
 
+/** A whole, non-negative count, or undefined — a garbled count must never reach a badge. */
+function optionalCount(v: unknown): number | undefined {
+  if (v == null || v === '') return undefined;
+  const n = Number(v);
+  return Number.isInteger(n) && n >= 0 ? n : undefined;
+}
+
 export function mapUnit(u: RawUnit): Unit {
   const images = [...(u.images ?? [])].sort((a, b) => Number(b.is_main) - Number(a.is_main));
   return {
@@ -471,6 +485,8 @@ export function mapUnit(u: RawUnit): Unit {
     cancellationPolicy: mapTemplate(u.cancellation_policy),
     cancellationPolicyDetails: mapPolicyDetails(u.cancellation_policy_details),
     createdAt: u.created_at ?? new Date().toISOString(),
+    groupSize: optionalCount(u.group_size),
+    availableCount: optionalCount(u.available_count),
   };
 }
 

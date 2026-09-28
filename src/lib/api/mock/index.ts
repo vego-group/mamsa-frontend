@@ -82,6 +82,17 @@ function freeDoor(cardId: string, start: string, end: string): MockDoor | null {
   return doorsOf(cardId).find((d) => !isUnitBooked(d.id, start, end)) ?? null;
 }
 
+/**
+ * The card as the API lists it: how many doors the building sells, and how
+ * many of those are free — over the searched stay when there is one,
+ * otherwise all of them. A standalone unit is a building of one.
+ */
+function asCard(u: Unit, start?: string, end?: string): Unit {
+  const doors = doorsOf(u.id);
+  const free = start && end ? doors.filter((d) => !isUnitBooked(d.id, start, end)).length : doors.length;
+  return { ...u, groupSize: doors.length, availableCount: free };
+}
+
 /** YYYY-MM-DD shifted by N days — local calendar math, no UTC/timezone drift. */
 function shiftISO(iso: string, days: number): string {
   const [y, m, d] = iso.split('-').map(Number);
@@ -114,19 +125,26 @@ function permitRefusal(unitId: string, endDate: string): Promise<never> | null {
   );
 }
 
-/** Collapses touching/overlapping spans, mirroring the real `/blocked-dates` feed. */
-function mergeDateRanges(ranges: { start: string; end: string }[]): { start: string; end: string }[] {
-  const sorted = [...ranges].sort((a, b) => a.start.localeCompare(b.start));
-  const merged: { start: string; end: string }[] = [];
-  for (const r of sorted) {
-    const last = merged[merged.length - 1];
-    if (last && r.start <= shiftISO(last.end, 1)) {
-      if (r.end > last.end) last.end = r.end;
-    } else {
-      merged.push({ ...r });
-    }
+/** Every night a unit's live bookings hold: check-in up to, not including, check-out. */
+function nightsHeld(unitId: string): Set<string> {
+  const nights = new Set<string>();
+  for (const b of bookings) {
+    if (b.unitId !== unitId || !HOLDING_STATUSES.includes(b.status)) continue;
+    const out = b.checkOutDate.slice(0, 10);
+    for (let d = b.checkInDate.slice(0, 10); d < out; d = shiftISO(d, 1)) nights.add(d);
   }
-  return merged;
+  return nights;
+}
+
+/** Nights → inclusive spans with consecutive nights joined, the shape of the real `/blocked-dates` feed. */
+function nightsToRanges(nights: Iterable<string>): { start: string; end: string }[] {
+  const ranges: { start: string; end: string }[] = [];
+  for (const n of [...nights].sort()) {
+    const last = ranges[ranges.length - 1];
+    if (last && n === shiftISO(last.end, 1)) last.end = n;
+    else ranges.push({ start: n, end: n });
+  }
+  return ranges;
 }
 let reviews: Review[] = [...MOCK_REVIEWS];
 let currentUser: User | null = null; // null until login
@@ -295,7 +313,7 @@ export const mockApi = {
           result = [...result].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
           break;
       }
-      return ok(result);
+      return ok(result.map((u) => asCard(u, filter.startDate, filter.endDate)));
     },
 
     /** Mirrors the API's paginator so the results page behaves the same offline. */
@@ -315,10 +333,10 @@ export const mockApi = {
     getById: async (id: string) => {
       const u = findUnitById(id);
       if (!u) return fail('الوحدة غير موجودة');
-      return ok(u);
+      return ok(asCard(u));
     },
 
-    getFeatured: async () => ok(units.filter((u) => u.isFeatured && u.status === 'approved')),
+    getFeatured: async () => ok(units.filter((u) => u.isFeatured && u.status === 'approved').map((u) => asCard(u))),
 
     sitemap: async () =>
       ok(
@@ -345,19 +363,18 @@ export const mockApi = {
      * included: it's the departing guest's last morning, free for the next
      * guest's arrival the same day.
      *
+     * A building's night is blocked only once every one of its doors holds
+     * it — while one door is free the card is still bookable that night.
+     *
      * A unit with a permit expiry also gets one span from the expiry day to
      * the end of the window, tagged `permit_expiry` and kept out of the merge
      * so the tag survives.
      */
     getBlockedDates: async (unitId: string, from?: string, to?: string) => {
-      const ranges = bookings
-        .filter((b) => b.unitId === unitId && HOLDING_STATUSES.includes(b.status))
-        .map((b) => ({
-          start: b.checkInDate.slice(0, 10),
-          end: shiftISO(b.checkOutDate.slice(0, 10), -1),
-        }));
-      const merged: { start: string; end: string; reason?: 'permit_expiry' }[] = mergeDateRanges(
-        ranges,
+      const [first, ...others] = doorsOf(unitId).map((d) => nightsHeld(d.id));
+      const blockedNights = [...first!].filter((n) => others.every((held) => held.has(n)));
+      const merged: { start: string; end: string; reason?: 'permit_expiry' }[] = nightsToRanges(
+        blockedNights,
       ).filter((r) => (!from || r.end >= from) && (!to || r.start <= to));
 
       const expiresAt = permitExpiresAt(unitId);

@@ -73,6 +73,36 @@ describe('mock role-plays a building: the booking lands on a free door', () => {
     await expect(book(BUILDING, '2027-10-10', '2027-10-13')).rejects.toThrow();
   });
 
+  it('counts the building’s doors on its card, and the free ones for a dated search', async () => {
+    await login();
+    const undated = (await mockApi.units.list({})).find((u) => u.id === BUILDING)!;
+    expect(undated.groupSize).toBe(3);
+    expect(undated.availableCount).toBe(3);
+
+    await book(BUILDING, '2028-01-10', '2028-01-13');
+    const dated = (await mockApi.units.list({ startDate: '2028-01-10', endDate: '2028-01-13' })).find(
+      (u) => u.id === BUILDING,
+    )!;
+    expect(dated.groupSize).toBe(3);
+    expect(dated.availableCount).toBe(2);
+  });
+
+  it('keeps a standalone unit at a group of one', async () => {
+    const standalone = (await mockApi.units.list({})).find((u) => u.id === 'U-001')!;
+    expect(standalone.groupSize).toBe(1);
+    expect(standalone.availableCount).toBe(1);
+  });
+
+  it('blocks a night on the building’s calendar only once every door holds it', async () => {
+    await login();
+    // Nights 10–12 on all three doors; night 13 on two of them only.
+    for (let i = 0; i < 3; i++) await book(BUILDING, '2028-02-10', '2028-02-13');
+    for (let i = 0; i < 2; i++) await book(BUILDING, '2028-02-13', '2028-02-14');
+
+    const blocked = await mockApi.units.getBlockedDates(BUILDING, '2028-02-01', '2028-02-28');
+    expect(blocked).toEqual([{ start: '2028-02-10', end: '2028-02-12' }]);
+  });
+
   it('gives a standalone unit no door number', async () => {
     await login();
     const b = await book('U-003', '2027-11-10', '2027-11-13');

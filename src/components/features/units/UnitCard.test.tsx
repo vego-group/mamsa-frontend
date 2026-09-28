@@ -81,3 +81,41 @@ describe.each(['grid', 'list'] as const)('UnitCard (%s) — unscored listing', (
     expect(container.querySelector('img')?.getAttribute('loading')).toBe('lazy');
   });
 });
+
+/**
+ * A building is one card. It says how many of its doors are free, so the guest
+ * knows it is a building, not a single flat.
+ */
+describe.each(['grid', 'list'] as const)('UnitCard (%s) — doors free in a building', (variant) => {
+  const doors = (available: number, total: number) =>
+    arMessages.card.doorsAvailable.replace('{available}', String(available)).replace('{total}', String(total));
+  /** Any rendering of the badge, whatever the numbers. */
+  const anyDoorsBadge = new RegExp(
+    arMessages.card.doorsAvailable.replace('{available}', '\\d+').replace('{total}', '\\d+'),
+  );
+
+  it('says how many of the doors are free when the building has more than one', () => {
+    renderCard(unit({ groupSize: 6, availableCount: 4 }), variant);
+    expect(screen.getByText(doors(4, 6))).toBeTruthy();
+  });
+
+  it('says so even when none is free right now', () => {
+    renderCard(unit({ groupSize: 3, availableCount: 0 }), variant);
+    expect(screen.getByText(doors(0, 3))).toBeTruthy();
+  });
+
+  it('shows no badge on a standalone unit', () => {
+    const { container } = renderCard(unit({ groupSize: 1, availableCount: 1 }), variant);
+    expect(container.textContent).not.toMatch(anyDoorsBadge);
+  });
+
+  it('shows no badge when the API sent no group size', () => {
+    const { container } = renderCard(unit({ availableCount: 1 }), variant);
+    expect(container.textContent).not.toMatch(anyDoorsBadge);
+  });
+
+  it('shows no badge when it knows the size but not how many are free', () => {
+    const { container } = renderCard(unit({ groupSize: 4 }), variant);
+    expect(container.textContent).not.toMatch(anyDoorsBadge);
+  });
+});

@@ -177,7 +177,8 @@
     "bathrooms": "{count} حمامات",
     "perNight": "ر.س / ليلة",
     "viewDetails": "عرض التفاصيل",
-    "newListing": "جديد"
+    "newListing": "جديد",
+    "doorsAvailable": "{available} من {total} متاحة"
   },
   "unitsPage": {
     "stays": "إقامات",
