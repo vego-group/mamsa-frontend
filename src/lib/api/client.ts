@@ -486,8 +486,12 @@ function mapQuotePricing(raw: unknown): QuotePricing | null {
   };
 }
 
-/** A row of `GET /units/sitemap` — nothing but what a sitemap needs. */
+/**
+ * A row of `GET /units/sitemap` — nothing but what a sitemap needs. One row per
+ * listing: a building comes once, under its card's id, dated by its newest door.
+ */
 export interface SitemapUnit {
+  listing_id: string;
   id: number;
   updated_at: string;
 }
@@ -579,7 +583,7 @@ export const unitsApi = {
       : http<RawUnit[]>('/units/popular').then((rows) => rows.map(mapUnit)),
 
   /**
-   * Every indexable unit, id and last-modified only. Unpaginated on purpose:
+   * Every indexable listing, keys and last-modified only. Unpaginated on purpose:
    * a sitemap needs one complete pass, and paging it would let the last page
    * decide whether a unit gets indexed at all.
    */
