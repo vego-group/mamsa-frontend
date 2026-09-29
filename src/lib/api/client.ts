@@ -487,6 +487,16 @@ function mapQuotePricing(raw: unknown): QuotePricing | null {
 }
 
 /**
+ * How the unit page's server-side reads go out. Cached for five minutes
+ * instead of going out on every visit. Given up after 3 s: the page's HTML
+ * waits on them, so an API that hangs would otherwise hang the page with it.
+ * A timeout is an outage to the page — it renders with the site-wide head.
+ */
+function pageRead(): RequestInit {
+  return { cache: undefined, next: { revalidate: 300 }, signal: AbortSignal.timeout(3000) };
+}
+
+/**
  * A row of `GET /units/sitemap` — nothing but what a sitemap needs. One row per
  * listing: a building comes once, under its card's id, dated by its newest door.
  */
@@ -556,23 +566,21 @@ export const unitsApi = {
     USE_MOCK ? withLatency(mockApi.units.getById(id)) : http<RawUnit>(`/units/${id}`).then(mapUnit),
 
   /**
-   * The unit page's own server-side read, for its listing key (the redirect)
-   * and its <head> only. Cached for five minutes: neither changes by the
-   * minute, and price and availability still come fresh from the browser's
-   * own `getById`.
-   *
-   * Given up after 3 s: the page's HTML waits on this read, so an API that
-   * hangs would otherwise hang the page with it. A timeout is an outage to
-   * the page — it renders with the site-wide head.
+   * The unit page's own server-side read: its listing key (the redirect), its
+   * <head>, and the content its first HTML carries. None of that changes by
+   * the minute; price and availability still come fresh from the browser's
+   * own `getById`, and the page never shows this copy's price.
    */
   getForPage: (ref: string) =>
     USE_MOCK
       ? withLatency(mockApi.units.getById(ref))
-      : http<RawUnit>(`/units/${ref}`, {
-          cache: undefined,
-          next: { revalidate: 300 },
-          signal: AbortSignal.timeout(3000),
-        }).then(mapUnit),
+      : http<RawUnit>(`/units/${ref}`, pageRead()).then(mapUnit),
+
+  /** The unit's reviews for the page's first HTML — read like `getForPage`. */
+  getReviewsForPage: (ref: string) =>
+    USE_MOCK
+      ? withLatency(mockApi.units.getReviews(ref))
+      : http<Record<string, unknown>[]>(`/units/${ref}/reviews`, pageRead()).then((rows) => rows.map(mapReview)),
 
   /**
    * The named units, in the API's own order. Batched at the endpoint's ceiling

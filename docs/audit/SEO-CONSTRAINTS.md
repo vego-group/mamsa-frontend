@@ -91,3 +91,37 @@ from a page.
 
 **Revisit with** the Next.js upgrade: check that `/units/{missing}` then comes
 back with the 404 page in its HTML.
+
+---
+
+## 4. Streamed reviews arrive hidden, and JavaScript puts them in place
+
+**What.** The unit page doesn't wait for its reviews: they stream in under a
+`<Suspense>` boundary (`src/app/units/[id]/page.tsx`,
+`src/app/units/[id]/server-reviews.tsx`). When they arrive after the rest of
+the page has been sent, React writes them at the end of the HTML inside
+`<div hidden id="S:…">`, and an inline script moves them into the reviews
+section.
+
+**Why it is acceptable now.** Google renders JavaScript, and the reviews are
+in the HTML it fetches. A crawler that doesn't run JavaScript sees them only
+as hidden markup.
+
+**Revisit** if a non-rendering crawler starts to matter, or if reviews should
+be in the first flush: that means waiting for them, which this page chose not
+to do (a slow reviews read must never hold the page back).
+
+---
+
+## 5. A phase that touches a server component isn't done until `next build` has served it
+
+**The rule.** Run `next build`, start it, and request the changed pages
+before calling such a phase finished. Unit tests are not enough.
+
+**Why.** Vitest runs server and client code as one module graph and can't
+see the React Server Components boundary. On 2026-09-29 the unit page called
+`withoutPrice`, exported from its `'use client'` view. Every test passed, and
+the built page answered 500 (`TypeError: d is not a function`): a function
+exported from a client module reaches a server component as a client
+reference, not as something it can call. The fix moved it to a plain module
+(`src/app/units/[id]/unit-content.ts`). Only the built page showed the bug.

@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -11,6 +11,7 @@ import {
   ArrowUpDown, Umbrella, PartyPopper, X, type LucideIcon,
 } from 'lucide-react';
 import { unitsApi, type BlockedDateRange } from '@/lib/api/client';
+import { loadFailureFor } from '@/lib/api/load-state';
 import { useFavoritesStore } from '@/stores/favorites';
 import { sanitizeStay, todayISO, useSearchStore } from '@/stores/search';
 import { useAuthStore } from '@/stores/auth';
@@ -21,16 +22,19 @@ import { Badge } from '@/components/ui/badge';
 import { UnitGallery } from '@/components/features/units/UnitGallery';
 import { UnitRating, hasRating } from '@/components/features/units/UnitRating';
 import { ExpandableSection } from '@/components/features/units/ExpandableSection';
+import { ReviewList } from '@/components/features/units/ReviewList';
 import { DateRangePicker, type DateRange } from '@/components/ui/date-range-picker';
 import { SelectField, type SelectOption } from '@/components/ui/select-field';
 import { LoadError } from '@/components/shared/LoadError';
+import { LoadStateView } from '@/components/shared/LoadStateView';
 import { RichText } from '@/components/shared/RichText';
 import { CancellationPolicyDisplay } from '@/components/features/booking/CancellationPolicyDisplay';
 import { getPolicyByTemplate } from '@/lib/constants/cancellation-policies';
-import { formatSAR, formatDate } from '@/lib/utils/format';
+import { formatSAR } from '@/lib/utils/format';
 import { quoteFromNightly } from '@/lib/pricing';
 import { cn } from '@/lib/utils/cn';
 import type { Unit, Review } from '@/types';
+import type { UnitContent } from './unit-content';
 
 /**
  * One icon per slug in the backend's closed amenity vocabulary. Anything the
@@ -91,7 +95,18 @@ function rangeOverlapsBlocked(start: string, end: string, blocked: ReadonlySet<s
   return false;
 }
 
-function UnitDetailsView() {
+interface UnitDetailsProps {
+  /**
+   * The unit as the page read it on the server, so the first HTML carries it.
+   * Absent when that read failed — the view then loads in the browser as it
+   * always has. It carries no price: that comes from the browser's own read.
+   */
+  initialUnit?: UnitContent;
+  /** The unit's first reviews, rendered on the server; shown until the browser's own fetch brings them. */
+  serverReviews?: ReactNode;
+}
+
+function UnitDetailsView({ initialUnit, serverReviews }: UnitDetailsProps) {
   const t = useTranslations('unit');
   const tCommon = useTranslations('common');
   const tTypes = useTranslations('types');
@@ -100,14 +115,22 @@ function UnitDetailsView() {
   const params = useParams<{ id: string }>();
   const search = useSearchParams();
   const router = useRouter();
-  const [unit, setUnit] = useState<Unit | null>(null);
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const [unit, setUnit] = useState<Unit | UnitContent | null>(initialUnit ?? null);
+  // Null until the browser's own fetch lands; the server's reviews show meanwhile.
+  const [reviews, setReviews] = useState<Review[] | null>(null);
   const [blockedDates, setBlockedDates] = useState<ReadonlySet<string>>(new Set());
   // The subset that is blocked because the unit's permit runs out — the one
   // kind of blocked night the calendar explains when pressed.
   const [permitBlockedDates, setPermitBlockedDates] = useState<ReadonlySet<string>>(new Set());
-  const [loading, setLoading] = useState(true);
+  // The browser's own read of the unit — the only one the price, the
+  // calendar and the book button are shown from. Null until it lands.
+  const [priced, setPriced] = useState<Unit | null>(null);
   const [loadError, setLoadError] = useState(false);
+  // The server showed this unit and the browser's read now finds it gone.
+  const [gone, setGone] = useState(false);
+  // False on the server and in the first client render. What only this
+  // browser knows (its saved units) waits for it, so hydration matches.
+  const [mounted, setMounted] = useState(false);
   // Bumping this re-runs the fetch effect — the retry path after a failure.
   const [attempt, setAttempt] = useState(0);
   const [checkIn, setCheckIn] = useState('');
@@ -122,9 +145,11 @@ function UnitDetailsView() {
   const openAuth = useUiStore((s) => s.openAuth);
   const { has, toggle } = useFavoritesStore();
 
+  useEffect(() => setMounted(true), []);
+
+  const shownFromServer = Boolean(initialUnit);
   useEffect(() => {
     if (!params.id) return;
-    setLoading(true);
     setLoadError(false);
     // Reviews and the blocked-dates feed are both best-effort — only the unit
     // fetch itself decides success/failure. Losing the feed just means the
@@ -137,13 +162,18 @@ function UnitDetailsView() {
     ])
       .then(([u, r, blocked]) => {
         setUnit(u);
+        setPriced(u);
         setReviews(r);
         setBlockedDates(expandBlockedDates(blocked));
         setPermitBlockedDates(expandBlockedDates(blocked.filter((b) => b.reason === 'permit_expiry')));
       })
-      .catch(() => setLoadError(true))
-      .finally(() => setLoading(false));
-  }, [params.id, attempt]);
+      .catch((e: unknown) => {
+        // Taken off sale since the server's read: say so rather than keep
+        // showing it. Without a server copy, any failure keeps the retry card.
+        if (shownFromServer && loadFailureFor(e) === 'notfound') setGone(true);
+        else setLoadError(true);
+      });
+  }, [params.id, attempt, shownFromServer]);
 
   // Open on the stay the guest already picked — on the search bar, on the map,
   // or on the last listing they looked at — instead of an empty calendar. The
@@ -191,7 +221,7 @@ function UnitDetailsView() {
   })();
   // Not a preview any more: `pricePerNight` is gross, so this IS the final
   // payable amount and must match checkout, payment and confirmation exactly.
-  const gross = unit ? quoteFromNightly(unit.pricePerNight, nights).gross : 0;
+  const gross = priced ? quoteFromNightly(priced.pricePerNight, nights).gross : 0;
 
   // Local YYYY-MM-DD "today" — floors the date pickers so past dates can't
   // be picked or typed in. Availability itself is still verified server-side
@@ -233,19 +263,30 @@ function UnitDetailsView() {
     router.push(`/booking/${unit.id}?${q.toString()}`);
   };
 
-  if (loadError) {
+  const retry = () => setAttempt((a) => a + 1);
+
+  if (gone) {
     return (
       <div className="container mx-auto px-4 py-16">
-        <LoadError onRetry={() => setAttempt((a) => a + 1)} />
+        <LoadStateView state="notfound" onRetry={retry} />
       </div>
     );
   }
 
-  if (loading || !unit) {
+  // With the server's copy on screen, a failed read costs only the booking card.
+  if (loadError && !unit) {
+    return (
+      <div className="container mx-auto px-4 py-16">
+        <LoadError onRetry={retry} />
+      </div>
+    );
+  }
+
+  if (!unit) {
     return <UnitDetailsLoading />;
   }
 
-  const isFav = has(unit.id);
+  const isFav = mounted && has(unit.id);
   // No guest has scored this unit yet — every score surface says "new" instead
   // of printing the backend's placeholder 0.
   const rated = hasRating(unit.rating, unit.reviewCount);
@@ -256,12 +297,12 @@ function UnitDetailsView() {
    * sidebar and by the mobile sheet. Splitting them would let the two drift,
    * and the calendar is the whole reason the sheet exists.
    */
-  const bookingBody = (
+  const bookingBody = priced && (
     <>
       <div className="flex items-end justify-between">
         <div>
           <div>
-            <span className="text-2xl font-bold text-brand-ink">{formatSAR(unit.pricePerNight)}</span>
+            <span className="text-2xl font-bold text-brand-ink">{formatSAR(priced.pricePerNight)}</span>
             <span className="text-sm text-brand-muted"> {tCommon('perNight')}</span>
           </div>
           <div className="text-xs text-brand-muted">{tPricing('inclVatShort')}</div>
@@ -310,7 +351,7 @@ function UnitDetailsView() {
 
       {nights > 0 && (
         <div className="space-y-1.5 text-sm">
-          <Row label={t('nightsLine', { price: formatSAR(unit.pricePerNight), nights })} value={formatSAR(gross)} bold />
+          <Row label={t('nightsLine', { price: formatSAR(priced.pricePerNight), nights })} value={formatSAR(gross)} bold />
           {/* The commercial payoff of VAT-inclusive pricing — given real
               presence next to the number, not buried as fine print. */}
           <p className="rounded-lg bg-brand-sage/20 px-3 py-2 text-xs font-medium leading-relaxed text-brand-primary">
@@ -340,6 +381,9 @@ function UnitDetailsView() {
       )}
     </>
   );
+
+  // Until the browser's own read lands there is no price to show.
+  const bookingPanel = bookingBody || (loadError ? <LoadError onRetry={retry} /> : <BookingSkeleton />);
 
   return (
     // Extra bottom padding on mobile keeps content clear of the fixed book bar.
@@ -506,34 +550,12 @@ function UnitDetailsView() {
               </div>
             )}
 
-            {reviews.length === 0 ? (
+            {reviews === null ? (
+              serverReviews
+            ) : reviews.length === 0 ? (
               rated && <p className="text-sm text-brand-muted">{t('noReviews')}</p>
             ) : (
-              <div className="grid gap-4 sm:grid-cols-2">
-                {reviews.map((r) => (
-                  <Card key={r.id} className="space-y-3 p-4">
-                    <div className="flex items-center gap-3">
-                      {r.userAvatarUrl ? (
-                        <img src={r.userAvatarUrl} alt="" className="h-10 w-10 rounded-full object-cover" />
-                      ) : (
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-cream font-bold text-brand-primary">
-                          {r.userName.charAt(0)}
-                        </div>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-semibold text-brand-ink">{r.userName}</div>
-                        <div className="text-xs text-brand-muted">{formatDate(r.createdAt)}</div>
-                      </div>
-                      <div className="flex gap-0.5">
-                        {Array.from({ length: r.rating }).map((_, i) => (
-                          <Star key={i} className="h-3.5 w-3.5 fill-yellow-500 text-yellow-500" />
-                        ))}
-                      </div>
-                    </div>
-                    <p className="text-sm leading-relaxed text-brand-muted">{r.comment}</p>
-                  </Card>
-                ))}
-              </div>
+              <ReviewList reviews={reviews} />
             )}
           </section>
         </div>
@@ -541,7 +563,7 @@ function UnitDetailsView() {
         {/* Booking sidebar — the desktop home of the shared booking body. */}
         <aside id="booking-card" className="hidden md:block">
           <Card className="sticky top-24 space-y-4 p-5 shadow-sm">
-            {bookingBody}
+            {bookingPanel}
           </Card>
         </aside>
       </div>
@@ -549,12 +571,16 @@ function UnitDetailsView() {
       {/* Mobile: fixed book bar — opens the booking sheet. `pb-[…safe-area…]`
           keeps the CTA clear of the iPhone home indicator. */}
       <div className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-between gap-3 border-t border-brand-border bg-white/95 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur md:hidden">
-        <div>
-          <div className="text-lg font-bold text-brand-ink">{formatSAR(unit.pricePerNight)}</div>
-          <div className="text-xs text-brand-muted">
-            {datesSelected ? t('nightsCount', { count: nights }) : `${tCommon('perNight')} · ${tPricing('inclVatShort')}`}
+        {priced ? (
+          <div>
+            <div className="text-lg font-bold text-brand-ink">{formatSAR(priced.pricePerNight)}</div>
+            <div className="text-xs text-brand-muted">
+              {datesSelected ? t('nightsCount', { count: nights }) : `${tCommon('perNight')} · ${tPricing('inclVatShort')}`}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div aria-hidden className="h-10 w-24 animate-pulse rounded-lg bg-brand-cream/80" />
+        )}
         <Button size="lg" className="max-w-[220px] flex-1" onClick={() => setSheetOpen(true)}>
           {datesSelected ? t('bookNow') : t('pickDatesShort')}
         </Button>
@@ -575,10 +601,21 @@ function UnitDetailsView() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            {bookingBody}
+            {bookingPanel}
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** The booking card's place while the browser's read is on its way. */
+function BookingSkeleton() {
+  return (
+    <div aria-hidden className="space-y-4">
+      <div className="h-8 w-32 animate-pulse rounded-lg bg-brand-cream/80" />
+      <div className="h-28 animate-pulse rounded-2xl bg-brand-cream/60" />
+      <div className="h-11 animate-pulse rounded-xl bg-brand-cream/80" />
     </div>
   );
 }
@@ -593,10 +630,10 @@ function UnitDetailsLoading() {
  * above it — without one `useSearchParams` opts the whole route out of
  * server rendering.
  */
-export default function UnitDetailsPage() {
+export default function UnitDetailsPage({ initialUnit, serverReviews }: UnitDetailsProps = {}) {
   return (
     <Suspense fallback={<UnitDetailsLoading />}>
-      <UnitDetailsView />
+      <UnitDetailsView initialUnit={initialUnit} serverReviews={serverReviews} />
     </Suspense>
   );
 }
