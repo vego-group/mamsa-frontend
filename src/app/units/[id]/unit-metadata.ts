@@ -36,6 +36,28 @@ export function unitMetadata(unit: Unit): Metadata {
   };
 }
 
+/**
+ * The page's breadcrumb trail as BreadcrumbList JSON-LD, ready to write into
+ * a `<script type="application/ld+json">`: the same three steps the page
+ * shows, the unit at its canonical URL. Arabic, like the rest of the head.
+ *
+ * The unit's name is the partner's own text, so every `<` is escaped — a
+ * name holding `</script>` must not end the script early.
+ */
+export function unitBreadcrumbJsonLd(unit: Unit): string {
+  const trail = [
+    { name: ar.common.home, item: `${SITE_URL}/` },
+    { name: ar.common.explore, item: `${SITE_URL}/units` },
+    { name: unit.title.trim(), item: `${SITE_URL}${unitPath(unit)}` },
+  ];
+  const data = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: trail.map((step, i) => ({ '@type': 'ListItem', position: i + 1, ...step })),
+  };
+  return JSON.stringify(data).replace(/</g, '\\u003c');
+}
+
 /** `{name} — {district}، {city} | مَمسَى`. A long name is cut; the place never is. */
 function unitTitle(unit: Unit): string | undefined {
   const name = unit.title.trim();

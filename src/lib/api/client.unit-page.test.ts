@@ -47,3 +47,20 @@ describe('unitsApi.getForPage', () => {
     expect(init.cache).toBeUndefined();
   });
 });
+
+describe('unitsApi.getReviewsForPage', () => {
+  it("reads the unit's reviews the same way: cached for five minutes, given up on after a few seconds", async () => {
+    fetchMock.mockResolvedValue(
+      json([{ id: 7, user_name: 'سارة', rating: 5, comment: 'نظيفة وهادئة', created_at: '2026-09-01T10:00:00Z' }], 200),
+    );
+
+    const reviews = await unitsApi.getReviewsForPage('u12');
+
+    expect(reviews).toEqual([expect.objectContaining({ id: '7', userName: 'سارة', rating: 5, comment: 'نظيفة وهادئة' })]);
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe('https://api.test/api/v1/units/u12/reviews');
+    expect(init.next).toEqual({ revalidate: 300 });
+    expect(init.cache).toBeUndefined();
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+});

@@ -1,10 +1,15 @@
-import { cache } from 'react';
+import { Suspense, cache } from 'react';
 import type { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
 import { ApiError, unitsApi } from '@/lib/api/client';
-import type { Unit } from '@/types';
+import type { Review, Unit } from '@/types';
 import UnitDetailsPage from './unit-page-client';
-import { unitMetadata } from './unit-metadata';
+import { withoutPrice } from './unit-content';
+import { ServerReviews } from './server-reviews';
+import { unitBreadcrumbJsonLd, unitMetadata } from './unit-metadata';
+
+/** How many reviews the first HTML carries — the first page of them. */
+const REVIEWS_IN_MARKUP = 10;
 
 interface Props {
   params: { id: string };
@@ -26,6 +31,17 @@ const readUnit = cache(
 );
 
 /**
+ * The unit's first reviews, for the page's markup. Null on any failure: the
+ * section then waits for the browser's own fetch, as it always has.
+ */
+function readReviews(ref: string): Promise<Review[] | null> {
+  return unitsApi.getReviewsForPage(ref).then(
+    (reviews) => reviews.slice(0, REVIEWS_IN_MARKUP),
+    () => null,
+  );
+}
+
+/**
  * The unit's own title, description, share card and canonical. On a failed
  * read, nothing — the site-wide head from the layout stands, and the page is
  * never marked noindex over what may be a passing outage.
@@ -44,6 +60,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
  * door of a building — is sent on to the key for good (308). The destination
  * is the key exactly as the server returned it, and the URL is compared with
  * it as is, so the page it lands on matches and does not redirect again.
+ *
+ * Otherwise the view starts from the unit read here, so the first HTML
+ * carries the unit itself rather than a loading line — all but its price,
+ * which is taken off here: this read may be five minutes old, and the view
+ * shows a price from the browser's own read only. The reviews are
+ * not awaited: they stream in when they come, and a slow or failed read
+ * never holds the page back.
  */
 export default async function UnitPage({ params }: Props) {
   const { unit, missing } = await readUnit(params.id);
@@ -51,5 +74,20 @@ export default async function UnitPage({ params }: Props) {
   if (unit?.listingId && params.id !== unit.listingId) {
     permanentRedirect(`/units/${encodeURIComponent(unit.listingId)}`);
   }
-  return <UnitDetailsPage />;
+  if (!unit) return <UnitDetailsPage />;
+
+  const reviews = readReviews(params.id);
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: unitBreadcrumbJsonLd(unit) }} />
+      <UnitDetailsPage
+        initialUnit={withoutPrice(unit)}
+        serverReviews={
+          <Suspense fallback={null}>
+            <ServerReviews reviews={reviews} />
+          </Suspense>
+        }
+      />
+    </>
+  );
 }

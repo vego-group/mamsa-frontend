@@ -3,13 +3,15 @@
  * sends an old URL on to the listing's own (308) and fills in the <head>.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { Children, isValidElement, type ReactElement, type ReactNode } from 'react';
 import type { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
 import UnitPage, { generateMetadata } from './page';
+import UnitDetailsPage from './unit-page-client';
 import { ApiError, unitsApi } from '@/lib/api/client';
 import { SITE_URL } from '@/lib/constants/brand';
 import { MOCK_UNITS } from '@/data/mock/units';
-import type { Unit } from '@/types';
+import type { Review, Unit } from '@/types';
 
 // React's `cache` lives in the server build Next renders with, not in the
 // React the tests run on. This stands in for it: one memo per request, and
@@ -267,5 +269,142 @@ describe('unit page — one read per request', () => {
     await page('u12');
 
     expect(read).toHaveBeenCalledOnce();
+  });
+});
+
+/** A review as the adapter hands it over. */
+const review = (n: number): Review => ({
+  id: String(n),
+  bookingId: '',
+  unitId: '12',
+  userId: `g${n}`,
+  userName: `ضيف ${n}`,
+  rating: 5,
+  comment: `تعليق ${n}`,
+  createdAt: '2026-09-01T10:00:00Z',
+});
+
+/** What the page rendered: the view it handed the unit to, and the JSON-LD beside it. */
+function partsOf(rendered: ReactNode) {
+  const el = rendered as ReactElement;
+  const kids = el.type === UnitDetailsPage ? [el] : (Children.toArray(el.props.children) as ReactElement[]);
+  const view = kids.find((k) => k.type === UnitDetailsPage) as ReactElement<{
+    initialUnit?: Unit;
+    serverReviews?: ReactNode;
+  }>;
+  const script = kids.find((k) => k.type === 'script') as
+    | ReactElement<{ type: string; dangerouslySetInnerHTML: { __html: string } }>
+    | undefined;
+  return { view, script };
+}
+
+/** Renders the server's reviews slot the way Next would: the async component inside the Suspense. */
+async function renderReviewsSlot(slot: ReactNode) {
+  const inner = (slot as ReactElement<{ children: ReactElement }>).props.children;
+  const render = inner.type as (props: unknown) => Promise<ReactNode>;
+  return render(inner.props);
+}
+
+describe('unit page — its content in the first HTML', () => {
+  it('hands the view the unit it read, so the view renders it from the start', async () => {
+    vi.spyOn(unitsApi, 'getForPage').mockResolvedValue(U12);
+
+    const { view } = partsOf(await page('u12'));
+
+    expect(view.props.initialUnit).toMatchObject({ id: '12', listingId: 'u12', title: U12.title });
+  });
+
+  // This read may be five minutes old: its price must not reach the browser,
+  // not even in the page's source.
+  it('hands it over without its price', async () => {
+    vi.spyOn(unitsApi, 'getForPage').mockResolvedValue(U12);
+
+    const { view } = partsOf(await page('u12'));
+
+    expect(view.props.initialUnit).not.toHaveProperty('pricePerNight');
+  });
+
+  it('hands the view nothing when the read failed — it loads in the browser as before', async () => {
+    vi.spyOn(unitsApi, 'getForPage').mockRejectedValue(new ApiError(503, 'down'));
+    const reviews = vi.spyOn(unitsApi, 'getReviewsForPage');
+
+    const { view, script } = partsOf(await page('u12'));
+
+    expect(view.props.initialUnit).toBeUndefined();
+    expect(view.props.serverReviews).toBeUndefined();
+    expect(script).toBeUndefined();
+    expect(reviews).not.toHaveBeenCalled();
+  });
+});
+
+describe('unit page — its reviews from the server', () => {
+  it("reads the listing's reviews and renders the first ten", async () => {
+    vi.spyOn(unitsApi, 'getForPage').mockResolvedValue(U12);
+    const read = vi.spyOn(unitsApi, 'getReviewsForPage').mockResolvedValue(Array.from({ length: 12 }, (_, i) => review(i + 1)));
+
+    const { view } = partsOf(await page('u12'));
+    const list = (await renderReviewsSlot(view.props.serverReviews)) as ReactElement<{ reviews: Review[] }>;
+
+    expect(read).toHaveBeenCalledWith('u12');
+    expect(list.props.reviews.map((r) => r.id)).toEqual(['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']);
+  });
+
+  // A secondary section must never hold the whole page back.
+  it('does not wait for them: a reviews read that never answers leaves the page as fast', async () => {
+    vi.spyOn(unitsApi, 'getForPage').mockResolvedValue(U12);
+    vi.spyOn(unitsApi, 'getReviewsForPage').mockReturnValue(new Promise<Review[]>(() => {}));
+
+    const { view } = partsOf(await page('u12'));
+
+    expect(view.props.initialUnit).toMatchObject({ id: '12', title: U12.title });
+  });
+
+  it('renders none when their read fails — the browser fetches them instead', async () => {
+    vi.spyOn(unitsApi, 'getForPage').mockResolvedValue(U12);
+    vi.spyOn(unitsApi, 'getReviewsForPage').mockRejectedValue(new ApiError(500, 'Server Error'));
+
+    const { view } = partsOf(await page('u12'));
+
+    expect(await renderReviewsSlot(view.props.serverReviews)).toBeNull();
+  });
+
+  it('renders none when the unit has none yet', async () => {
+    vi.spyOn(unitsApi, 'getForPage').mockResolvedValue(U12);
+    vi.spyOn(unitsApi, 'getReviewsForPage').mockResolvedValue([]);
+
+    const { view } = partsOf(await page('u12'));
+
+    expect(await renderReviewsSlot(view.props.serverReviews)).toBeNull();
+  });
+});
+
+describe('unit page — BreadcrumbList JSON-LD', () => {
+  it('describes the same trail the page shows: home, the listings, this unit at its canonical URL', async () => {
+    vi.spyOn(unitsApi, 'getForPage').mockResolvedValue(U12);
+
+    const { script } = partsOf(await page('u12'));
+
+    expect(script!.props.type).toBe('application/ld+json');
+    expect(JSON.parse(script!.props.dangerouslySetInnerHTML.__html)).toEqual({
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'الرئيسية', item: `${SITE_URL}/` },
+        { '@type': 'ListItem', position: 2, name: 'إكتشف وجهتك', item: `${SITE_URL}/units` },
+        { '@type': 'ListItem', position: 3, name: 'شقة تجريبية — لوحة الشريك', item: `${SITE_URL}/units/u12` },
+      ],
+    });
+  });
+
+  // The name is the partner's own text, written inside a <script>.
+  it("can't be closed early by a unit name that holds markup", async () => {
+    const title = '</script><script>alert(1)</script>';
+    vi.spyOn(unitsApi, 'getForPage').mockResolvedValue({ ...U12, title });
+
+    const { script } = partsOf(await page('u12'));
+    const html = script!.props.dangerouslySetInnerHTML.__html;
+
+    expect(html).not.toContain('<');
+    expect(JSON.parse(html).itemListElement[2].name).toBe(title);
   });
 });
