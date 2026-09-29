@@ -560,11 +560,19 @@ export const unitsApi = {
    * and its <head> only. Cached for five minutes: neither changes by the
    * minute, and price and availability still come fresh from the browser's
    * own `getById`.
+   *
+   * Given up after 3 s: the page's HTML waits on this read, so an API that
+   * hangs would otherwise hang the page with it. A timeout is an outage to
+   * the page — it renders with the site-wide head.
    */
   getForPage: (ref: string) =>
     USE_MOCK
       ? withLatency(mockApi.units.getById(ref))
-      : http<RawUnit>(`/units/${ref}`, { cache: undefined, next: { revalidate: 300 } }).then(mapUnit),
+      : http<RawUnit>(`/units/${ref}`, {
+          cache: undefined,
+          next: { revalidate: 300 },
+          signal: AbortSignal.timeout(3000),
+        }).then(mapUnit),
 
   /**
    * The named units, in the API's own order. Batched at the endpoint's ceiling
