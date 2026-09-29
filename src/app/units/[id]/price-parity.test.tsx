@@ -4,7 +4,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import arMessages from '../../../../messages/ar.json';
-import UnitDetailsPage from './page';
+import UnitDetailsPage from './unit-page-client';
 import { mockApi } from '@/lib/api/mock';
 import { formatSAR } from '@/lib/utils/format';
 
