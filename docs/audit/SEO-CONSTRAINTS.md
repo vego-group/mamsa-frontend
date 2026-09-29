@@ -40,3 +40,54 @@ URL (e.g. `/en/units/{listing_id}`):
   `x-default` on Arabic; `og:locale:alternate` lists the other.
 - The canonical stays per language, and the sitemap lists both
   (`src/app/sitemap.ts`).
+
+---
+
+## 2. No exact coordinates in structured data
+
+**Position (decided 2026-09-29).** Publishing a unit's coordinates to five
+decimal places (about 1 m) is refused in principle: that is the address of
+someone's home. Comparable platforms show an approximate area until a booking
+is confirmed.
+
+**Why it comes up.** Google's `VacationRental` markup requires `latitude` and
+`longitude` to at least five decimal places
+([developers.google.com](https://developers.google.com/search/docs/appearance/structured-data/vacation-rental)),
+alongside a Hotel Center account and at least eight photos. None of that
+markup exists today, and none is planned in the unit-page phases.
+
+**If `VacationRental` is asked for later,** this condition is the first thing
+to settle with the owner, not something to implement because Google requires
+it.
+
+**For the record, what is already public.** The unit API returns coordinates
+to four decimal places (about 11 m) to anyone — on staging, unit 12 is
+`24.7136, 46.6753` — and the site places map pins with them
+(`src/app/page.tsx:163-164`, `src/app/units/units-page-client.tsx:202-203`).
+This position covers what we add to structured data; whether four decimals on
+the public API is itself too precise is a question for the owner and the
+backend.
+
+---
+
+## 3. A unit's 404 is a real 404, but its body is drawn in the browser
+
+**What.** When the API answers 404 for a unit, the page calls `notFound()`
+(`src/app/units/[id]/page.tsx`). The response is a real `404` with
+`<meta name="robots" content="noindex">`, but its HTML is Next's error shell,
+`<html id="__next_error__">` with an empty `<body>`: the Arabic 404 page
+(`src/app/not-found.tsx`) is drawn by the browser from the RSC payload. A
+mistyped URL (`/no-such-page`) gets the same page rendered on the server.
+
+**Why it is acceptable now.** What a crawler acts on — the status and the
+noindex — is server-side either way. A visitor with JavaScript sees the same
+page, header, footer and the link to the listings (checked in Chrome,
+2026-09-29).
+
+**Not ours to fix in the page.** It is Next 14.2.13 (`package.json:37`): the
+same shell comes back with Next's default 404 and with `notFound()` also
+called from `generateMetadata`. The App Router has no other way to send a 404
+from a page.
+
+**Revisit with** the Next.js upgrade: check that `/units/{missing}` then comes
+back with the 404 page in its HTML.
