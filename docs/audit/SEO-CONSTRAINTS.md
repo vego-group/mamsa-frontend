@@ -125,3 +125,33 @@ the built page answered 500 (`TypeError: d is not a function`): a function
 exported from a client module reaches a server component as a client
 reference, not as something it can call. The fix moved it to a plain module
 (`src/app/units/[id]/unit-content.ts`). Only the built page showed the bug.
+
+---
+
+## 6. Never recognise a unit key by its shape
+
+**The rule.** Whatever the unit URL carries, the page hands it to the API
+exactly as it is, and takes the redirect target from the `listing_id` in the
+answer (`src/app/units/[id]/page.tsx`). Nothing on our side decides what kind
+of key a value is: no `^MRN`, no length, no "has letters", no "looks like a
+ULID". An unknown value is the API's to resolve, and a 404 from the API is the
+only "not a unit".
+
+**Why.** Unit codes don't have one format: there are two generators (on
+production `MRNXDX5D`, on staging `1G4ADB2F` and `ELDZ5BZ9`). What is
+guaranteed is the backend's order of resolution, not the shape. And the
+answer's `id` is not the target either: `GET /units/42`, a door of building
+30, answers `id: 42` with `listing_id: 01M19EZRB4ARP4BDGJ4ET7P03F`. A target
+built from `id` (`/units/42`, `/units/u42`) still opens a page, so nobody
+would notice the split.
+
+**Tempting, and wrong.** Skipping the read for a value that "already looks
+like a key", to save a call. The read is what fills the page's head and
+content; a wrong guess sends a crawler to a second URL.
+
+**Pinned by** `src/app/units/[id]/page.keys.test.tsx`: a door's code, a
+door's own id, a code in the other format, a code of a unit not on sale
+(404, no redirect), and the key itself (no redirect, canonical to itself).
+Checked against four ways of breaking it: a target built from `id`, codes
+told apart by `^MRN`, a door's id taken as canonical, and the read skipped for
+key-shaped values. Each one fails the tests.
