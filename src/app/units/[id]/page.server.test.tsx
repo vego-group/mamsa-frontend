@@ -4,9 +4,9 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Metadata } from 'next';
-import { permanentRedirect } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import UnitPage, { generateMetadata } from './page';
-import { unitsApi } from '@/lib/api/client';
+import { ApiError, unitsApi } from '@/lib/api/client';
 import { SITE_URL } from '@/lib/constants/brand';
 import { MOCK_UNITS } from '@/data/mock/units';
 import type { Unit } from '@/types';
@@ -30,11 +30,14 @@ vi.mock('react', async (importOriginal) => {
   };
 });
 
-// Like the real one, it throws: nothing after a redirect runs.
+// Like the real ones, they throw: nothing after a redirect or a 404 runs.
 vi.mock('next/navigation', async (importOriginal) => ({
   ...(await importOriginal<typeof import('next/navigation')>()),
   permanentRedirect: vi.fn(() => {
     throw new Error('NEXT_REDIRECT');
+  }),
+  notFound: vi.fn(() => {
+    throw new Error('NEXT_NOT_FOUND');
   }),
 }));
 
@@ -72,6 +75,7 @@ const head = (id: string) => generateMetadata({ params: { id } });
 beforeEach(() => {
   vi.restoreAllMocks();
   vi.mocked(permanentRedirect).mockClear();
+  vi.mocked(notFound).mockClear();
   for (const memo of memos) memo.clear();
 });
 
@@ -223,6 +227,35 @@ describe('unit page — its <head>', () => {
     await expect(page('12')).resolves.toBeTruthy();
 
     expect(permanentRedirect).not.toHaveBeenCalled();
+  });
+});
+
+describe('unit page — a unit that is not there', () => {
+  // A permit that runs out takes the unit off the feed; its page must say so
+  // with a real 404, not a 200 that renders "unavailable" in the browser.
+  it('answers 404 when the API says the unit is not there', async () => {
+    vi.spyOn(unitsApi, 'getForPage').mockRejectedValue(new ApiError(404, 'الوحدة غير متاحة'));
+
+    await expect(page('13')).rejects.toThrow('NEXT_NOT_FOUND');
+
+    expect(notFound).toHaveBeenCalledOnce();
+    expect(permanentRedirect).not.toHaveBeenCalled();
+  });
+
+  // An outage is not a missing unit: a 404 here would drop live pages from
+  // the index over a minute of downtime.
+  it.each([
+    ['a 503', new ApiError(503, 'Service Unavailable')],
+    ['a 500', new ApiError(500, 'Server Error')],
+    ['a network failure', new TypeError('fetch failed')],
+    ['a timeout', new DOMException('The operation timed out.', 'TimeoutError')],
+  ])('renders the page (200) with the site-wide head on %s', async (_, error) => {
+    vi.spyOn(unitsApi, 'getForPage').mockRejectedValue(error);
+
+    await expect(page('u12')).resolves.toBeTruthy();
+    expect(await head('u12')).toEqual({});
+
+    expect(notFound).not.toHaveBeenCalled();
   });
 });
 
