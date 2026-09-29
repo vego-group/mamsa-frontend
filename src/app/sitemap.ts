@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { SITE_URL } from '@/lib/constants/brand';
 import { unitsApi } from '@/lib/api/client';
+import { unitPath } from '@/lib/listing';
 
 /**
  * Generates /sitemap.xml (Sitemaps 0.9 protocol) — Next.js App Router
@@ -8,9 +9,10 @@ import { unitsApi } from '@/lib/api/client';
  * and transactional routes (account, bookings, payments) are intentionally
  * excluded and are also disallowed in robots.txt.
  *
- * Unit detail pages come from `GET /units/sitemap` — ids and `updated_at` only,
+ * Unit detail pages come from `GET /units/sitemap` — keys and `updated_at` only,
  * unpaginated, so every listing gets a chance at being indexed rather than only
- * whichever page a crawler happened to reach.
+ * whichever page a crawler happened to reach. Each is listed by its
+ * `listing_id`, the URL the unit page itself redirects to.
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const lastModified = new Date();
@@ -43,7 +45,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let unitEntries: MetadataRoute.Sitemap = [];
   try {
     unitEntries = (await unitsApi.sitemap()).map((u) => ({
-      url: `${SITE_URL}/units/${u.id}`,
+      url: `${SITE_URL}${unitPath({ id: String(u.id), listingId: u.listing_id })}`,
       lastModified: new Date(u.updated_at),
       changeFrequency: 'weekly' as const,
       priority: 0.8,
