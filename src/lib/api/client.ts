@@ -556,6 +556,17 @@ export const unitsApi = {
     USE_MOCK ? withLatency(mockApi.units.getById(id)) : http<RawUnit>(`/units/${id}`).then(mapUnit),
 
   /**
+   * The unit page's own server-side read, for its listing key (the redirect)
+   * and its <head> only. Cached for five minutes: neither changes by the
+   * minute, and price and availability still come fresh from the browser's
+   * own `getById`.
+   */
+  getForPage: (ref: string) =>
+    USE_MOCK
+      ? withLatency(mockApi.units.getById(ref))
+      : http<RawUnit>(`/units/${ref}`, { cache: undefined, next: { revalidate: 300 } }).then(mapUnit),
+
+  /**
    * The named units, in the API's own order. Batched at the endpoint's ceiling
    * of 50 — asking for more is a 422, not a truncation.
    *
