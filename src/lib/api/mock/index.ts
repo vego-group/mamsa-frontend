@@ -343,7 +343,11 @@ export const mockApi = {
       ok(
         units
           .filter((u) => u.status === 'approved')
-          .map((u) => ({ id: Number(u.id.replace(/\D/g, '')) || 0, updated_at: u.createdAt })),
+          .map((u) => ({
+            listing_id: listingIdOf(u.id),
+            id: Number(u.id.replace(/\D/g, '')) || 0,
+            updated_at: u.createdAt,
+          })),
       ),
 
     getReviews: async (ref: string) => {
