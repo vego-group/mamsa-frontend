@@ -117,6 +117,20 @@ export interface Unit {
   /** Present when `status === 'rejected'` — the admin's reason. */
   rejectionReason?: string | null;
   createdAt: string;
+  /**
+   * A building is one card. How many of its doors are approved and on sale —
+   * 1 for a standalone unit. Not the admin's `group.size`, which counts every
+   * door in any state. Absent when the API sent none.
+   */
+  groupSize?: number;
+  /** Of those doors, how many are free — over the searched dates, when the search had any. */
+  availableCount?: number;
+  /**
+   * The listing's key: shared by every door of a building, `u<id>` for a
+   * standalone unit. What a booking is matched to this card by — see
+   * `isSameListing`. Not a route: `/units/{listingId}` is a 404.
+   */
+  listingId?: string;
 }
 
 // ============ Cancellation Policy ============
@@ -171,25 +185,54 @@ export interface PriceBreakdown {
   vat: number;
 }
 
-export interface RefundRecord {
-  amount: number;
-  percent: number;
-  tierLabel: string;
-  refundedAt: string;
+/**
+ * Who ended a booking and what came back — the `cancellation` object that is
+ * present on EVERY cancelled booking, whoever cancelled it. `customer` is the
+ * guest, `partner` the host, and `admin` and `system` are both the platform
+ * (back-office by hand, or automated: a payment that timed out, a night that
+ * was sold twice). Branch on `cancelledBy`, never on `reason` — that is free
+ * text the backend may reword at any time.
+ */
+export interface BookingCancellation {
+  /**
+   * `unknown` is the adapter's answer to a value outside the closed set: the
+   * UI then names nobody. It must never default to the guest — that would
+   * accuse them of a cancellation they did not make.
+   */
+  cancelledBy: 'customer' | 'partner' | 'admin' | 'system' | 'unknown';
+  /** Free text — display only, never a condition. */
   reason?: string;
-  cancelledBy: 'customer' | 'partner' | 'admin' | 'system';
+  cancelledAt?: string;
+  /**
+   * Riyals actually returned to the guest. `0` does NOT mean nothing was
+   * owed: it means the automatic refund failed at the gateway and no money
+   * moved, so an admin is handling it by hand. Say nothing about a refund at
+   * all in that case — a "0 refunded" or "processing" line would be a lie.
+   * The adapter folds an absent or null figure into the same 0, so this is
+   * always a number and "silence" has exactly one trigger: `> 0` is false.
+   */
+  refundedAmount: number;
 }
 
 export interface Booking {
   id: string;
   code: string; // e.g. "NXTZ3K8L5Q"
+  /**
+   * The unit the server actually booked — in a building, whichever door was
+   * free, which need not be the card the guest opened. Always read from the
+   * booking, never carried over from the card.
+   */
   unitId: string;
+  /** The listing the booked door belongs to (`booking.unit.listing_id`) — see `Unit.listingId`. */
+  listingId?: string;
   unitSnapshot: {
     title: string;
     city: string;
     country: string;
     imageUrl: string;
     ownerName: string;
+    /** The door number inside a building. Absent for a standalone unit. */
+    apartmentNo?: string;
   };
   userId: string;
   guestName?: string;
@@ -212,7 +255,8 @@ export interface Booking {
    * أي تعديل لاحق من الشريك لا يؤثر على هذا الحجز.
    */
   policySnapshot: CancellationPolicy;
-  refund?: RefundRecord;
+  /** Present once the booking is cancelled. The guest surface has no `refund` object — only this. */
+  cancellation?: BookingCancellation;
   /** Whether the guest has already reviewed this booking (embedded by the backend on the booking resource). */
   isReviewed: boolean;
   createdAt: string;

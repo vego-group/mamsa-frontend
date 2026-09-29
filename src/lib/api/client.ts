@@ -43,7 +43,6 @@ import type {
   Review,
   User,
   UnitsFilter,
-  RefundRecord,
   CancellationPolicy,
   SavedCard,
   GuestComplaint,
@@ -80,8 +79,13 @@ const MOCK_LATENCY_MS = 300;
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function withLatency<T>(promise: Promise<T> | T): Promise<T> {
+  const answer = Promise.resolve(promise);
+  // A mock that rejects has already rejected; mark it handled before the delay
+  // so it isn't reported as unhandled while the caller has yet to see it. The
+  // caller still gets the rejection below.
+  answer.catch(() => {});
   if (USE_MOCK) await delay(MOCK_LATENCY_MS);
-  return promise;
+  return answer;
 }
 
 export { ApiError };
@@ -442,6 +446,18 @@ export interface CheckAvailabilityResult {
 export interface BlockedDateRange {
   start: string;
   end: string;
+  /**
+   * Set on one span only: the nights past the unit's permit, from the expiry
+   * day to the end of the window. Bookings and closures come back without it.
+   */
+  reason?: 'permit_expiry';
+}
+
+/** Keeps `reason` only when it is one the calendar knows; anything else is a plain blocked span. */
+function mapBlockedRange(raw: { start: string; end: string; reason?: unknown }): BlockedDateRange {
+  return raw.reason === 'permit_expiry'
+    ? { start: raw.start, end: raw.end, reason: 'permit_expiry' }
+    : { start: raw.start, end: raw.end };
 }
 
 /**
@@ -470,8 +486,22 @@ function mapQuotePricing(raw: unknown): QuotePricing | null {
   };
 }
 
-/** A row of `GET /units/sitemap` — nothing but what a sitemap needs. */
+/**
+ * How the unit page's server-side reads go out. Cached for five minutes
+ * instead of going out on every visit. Given up after 3 s: the page's HTML
+ * waits on them, so an API that hangs would otherwise hang the page with it.
+ * A timeout is an outage to the page — it renders with the site-wide head.
+ */
+function pageRead(): RequestInit {
+  return { cache: undefined, next: { revalidate: 300 }, signal: AbortSignal.timeout(3000) };
+}
+
+/**
+ * A row of `GET /units/sitemap` — nothing but what a sitemap needs. One row per
+ * listing: a building comes once, under its card's id, dated by its newest door.
+ */
 export interface SitemapUnit {
+  listing_id: string;
   id: number;
   updated_at: string;
 }
@@ -536,6 +566,23 @@ export const unitsApi = {
     USE_MOCK ? withLatency(mockApi.units.getById(id)) : http<RawUnit>(`/units/${id}`).then(mapUnit),
 
   /**
+   * The unit page's own server-side read: its listing key (the redirect), its
+   * <head>, and the content its first HTML carries. None of that changes by
+   * the minute; price and availability still come fresh from the browser's
+   * own `getById`, and the page never shows this copy's price.
+   */
+  getForPage: (ref: string) =>
+    USE_MOCK
+      ? withLatency(mockApi.units.getById(ref))
+      : http<RawUnit>(`/units/${ref}`, pageRead()).then(mapUnit),
+
+  /** The unit's reviews for the page's first HTML — read like `getForPage`. */
+  getReviewsForPage: (ref: string) =>
+    USE_MOCK
+      ? withLatency(mockApi.units.getReviews(ref))
+      : http<Record<string, unknown>[]>(`/units/${ref}/reviews`, pageRead()).then((rows) => rows.map(mapReview)),
+
+  /**
    * The named units, in the API's own order. Batched at the endpoint's ceiling
    * of 50 — asking for more is a 422, not a truncation.
    *
@@ -563,7 +610,7 @@ export const unitsApi = {
       : http<RawUnit[]>('/units/popular').then((rows) => rows.map(mapUnit)),
 
   /**
-   * Every indexable unit, id and last-modified only. Unpaginated on purpose:
+   * Every indexable listing, keys and last-modified only. Unpaginated on purpose:
    * a sitemap needs one complete pass, and paging it would let the last page
    * decide whether a unit gets indexed at all.
    */
@@ -595,16 +642,17 @@ export const unitsApi = {
   /**
    * Nights already spoken for — bookings, partner closures and iCal imports
    * alike (the API deliberately doesn't say which, so a guest can never read
-   * a unit's occupancy from the calendar). Unauthenticated: a guest browsing
+   * a unit's occupancy from the calendar). The one exception is the span past
+   * the unit's permit, tagged `permit_expiry`. Unauthenticated: a guest browsing
    * a listing has no token yet. `from`/`to` default to today .. +6 months on
    * the backend, same as leaving them off here.
    */
   getBlockedDates: (id: string, from?: string, to?: string): Promise<BlockedDateRange[]> =>
     USE_MOCK
       ? withLatency(mockApi.units.getBlockedDates(id, from, to))
-      : http<{ blocked: BlockedDateRange[] }>(`/units/${id}/blocked-dates${qs({ from, to })}`).then(
-          (d) => d.blocked ?? [],
-        ),
+      : http<{ blocked?: { start: string; end: string; reason?: unknown }[] }>(
+          `/units/${id}/blocked-dates${qs({ from, to })}`,
+        ).then((d) => (d.blocked ?? []).map(mapBlockedRange)),
 };
 
 /** features[] is repeatable, so it is appended outside URLSearchParams' set(). */
@@ -804,29 +852,17 @@ export const bookingsApi = {
   /**
    * SRS FR-046: execute cancellation + auto-refund via Moyasar.
    * The `cancel` endpoint returns a cancellation-result object (same shape as
-   * the preview), not the updated booking — so we fetch the booking
-   * separately to fulfil the same `{ booking, refund }` contract mock mode
-   * provides.
+   * the preview), not the updated booking — so the booking is re-fetched. Its
+   * `cancellation` block is the only trustworthy account of what was actually
+   * refunded: the preview is a quote, and the gateway refund can still fail.
    */
-  cancel: (id: string, reason?: string) =>
+  cancel: (id: string, reason?: string): Promise<Booking> =>
     USE_MOCK
       ? withLatency(mockApi.bookings.cancel(id, reason))
       : http<RawCancellationPreview>(`/bookings/${id}/cancel`, {
           method: 'POST',
           body: JSON.stringify({ reason }),
-        }).then(async (result) => {
-          const preview = mapCancellationPreview(result);
-          const booking = await http<RawBooking>(`/bookings/${id}`).then(mapBooking);
-          const refund: RefundRecord = {
-            amount: preview.refundAmount,
-            percent: preview.refundPercent,
-            tierLabel: preview.rawTierLabel ?? '',
-            refundedAt: booking.cancelledAt ?? new Date().toISOString(),
-            reason,
-            cancelledBy: 'customer',
-          };
-          return { booking, refund };
-        }),
+        }).then(() => http<RawBooking>(`/bookings/${id}`).then(mapBooking)),
 };
 
 // ============ Payments ============

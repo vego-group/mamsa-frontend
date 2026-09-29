@@ -19,7 +19,7 @@ import type {
   CancellationTemplate,
   CancellationPolicy,
   CancellationTier,
-  RefundRecord,
+  BookingCancellation,
   SavedCard,
   Transaction,
   GuestComplaint,
@@ -120,6 +120,19 @@ export interface RawUnit {
   reviews_count?: number;
   owner?: RawOwner;
   created_at?: string;
+  /**
+   * A building is one card. `group_size` counts its doors that are approved
+   * and on sale (1 for a standalone unit); `available_count` counts the ones
+   * free — over the searched dates when the list was dated, otherwise overall.
+   */
+  group_size?: number;
+  available_count?: number;
+  /**
+   * The listing's key — the building's, shared by every one of its doors;
+   * `u<id>` for a standalone unit. Also on `booking.unit`. Match a booking to
+   * a card by this, never by unit id. The unit routes do not accept it.
+   */
+  listing_id?: string | null;
 }
 
 export interface RawBooking {
@@ -127,7 +140,17 @@ export interface RawBooking {
   reference?: string;
   user_id?: number | string;
   guest_name?: string | null;
-  unit?: RawUnit;
+  /**
+   * Absent or null on the guest API — the contract says null, staging omits
+   * the key. The booked unit is `unit.id`. Never read.
+   */
+  unit_id?: number | string | null;
+  /**
+   * The unit the server allocated. `apartment_no` rides on this response only
+   * (the list and `/units/{id}` never carry it): the door number in a
+   * building, null for a standalone unit.
+   */
+  unit?: RawUnit & { apartment_no?: string | null };
   start_date: string;
   end_date: string;
   nights?: number;
@@ -151,13 +174,32 @@ export interface RawBooking {
   status_label?: string;
   notes?: string | null;
   cancelled_at?: string | null;
+  /**
+   * Present on EVERY cancelled booking, whoever cancelled it (confirmed with
+   * the backend 2026-09-11) — so the UI may build the cancelled card on its
+   * presence alone. Since the 2026-09-10 double-sale fix a `cancelled` booking
+   * can have been charged and refunded — `refunded_amount` is what actually
+   * came back, and `0` means the gateway refund failed and an admin is
+   * handling it by hand (NOT "nothing was owed").
+   */
   cancellation?: {
     reason?: string | null;
+    /**
+     * DELIBERATELY NOT WIRED. The backend renders this in one language; this
+     * app is bilingual and its actor label must follow the locale, so the
+     * label comes from our own dictionary keyed on `cancelled_by`. Do not
+     * connect it — that would leave two sources for one string.
+     */
     cancelled_by_label?: string;
+    /** Exactly four values: `customer` (guest), `partner` (host), `admin` and `system` (both the platform). The key to branch on. */
     cancelled_by?: string;
-    refunded_amount?: number;
-    refund_percent?: number;
-    tier_label?: string;
+    cancelled_at?: string | null;
+    /**
+     * Riyals, always a JSON number (the payment relation is eager-loaded on
+     * both guest endpoints). Typed loosely anyway: absent, null and 0 must all
+     * read as the same silence, and a stray string must never become a figure.
+     */
+    refunded_amount?: number | string | null;
   } | null;
   payment?: { method?: string; last4?: string } | null;
   /**
@@ -407,6 +449,13 @@ function mapImage(i: RawImage): UnitImage {
   };
 }
 
+/** A whole, non-negative count, or undefined — a garbled count must never reach a badge. */
+function optionalCount(v: unknown): number | undefined {
+  if (v == null || v === '') return undefined;
+  const n = Number(v);
+  return Number.isInteger(n) && n >= 0 ? n : undefined;
+}
+
 export function mapUnit(u: RawUnit): Unit {
   const images = [...(u.images ?? [])].sort((a, b) => Number(b.is_main) - Number(a.is_main));
   return {
@@ -445,6 +494,9 @@ export function mapUnit(u: RawUnit): Unit {
     cancellationPolicy: mapTemplate(u.cancellation_policy),
     cancellationPolicyDetails: mapPolicyDetails(u.cancellation_policy_details),
     createdAt: u.created_at ?? new Date().toISOString(),
+    groupSize: optionalCount(u.group_size),
+    availableCount: optionalCount(u.available_count),
+    listingId: u.listing_id ? String(u.listing_id) : undefined,
   };
 }
 
@@ -452,12 +504,24 @@ export function mapUnit(u: RawUnit): Unit {
  * Closed set confirmed by the backend — `customer` = guest, `partner` = host,
  * `admin` = back-office, `system` = automated (e.g. payment expiry). No aliases
  * (`guest`/`host` are explicitly not used), so anything else means the contract
- * changed; fall back to the commonest case rather than render a blank actor.
+ * changed. The fallback is `unknown`, which names nobody — never the guest,
+ * because that would accuse them of a cancellation they did not make.
  */
 const CANCELLED_BY = ['customer', 'partner', 'admin', 'system'] as const;
+type KnownCancelledBy = (typeof CANCELLED_BY)[number];
 
-const mapCancelledBy = (v?: string): RefundRecord['cancelledBy'] =>
-  CANCELLED_BY.includes(v as RefundRecord['cancelledBy']) ? (v as RefundRecord['cancelledBy']) : 'customer';
+const mapCancelledBy = (v?: string): BookingCancellation['cancelledBy'] =>
+  CANCELLED_BY.includes(v as KnownCancelledBy) ? (v as KnownCancelledBy) : 'unknown';
+
+/**
+ * Riyals actually returned. Absent, null, 0, negative and unparseable all read
+ * as 0 — the "no money moved" case — because the UI shows a refund line only
+ * above 0, and a garbage figure must never become a promise to the guest.
+ */
+const mapRefundedAmount = (v: number | string | null | undefined): number => {
+  const n = Number(v ?? 0);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+};
 
 /**
  * `guests` is the total headcount and `guests_detail` the split. When the split
@@ -476,17 +540,23 @@ export function mapBooking(b: RawBooking): Booking {
   const p = b.pricing ?? {};
   const mainRaw = unit?.images?.find((i) => i.is_main) ?? unit?.images?.[0];
   const mainImage = mainRaw ? (mainRaw.variants?.thumb ?? mainRaw.url) : '';
+  // Null (standalone), absent and blank all mean "no door to name".
+  const apartmentNo = unit?.apartment_no == null ? '' : String(unit.apartment_no).trim();
 
   return {
     id: String(b.id),
     code: b.reference ?? '',
+    // From `booking.unit`, never the root `unit_id` (always null): in a
+    // building this is the door the server picked, not the card.
     unitId: unit ? String(unit.id) : '',
+    listingId: unit?.listing_id ? String(unit.listing_id) : undefined,
     unitSnapshot: {
       title: unit?.name ?? '',
       city: unit?.city ?? '',
       country: DEFAULT_COUNTRY,
       imageUrl: mainImage,
       ownerName: unit?.owner?.name ?? '',
+      ...(apartmentNo ? { apartmentNo } : {}),
     },
     userId: b.user_id == null ? 'CURRENT_USER' : String(b.user_id),
     guestName: b.guest_name ?? undefined,
@@ -531,18 +601,16 @@ export function mapBooking(b: RawBooking): Booking {
     payment: b.payment?.method
       ? { method: b.payment.method as PaymentInfo['method'], last4: b.payment.last4 }
       : undefined,
-    refund: b.cancellation
+    cancellation: b.cancellation
       ? {
-          amount: Number(b.cancellation.refunded_amount ?? 0),
-          percent: Number(b.cancellation.refund_percent ?? 0),
-          tierLabel: b.cancellation.tier_label ?? '',
-          refundedAt: b.cancelled_at ?? new Date().toISOString(),
-          reason: b.cancellation.reason ?? undefined,
           cancelledBy: mapCancelledBy(b.cancellation.cancelled_by),
+          reason: b.cancellation.reason || undefined,
+          cancelledAt: b.cancellation.cancelled_at ?? b.cancelled_at ?? undefined,
+          refundedAmount: mapRefundedAmount(b.cancellation.refunded_amount),
         }
       : undefined,
     createdAt: b.created_at ?? new Date().toISOString(),
-    cancelledAt: b.cancelled_at ?? undefined,
+    cancelledAt: b.cancelled_at ?? b.cancellation?.cancelled_at ?? undefined,
   };
 }
 

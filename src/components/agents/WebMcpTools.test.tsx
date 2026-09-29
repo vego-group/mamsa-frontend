@@ -3,7 +3,7 @@ import { render, cleanup, act } from '@testing-library/react';
 import { WebMcpTools } from './WebMcpTools';
 
 const UNITS = [
-  { id: 'U-1', title: 'شقة', type: 'apartment', city: 'الرياض', district: 'الملقا', pricePerNight: 450,
+  { id: 'U-1', listingId: 'uU-1', title: 'شقة', type: 'apartment', city: 'الرياض', district: 'الملقا', pricePerNight: 450,
     capacity: 4, bedrooms: 2, beds: 3, bathrooms: 2, rating: 4.8, reviewCount: 10,
     amenities: [{ key: 'wifi', labelAr: 'واي فاي' }], checkInTime: '15:00', checkOutTime: '12:00',
     cancellationPolicy: 'moderate', description: 'وصف' },
@@ -85,7 +85,8 @@ describe('WebMcpTools', () => {
     expect(result.count).toBe(1);
     expect(result.units).toHaveLength(1);
     expect(result.units[0]).toMatchObject({
-      url: `${window.location.origin}/units/U-1`,
+      // By listing key, like every other link to a unit page.
+      url: `${window.location.origin}/units/uU-1`,
       beds: 3,
       amenities: ['واي فاي'],
     });

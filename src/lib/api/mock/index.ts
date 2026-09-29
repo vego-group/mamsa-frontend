@@ -3,12 +3,12 @@
  * يحاكي سلوك الباك إند على البيانات في data/mock/.
  * يحافظ على state في الذاكرة للجلسة الحالية فقط (sessionStorage معطّل لأنه لا يعمل في artifacts).
  */
-import { MOCK_UNITS, findUnitById } from '@/data/mock/units';
+import { MOCK_UNITS, doorsOf, findUnitById, listingIdOf, resolveUnitRef, type MockDoor } from '@/data/mock/units';
 import { MOCK_BOOKINGS } from '@/data/mock/bookings';
 import { MOCK_REVIEWS, getReviewForBooking } from '@/data/mock/reviews';
 import { MOCK_CURRENT_USER, MOCK_SAVED_CARDS, MOCK_TRANSACTIONS } from '@/data/mock/users';
 import { OTP_CONFIG, INVOICE_SELLER, VAT_RATE } from '@/lib/constants/brand';
-import { previewCancellation, buildRefundRecord } from '@/lib/cancellation/engine';
+import { previewCancellation, buildCancellation } from '@/lib/cancellation/engine';
 import { getPolicyByTemplate } from '@/lib/constants/cancellation-policies';
 import { ApiError, ERROR_CODE_MESSAGES } from '../errors';
 import { isValidEmail } from '@/lib/utils/email';
@@ -21,13 +21,13 @@ import type {
   Unit,
   User,
   UnitsFilter,
-  RefundRecord,
   GuestComplaint,
   GuestComplaintRow,
   GuestComplaintStatus,
 } from '@/types';
 import { diffNights } from '@/lib/utils/format';
 import { quoteFromNightly } from '@/lib/pricing';
+import { todayISO } from '@/stores/search';
 
 // Matches the backend's OTP_FIXED_CODE convention for staging, so the same code
 // works whether you're pointed at the local mock or a staging backend.
@@ -42,7 +42,8 @@ const EMAIL_MAX_ATTEMPTS = 5;
 
 // ============ In-memory state ============
 let units: Unit[] = [...MOCK_UNITS];
-let bookings: Booking[] = [...MOCK_BOOKINGS];
+// Every booking carries its listing, as `booking.unit.listing_id` always does on the real API.
+let bookings: Booking[] = MOCK_BOOKINGS.map((b) => ({ ...b, listingId: listingIdOf(b.unitId) }));
 
 /**
  * Look-ups MUST go through the live session list, not `findBookingById` from
@@ -74,6 +75,25 @@ function isUnitBooked(unitId: string, start: string, end: string): boolean {
   );
 }
 
+/**
+ * The first door of a card free over [start, end), or null when every door is
+ * held. A standalone unit is its own single door.
+ */
+function freeDoor(cardId: string, start: string, end: string): MockDoor | null {
+  return doorsOf(cardId).find((d) => !isUnitBooked(d.id, start, end)) ?? null;
+}
+
+/**
+ * The card as the API lists it: how many doors the building sells, and how
+ * many of those are free — over the searched stay when there is one,
+ * otherwise all of them. A standalone unit is a building of one.
+ */
+function asCard(u: Unit, start?: string, end?: string): Unit {
+  const doors = doorsOf(u.id);
+  const free = start && end ? doors.filter((d) => !isUnitBooked(d.id, start, end)).length : doors.length;
+  return { ...u, groupSize: doors.length, availableCount: free, listingId: listingIdOf(u.id) };
+}
+
 /** YYYY-MM-DD shifted by N days — local calendar math, no UTC/timezone drift. */
 function shiftISO(iso: string, days: number): string {
   const [y, m, d] = iso.split('-').map(Number);
@@ -81,19 +101,51 @@ function shiftISO(iso: string, days: number): string {
   return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
 }
 
-/** Collapses touching/overlapping spans, mirroring the real `/blocked-dates` feed. */
-function mergeDateRanges(ranges: { start: string; end: string }[]): { start: string; end: string }[] {
-  const sorted = [...ranges].sort((a, b) => a.start.localeCompare(b.start));
-  const merged: { start: string; end: string }[] = [];
-  for (const r of sorted) {
-    const last = merged[merged.length - 1];
-    if (last && r.start <= shiftISO(last.end, 1)) {
-      if (r.end > last.end) last.end = r.end;
-    } else {
-      merged.push({ ...r });
-    }
+/**
+ * Permit expiry per unit, in days from today — server-side data the guest API
+ * never sends. Relative so the cap stays in the calendar's view instead of
+ * drifting into the past. Units not listed have no expiry, so no cap.
+ */
+const PERMIT_EXPIRES_IN_DAYS: Record<string, number> = { 'U-004': 20 };
+
+function permitExpiresAt(unitId: string): string | null {
+  const days = PERMIT_EXPIRES_IN_DAYS[unitId];
+  return days == null ? null : shiftISO(todayISO(), days);
+}
+
+/**
+ * The backend's rule: a stay may check out ON the expiry day, never after it.
+ * Availability and booking both answer with this, so the probe and the create
+ * never disagree.
+ */
+function permitRefusal(unitId: string, endDate: string): Promise<never> | null {
+  const expiresAt = permitExpiresAt(unitId);
+  if (!expiresAt || endDate <= expiresAt) return null;
+  return Promise.reject(
+    new ApiError(409, 'تصريح هذه الوحدة لا يغطي هذه التواريخ', 'BOOKING_EXCEEDS_PERMIT_VALIDITY'),
+  );
+}
+
+/** Every night a unit's live bookings hold: check-in up to, not including, check-out. */
+function nightsHeld(unitId: string): Set<string> {
+  const nights = new Set<string>();
+  for (const b of bookings) {
+    if (b.unitId !== unitId || !HOLDING_STATUSES.includes(b.status)) continue;
+    const out = b.checkOutDate.slice(0, 10);
+    for (let d = b.checkInDate.slice(0, 10); d < out; d = shiftISO(d, 1)) nights.add(d);
   }
-  return merged;
+  return nights;
+}
+
+/** Nights → inclusive spans with consecutive nights joined, the shape of the real `/blocked-dates` feed. */
+function nightsToRanges(nights: Iterable<string>): { start: string; end: string }[] {
+  const ranges: { start: string; end: string }[] = [];
+  for (const n of [...nights].sort()) {
+    const last = ranges[ranges.length - 1];
+    if (last && n === shiftISO(last.end, 1)) last.end = n;
+    else ranges.push({ start: n, end: n });
+  }
+  return ranges;
 }
 let reviews: Review[] = [...MOCK_REVIEWS];
 let currentUser: User | null = null; // null until login
@@ -242,9 +294,10 @@ export const mockApi = {
           filter.amenities!.every((a) => u.amenities.some((am) => am.key === a)),
         );
       }
-      // Searching with a stay means searching for units free over it.
+      // Searching with a stay means searching for units free over it — for a
+      // building, any one door free is enough.
       if (filter.startDate && filter.endDate) {
-        result = result.filter((u) => !isUnitBooked(u.id, filter.startDate!, filter.endDate!));
+        result = result.filter((u) => freeDoor(u.id, filter.startDate!, filter.endDate!) !== null);
       }
 
       switch (filter.sort) {
@@ -261,7 +314,7 @@ export const mockApi = {
           result = [...result].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
           break;
       }
-      return ok(result);
+      return ok(result.map((u) => asCard(u, filter.startDate, filter.endDate)));
     },
 
     /** Mirrors the API's paginator so the results page behaves the same offline. */
@@ -278,28 +331,38 @@ export const mockApi = {
       });
     },
 
-    getById: async (id: string) => {
-      const u = findUnitById(id);
+    getById: async (ref: string) => {
+      const u = findUnitById(resolveUnitRef(ref));
       if (!u) return fail('الوحدة غير موجودة');
-      return ok(u);
+      return ok(asCard(u));
     },
 
-    getFeatured: async () => ok(units.filter((u) => u.isFeatured && u.status === 'approved')),
+    getFeatured: async () => ok(units.filter((u) => u.isFeatured && u.status === 'approved').map((u) => asCard(u))),
 
     sitemap: async () =>
       ok(
         units
           .filter((u) => u.status === 'approved')
-          .map((u) => ({ id: Number(u.id.replace(/\D/g, '')) || 0, updated_at: u.createdAt })),
+          .map((u) => ({
+            listing_id: listingIdOf(u.id),
+            id: Number(u.id.replace(/\D/g, '')) || 0,
+            updated_at: u.createdAt,
+          })),
       ),
 
-    getReviews: async (unitId: string) => ok(reviews.filter((r) => r.unitId === unitId)),
+    getReviews: async (ref: string) => {
+      const unitId = resolveUnitRef(ref);
+      return ok(reviews.filter((r) => r.unitId === unitId));
+    },
 
-    checkAvailability: async (unitId: string, startDate: string, endDate: string) => {
+    checkAvailability: async (ref: string, startDate: string, endDate: string) => {
+      const unitId = resolveUnitRef(ref);
       const unit = findUnitById(unitId);
       if (!unit) return fail('الوحدة غير موجودة');
       const nights = diffNights(startDate, endDate);
-      if (isUnitBooked(unitId, startDate, endDate)) return ok({ available: false, pricing: null });
+      const refused = permitRefusal(unitId, endDate);
+      if (refused) return refused;
+      if (!freeDoor(unitId, startDate, endDate)) return ok({ available: false, pricing: null });
       return ok({ available: true, pricing: computeMockPricing(unit, nights) });
     },
 
@@ -308,17 +371,29 @@ export const mockApi = {
      * `GET /units/{id}/blocked-dates`. The checkout date itself is never
      * included: it's the departing guest's last morning, free for the next
      * guest's arrival the same day.
+     *
+     * A building's night is blocked only once every one of its doors holds
+     * it — while one door is free the card is still bookable that night.
+     *
+     * A unit with a permit expiry also gets one span from the expiry day to
+     * the end of the window, tagged `permit_expiry` and kept out of the merge
+     * so the tag survives.
      */
-    getBlockedDates: async (unitId: string, from?: string, to?: string) => {
-      const ranges = bookings
-        .filter((b) => b.unitId === unitId && HOLDING_STATUSES.includes(b.status))
-        .map((b) => ({
-          start: b.checkInDate.slice(0, 10),
-          end: shiftISO(b.checkOutDate.slice(0, 10), -1),
-        }));
-      const merged = mergeDateRanges(ranges).filter(
-        (r) => (!from || r.end >= from) && (!to || r.start <= to),
-      );
+    getBlockedDates: async (ref: string, from?: string, to?: string) => {
+      const unitId = resolveUnitRef(ref);
+      const [first, ...others] = doorsOf(unitId).map((d) => nightsHeld(d.id));
+      const blockedNights = [...first!].filter((n) => others.every((held) => held.has(n)));
+      const merged: { start: string; end: string; reason?: 'permit_expiry' }[] = nightsToRanges(
+        blockedNights,
+      ).filter((r) => (!from || r.end >= from) && (!to || r.start <= to));
+
+      const expiresAt = permitExpiresAt(unitId);
+      // The backend's default window runs six months out.
+      const windowEnd = to ?? shiftISO(todayISO(), 183);
+      if (expiresAt && expiresAt <= windowEnd) {
+        const start = from && from > expiresAt ? from : expiresAt;
+        merged.push({ start, end: windowEnd, reason: 'permit_expiry' });
+      }
       return ok(merged);
     },
   },
@@ -376,9 +451,14 @@ export const mockApi = {
       if (!currentUser?.emailVerified) return failCode(422, 'EMAIL_VERIFICATION_REQUIRED');
       const unit = findUnitById(input.unitId);
       if (!unit) return fail('الوحدة غير موجودة') as Promise<Booking>;
+      const refused = permitRefusal(input.unitId, input.checkOutDate);
+      if (refused) return refused;
       // Re-check at creation time, same as the real backend — a prior
       // `checkAvailability` call is a snapshot, never a hold on the dates.
-      if (isUnitBooked(input.unitId, input.checkInDate, input.checkOutDate)) {
+      // In a building the server picks the first free door, so the booked
+      // unit can differ from the card the guest opened.
+      const door = freeDoor(input.unitId, input.checkInDate, input.checkOutDate);
+      if (!door) {
         return fail('الوحدة محجوزة في هذه الفترة') as Promise<Booking>;
       }
       const nights = diffNights(input.checkInDate, input.checkOutDate);
@@ -388,13 +468,15 @@ export const mockApi = {
       const booking: Booking = {
         id: genId('BK'),
         code: genCode(),
-        unitId: unit.id,
+        unitId: door.id,
+        listingId: listingIdOf(door.id),
         unitSnapshot: {
           title: unit.title,
           city: unit.city,
           country: unit.country,
           imageUrl: unit.images[0]?.thumb ?? '',
           ownerName: unit.ownerName,
+          ...(door.apartmentNo ? { apartmentNo: door.apartmentNo } : {}),
         },
         userId: 'CURRENT_USER',
         status: 'confirmed',
@@ -425,21 +507,21 @@ export const mockApi = {
       return ok(previewCancellation(b, new Date()));
     },
 
-    cancel: async (id: string, reason?: string): Promise<{ booking: Booking; refund: RefundRecord }> => {
+    cancel: async (id: string, reason?: string): Promise<Booking> => {
       const idx = bookings.findIndex((x) => x.id === id);
       if (idx === -1) return fail('الحجز غير موجود') as Promise<never>;
       const b = bookings[idx]!;
       const preview = previewCancellation(b, new Date());
       if (!preview.isAllowed) return fail('الإلغاء غير مسموح');
-      const refund = buildRefundRecord(preview, 'customer', reason);
+      const cancellation = buildCancellation(preview, 'customer', reason);
       const updated: Booking = {
         ...b,
         status: 'cancelled',
-        refund,
-        cancelledAt: new Date().toISOString(),
+        cancellation,
+        cancelledAt: cancellation.cancelledAt,
       };
       bookings = bookings.map((x) => (x.id === id ? updated : x));
-      return ok({ booking: updated, refund });
+      return ok(updated);
     },
   },
 

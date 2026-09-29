@@ -174,6 +174,62 @@ describe('Booking details — the review is supplementary', () => {
   });
 });
 
+describe('Booking details — book again opens the listing', () => {
+  it('links by the booking’s listing key, not the unit id it was booked on', async () => {
+    useAuthStore.setState({ user: USER, isAuthenticated: true });
+    vi.spyOn(bookingsApi, 'getById').mockResolvedValue({
+      ...bookingFixture(),
+      status: 'completed',
+      unitId: '40',
+      listingId: '01M19EZRB4ARP4BDGJ4ET7P03F',
+      // Long past, so the complaint section stays out of it.
+      checkInDate: '2026-01-10',
+      checkOutDate: '2026-01-12',
+    });
+    vi.spyOn(reviewsApi, 'getForBooking').mockResolvedValue(null);
+    vi.spyOn(complaintsApi, 'getForBooking').mockResolvedValue(null);
+    await renderPage();
+
+    const again = screen.getByText(arMessages.bookingDetails.bookAgain).closest('a');
+    expect(again?.getAttribute('href')).toBe('/units/01M19EZRB4ARP4BDGJ4ET7P03F');
+  });
+});
+
+describe('Booking details — the door the server allocated', () => {
+  const doorLine = (n: string) => arMessages.common.apartmentNo.replace('{number}', n);
+
+  it('names the door when the booking carries one', async () => {
+    useAuthStore.setState({ user: USER, isAuthenticated: true });
+    const fixture = bookingFixture();
+    vi.spyOn(bookingsApi, 'getById').mockResolvedValue({
+      ...fixture,
+      unitId: 'U-005-2',
+      unitSnapshot: { ...fixture.unitSnapshot, apartmentNo: '2' },
+    });
+    vi.spyOn(reviewsApi, 'getForBooking').mockResolvedValue(null);
+    await renderPage();
+
+    expect(screen.getByText(doorLine('2'))).toBeTruthy();
+  });
+
+  it('shows no door line for a standalone unit', async () => {
+    useAuthStore.setState({ user: USER, isAuthenticated: true });
+    vi.spyOn(bookingsApi, 'getById').mockResolvedValue(bookingFixture());
+    vi.spyOn(reviewsApi, 'getForBooking').mockResolvedValue(null);
+    const { container } = render(
+      <NextIntlClientProvider locale="ar" messages={arMessages}>
+        <BookingDetailsPage />
+      </NextIntlClientProvider>,
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(400);
+    });
+
+    expect(screen.getByText('شقة تجريبية')).toBeTruthy();
+    expect(container.textContent).not.toContain(doorLine('').trim());
+  });
+});
+
 /** YYYY-MM-DD, N days from today (UTC) — the shape bookings carry. */
 function daysFromToday(n: number): string {
   const d = new Date();
@@ -208,5 +264,43 @@ describe('Booking details — a complaint lives on the completed booking', () =>
 
     expect(getComplaint).not.toHaveBeenCalled();
     expect(screen.queryByText(arMessages.complaints.sectionTitle)).toBeNull();
+  });
+});
+
+/**
+ * Since the double-sale fix (2026-09-10) a cancelled booking can have been
+ * charged and refunded. The card must make clear the booking is over and,
+ * only when money actually came back, say how much. A 0 means the gateway
+ * refund FAILED and an admin is handling it — no refund wording at all then.
+ */
+describe('Booking details — a cancelled booking explains what happened to the money', () => {
+  function cancelledFixture(refundedAmount: number): Booking {
+    return {
+      ...bookingFixture(),
+      status: 'cancelled',
+      cancelledAt: '2026-09-10T08:00:00Z',
+      cancellation: { cancelledBy: 'system', reason: 'انتهت مهلة إتمام الدفع', refundedAmount },
+    };
+  }
+
+  it('shows the refunded amount when money came back', async () => {
+    useAuthStore.setState({ user: USER, isAuthenticated: true });
+    vi.spyOn(bookingsApi, 'getById').mockResolvedValue(cancelledFixture(1000));
+    vi.spyOn(reviewsApi, 'getForBooking').mockResolvedValue(null);
+    await renderPage();
+
+    expect(screen.getByText(arMessages.bookingDetails.cancelledTitle)).toBeTruthy();
+    expect(screen.getByText(new RegExp(arMessages.bookingDetails.bySystem))).toBeTruthy();
+    expect(screen.getByText(/تم رد المبلغ: 1,000/)).toBeTruthy();
+  });
+
+  it('says nothing about a refund when refundedAmount is 0', async () => {
+    useAuthStore.setState({ user: USER, isAuthenticated: true });
+    vi.spyOn(bookingsApi, 'getById').mockResolvedValue(cancelledFixture(0));
+    vi.spyOn(reviewsApi, 'getForBooking').mockResolvedValue(null);
+    await renderPage();
+
+    expect(screen.getByText(arMessages.bookingDetails.cancelledTitle)).toBeTruthy();
+    expect(screen.queryByText(/تم رد المبلغ/)).toBeNull();
   });
 });

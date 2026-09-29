@@ -86,6 +86,38 @@ describe('mapCancellationPreview — refund figures', () => {
   });
 });
 
+/**
+ * In a building the server books whichever door is free, so the unit a booking
+ * shows must come from `booking.unit` — never from the card the guest opened,
+ * and never from the root `unit_id`, which the API sends as null.
+ */
+describe('mapBooking — the unit the server allocated', () => {
+  const allocated = { id: 12, name: 'منتجع العائلة السعيدة', city: 'الرياض' } as RawUnit;
+
+  it('takes the unit from booking.unit even though the root unit_id is null', () => {
+    const b = mapBooking(makeRawBooking({ unit_id: null, unit: allocated }));
+    expect(b.unitId).toBe('12');
+    expect(b.unitSnapshot.title).toBe('منتجع العائلة السعيدة');
+  });
+
+  it('carries apartment_no as the door number', () => {
+    const b = mapBooking(makeRawBooking({ unit: { ...allocated, apartment_no: '2' } }));
+    expect(b.unitSnapshot.apartmentNo).toBe('2');
+  });
+
+  it('reads a numeric apartment_no as text', () => {
+    const b = mapBooking(makeRawBooking({ unit: { ...allocated, apartment_no: 3 as never } }));
+    expect(b.unitSnapshot.apartmentNo).toBe('3');
+  });
+
+  it('has no door number for a standalone unit, an absent key or a blank one', () => {
+    for (const apartment_no of [null, undefined, '', '  ']) {
+      const b = mapBooking(makeRawBooking({ unit: { ...allocated, apartment_no } }));
+      expect(b.unitSnapshot.apartmentNo).toBeUndefined();
+    }
+  });
+});
+
 describe('mapBooking — guests split', () => {
   it('uses guests_detail when present', () => {
     const b = mapBooking(makeRawBooking({ guests: 3, guests_detail: { adults: 2, children: 1 } }));
@@ -107,12 +139,59 @@ describe('mapBooking — guests split', () => {
 describe('mapBooking — cancelledBy', () => {
   it.each(['customer', 'partner', 'admin', 'system'] as const)('passes through %s', (who) => {
     const b = mapBooking(makeRawBooking({ cancellation: { cancelled_by: who } }));
-    expect(b.refund?.cancelledBy).toBe(who);
+    expect(b.cancellation?.cancelledBy).toBe(who);
   });
 
-  it('falls back to customer for a value outside the closed set', () => {
-    const b = mapBooking(makeRawBooking({ cancellation: { cancelled_by: 'guest' } }));
-    expect(b.refund?.cancelledBy).toBe('customer');
+  // Never the guest: a default of "customer" would pin a cancellation on
+  // someone who may not have made it.
+  it.each(['guest', '', undefined])('reads %s (outside the closed set) as unknown, not as the guest', (v) => {
+    const b = mapBooking(makeRawBooking({ cancellation: { cancelled_by: v } }));
+    expect(b.cancellation?.cancelledBy).toBe('unknown');
+  });
+});
+
+/**
+ * Since the double-sale fix (2026-09-10) a `cancelled` booking can have been
+ * charged and refunded. `refunded_amount` is what actually came back, and 0
+ * means the gateway refund FAILED with the admin handling it by hand — so the
+ * figure must reach the UI exactly, and anything unusable must read as 0, the
+ * value at which the UI says nothing about money at all.
+ */
+describe('mapBooking — cancellation.refundedAmount', () => {
+  it('passes a positive riyal figure through untouched', () => {
+    const b = mapBooking(makeRawBooking({ cancellation: { cancelled_by: 'system', refunded_amount: 1000 } }));
+    expect(b.cancellation?.refundedAmount).toBe(1000);
+  });
+
+  it('tolerates a numeric string', () => {
+    const b = mapBooking(makeRawBooking({ cancellation: { cancelled_by: 'system', refunded_amount: '391.30' } }));
+    expect(b.cancellation?.refundedAmount).toBe(391.3);
+  });
+
+  it.each([0, null, undefined, 'n/a', -5])('reads %s as 0 — no money moved', (v) => {
+    const b = mapBooking(makeRawBooking({ cancellation: { cancelled_by: 'system', refunded_amount: v } }));
+    expect(b.cancellation?.refundedAmount).toBe(0);
+  });
+
+  it('leaves cancellation undefined on a booking that was never cancelled', () => {
+    expect(mapBooking(makeRawBooking()).cancellation).toBeUndefined();
+  });
+
+  it('keeps the free-text reason as text, and drops an empty one', () => {
+    const withReason = mapBooking(
+      makeRawBooking({ cancellation: { cancelled_by: 'system', reason: 'انتهت مهلة إتمام الدفع' } }),
+    );
+    expect(withReason.cancellation?.reason).toBe('انتهت مهلة إتمام الدفع');
+    const blank = mapBooking(makeRawBooking({ cancellation: { cancelled_by: 'system', reason: '' } }));
+    expect(blank.cancellation?.reason).toBeUndefined();
+  });
+
+  it('takes cancelled_at from the cancellation block when the top-level key is absent', () => {
+    const b = mapBooking(
+      makeRawBooking({ cancellation: { cancelled_by: 'system', cancelled_at: '2026-09-10T08:00:00Z' } }),
+    );
+    expect(b.cancelledAt).toBe('2026-09-10T08:00:00Z');
+    expect(b.cancellation?.cancelledAt).toBe('2026-09-10T08:00:00Z');
   });
 });
 
@@ -163,6 +242,63 @@ describe('mapUser — role', () => {
   it('ranks admin above partner, and defaults to a plain user', () => {
     expect(mapUser({ ...base, is_admin: true, is_partner: true }).role).toBe('super_admin');
     expect(mapUser(base).role).toBe('user');
+  });
+});
+
+/**
+ * A building comes back as one card. `group_size` counts its sellable doors,
+ * `available_count` the ones free (over the searched dates, when dated).
+ */
+describe('mapUnit — building counts', () => {
+  const card = (extra: Record<string, unknown>): RawUnit =>
+    ({ id: 30, name: 'مبنى', type: 'apartment', price: 300, capacity: 2, bedrooms: 1, bathrooms: 1, city: 'الرياض', ...extra }) as RawUnit;
+
+  it('carries group_size and available_count', () => {
+    const u = mapUnit(card({ group_size: 6, available_count: 4 }));
+    expect(u.groupSize).toBe(6);
+    expect(u.availableCount).toBe(4);
+  });
+
+  it('keeps a standalone unit at a group of one', () => {
+    expect(mapUnit(card({ group_size: 1, available_count: 1 })).groupSize).toBe(1);
+  });
+
+  it('leaves both unset when the API sends none, or sends something that is not a count', () => {
+    for (const v of [undefined, null, 'x', -1, 2.5]) {
+      const u = mapUnit(card({ group_size: v, available_count: v }));
+      expect(u.groupSize, String(v)).toBeUndefined();
+      expect(u.availableCount, String(v)).toBeUndefined();
+    }
+  });
+
+  it('reads a zero available_count as zero, not as missing', () => {
+    expect(mapUnit(card({ group_size: 3, available_count: 0 })).availableCount).toBe(0);
+  });
+});
+
+/**
+ * `listing_id` is the building's key: every door of a building carries the
+ * same value, a standalone unit carries `u<id>`. It rides on the unit and on
+ * `booking.unit`, and it is what a booking is matched to a card by.
+ */
+describe('listing_id — the key a booking and a card share', () => {
+  const raw = { id: 40, name: 'مبنى', type: 'apartment', price: 450, capacity: 2, bedrooms: 1, bathrooms: 1, city: 'الرياض' } as RawUnit;
+
+  it('carries listing_id on the unit', () => {
+    expect(mapUnit({ ...raw, listing_id: '01M19EZRB4ARP4BDGJ4ET7P03F' }).listingId).toBe('01M19EZRB4ARP4BDGJ4ET7P03F');
+  });
+
+  it('carries booking.unit.listing_id on the booking', () => {
+    const b = mapBooking(makeRawBooking({ unit: { ...raw, listing_id: '01M19EZRB4ARP4BDGJ4ET7P03F' } }));
+    expect(b.listingId).toBe('01M19EZRB4ARP4BDGJ4ET7P03F');
+    expect(b.unitId).toBe('40');
+  });
+
+  it('leaves it unset when the API sends none or a blank one', () => {
+    for (const listing_id of [undefined, null, '']) {
+      expect(mapUnit({ ...raw, listing_id } as RawUnit).listingId).toBeUndefined();
+      expect(mapBooking(makeRawBooking({ unit: { ...raw, listing_id } as RawUnit })).listingId).toBeUndefined();
+    }
   });
 });
 

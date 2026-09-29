@@ -63,6 +63,33 @@ export const MOCK_BOOKINGS: Booking[] = [
     isReviewed: false,
     createdAt: addDays(-2),
   },
+  // A stay in a building (U-005): the server put it on door 2, not on the
+  // card's own door — the booking names the door, the card never did.
+  {
+    id: 'BK-010',
+    code: 'DOOR2B7K9M',
+    unitId: 'U-005-2',
+    unitSnapshot: {
+      title: 'منتجع العائلة السعيدة',
+      city: 'الرياض',
+      country: 'المملكة العربية السعودية',
+      imageUrl: 'https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?auto=format&fit=crop&w=800&q=80',
+      ownerName: 'أحمد المالكي',
+      apartmentNo: '2',
+    },
+    userId: 'CURRENT_USER',
+    status: 'confirmed',
+    checkInDate: addDays(30),
+    checkOutDate: addDays(33),
+    checkOutTime: '12:00',
+    nights: 3,
+    guests: { adults: 2, children: 0 },
+    price: priceOf(1200, 3),
+    payment: { method: 'visa', last4: '4242' },
+    policySnapshot: MODERATE_POLICY,
+    isReviewed: false,
+    createdAt: addDays(-1),
+  },
   // === نشطة (قريبة جدًا) ===
   {
     id: 'BK-003',
@@ -212,13 +239,11 @@ export const MOCK_BOOKINGS: Booking[] = [
     payment: { method: 'visa', last4: '4242' },
     policySnapshot: MODERATE_POLICY,
     isReviewed: false,
-    refund: {
-      amount: 2700,
-      percent: 50,
-      tierLabel: 'استرداد جزئي 50%',
-      refundedAt: addDays(-25),
-      reason: 'تغيير في خطط السفر',
+    cancellation: {
       cancelledBy: 'customer',
+      reason: 'تغيير في خطط السفر',
+      cancelledAt: addDays(-25),
+      refundedAmount: 2700,
     },
     createdAt: addDays(-40),
     cancelledAt: addDays(-25),

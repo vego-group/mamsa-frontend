@@ -88,7 +88,7 @@ export const MOCK_UNITS: Unit[] = [
     createdAt: '2026-01-15T08:30:00Z',
   },
   {
-    id: 'U-002',
+    id: 'U-007',
     ownerId: 'P-003',
     ownerName: 'فيلا كود',
     ownerType: 'company',
@@ -304,4 +304,57 @@ export const MOCK_UNITS: Unit[] = [
 
 export function findUnitById(id: string): Unit | undefined {
   return MOCK_UNITS.find((u) => u.id === id);
+}
+
+/** One door of a building: a unit of its own, listed under the building's card. */
+export interface MockDoor {
+  id: string;
+  apartmentNo?: string;
+}
+
+/**
+ * Buildings, keyed by the card the guest sees. Door 1 is the card itself; the
+ * other doors are units the list never shows. A booking lands on whichever
+ * door is free, so its unit can differ from the card the guest opened.
+ */
+export const MOCK_BUILDINGS: Record<string, MockDoor[]> = {
+  'U-005': [
+    { id: 'U-005', apartmentNo: '1' },
+    { id: 'U-005-2', apartmentNo: '2' },
+    { id: 'U-005-3', apartmentNo: '3' },
+  ],
+};
+
+/** The doors a card sells: its building's, or the card alone with no door number. */
+export function doorsOf(cardId: string): MockDoor[] {
+  return MOCK_BUILDINGS[cardId] ?? [{ id: cardId }];
+}
+
+/** The card a unit is listed under: its building's card, or the unit itself. */
+export function cardIdOf(unitId: string): string {
+  for (const [cardId, doors] of Object.entries(MOCK_BUILDINGS)) {
+    if (doors.some((d) => d.id === unitId)) return cardId;
+  }
+  return unitId;
+}
+
+/** Each building's `listing_id` — a ULID on the real API, one per building. */
+const BUILDING_LISTING_IDS: Record<string, string> = { 'U-005': '01MOCKBUILDINGU005XXXXXXXXX' };
+
+/** The listing a unit belongs to: its building's key, or `u<id>` for a standalone unit. */
+export function listingIdOf(unitId: string): string {
+  return BUILDING_LISTING_IDS[cardIdOf(unitId)] ?? `u${unitId}`;
+}
+
+/**
+ * What a unit route answers to, as on the real API: a unit id, or a listing
+ * key — a building's (answered by its card) or `u<id>` (that unit). Anything
+ * else comes back unchanged, to miss like any unknown id.
+ */
+export function resolveUnitRef(ref: string): string {
+  for (const [cardId, listingId] of Object.entries(BUILDING_LISTING_IDS)) {
+    if (listingId === ref) return cardId;
+  }
+  if (ref.startsWith('u') && findUnitById(ref.slice(1))) return ref.slice(1);
+  return ref;
 }
