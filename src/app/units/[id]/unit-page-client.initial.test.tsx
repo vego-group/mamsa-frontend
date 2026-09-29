@@ -167,4 +167,27 @@ describe('unit page view — reviews', () => {
     expect(screen.queryByText('مراجعات من السيرفر')).toBeNull();
     expect(screen.getByText('تعليق من المتصفح')).toBeTruthy();
   });
+
+  // The price is what the guest is waiting for; the reviews are already on
+  // the page from the server.
+  it('lets the booking card open without waiting for slow reviews', async () => {
+    vi.spyOn(unitsApi, 'getReviews').mockReturnValue(new Promise(() => {}));
+    render(tree({ initialUnit: SERVER_COPY, serverReviews: <p>مراجعات من السيرفر</p> }));
+
+    await browserReadLands();
+
+    expect(document.body.textContent).toContain(FRESH_PRICE);
+    expect(screen.getByText('مراجعات من السيرفر')).toBeTruthy();
+  });
+
+  it("keeps the server's reviews when the browser's own read of them fails", async () => {
+    vi.spyOn(unitsApi, 'getReviews').mockRejectedValue(new ApiError(503, 'down'));
+    render(tree({ initialUnit: SERVER_COPY, serverReviews: <p>مراجعات من السيرفر</p> }));
+
+    await browserReadLands();
+
+    expect(document.body.textContent).toContain(FRESH_PRICE);
+    expect(screen.getByText('مراجعات من السيرفر')).toBeTruthy();
+    expect(screen.queryByText(arMessages.unit.noReviews)).toBeNull();
+  });
 });

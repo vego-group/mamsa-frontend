@@ -151,19 +151,24 @@ function UnitDetailsView({ initialUnit, serverReviews }: UnitDetailsProps) {
   useEffect(() => {
     if (!params.id) return;
     setLoadError(false);
-    // Reviews and the blocked-dates feed are both best-effort — only the unit
-    // fetch itself decides success/failure. Losing the feed just means the
-    // calendar falls back to floor-only disabling; checkout still catches a
-    // real conflict server-side.
+    // The reviews go on their own and hold nothing up: the booking card waits
+    // for the unit alone, and the server has usually drawn the reviews already.
+    // This fetch still has work to do — they are missing whenever the server's
+    // read of them (or of the unit) failed, and it brings any past the first
+    // ten, or written in the last five minutes. If it fails, whatever is
+    // showing stays.
+    unitsApi.getReviews(params.id).then(setReviews, () => {});
+    // The blocked-dates feed is best-effort — only the unit fetch itself
+    // decides success/failure. Losing the feed just means the calendar falls
+    // back to floor-only disabling; checkout still catches a real conflict
+    // server-side.
     Promise.all([
       unitsApi.getById(params.id),
-      unitsApi.getReviews(params.id).catch(() => [] as Review[]),
       unitsApi.getBlockedDates(params.id).catch(() => [] as BlockedDateRange[]),
     ])
-      .then(([u, r, blocked]) => {
+      .then(([u, blocked]) => {
         setUnit(u);
         setPriced(u);
-        setReviews(r);
         setBlockedDates(expandBlockedDates(blocked));
         setPermitBlockedDates(expandBlockedDates(blocked.filter((b) => b.reason === 'permit_expiry')));
       })
