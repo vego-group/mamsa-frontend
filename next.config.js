@@ -12,12 +12,11 @@ const DEV_PROXY_PATH = '/api/backend';
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  images: {
-    remotePatterns: [
-      { protocol: 'https', hostname: 'images.unsplash.com' },
-      { protocol: 'https', hostname: 'plus.unsplash.com' },
-    ],
-  },
+  // No remotePatterns, on purpose. `/_next/image` fetches and re-serves any
+  // image its config allows, for anyone who asks; next/image here renders only
+  // local files, and remote pictures (unit photos, Unsplash) are plain <img> or
+  // CSS the browser fetches itself. Allowing a remote host only opens a proxy.
+  // See src/next-config.images.test.ts.
   // Apple Pay domain verification: Apple's crawler fetches this file and
   // rejects redirects or wrong content types. Any future middleware/rewrite
   // must keep /.well-known/* untouched.
