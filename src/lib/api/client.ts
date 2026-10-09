@@ -2,10 +2,11 @@
  * API Client
  *
  * طبقة وسيطة بين الـ UI وبيانات النظام.
- * - وضع الـ Mock (NEXT_PUBLIC_USE_MOCK=true): يقرأ من mock/ مباشرة.
- * - وضع الـ Backend (USE_MOCK=false): fetch حقيقي إلى Laravel API عبر adapters.
+ * - وضع الـ Backend (الافتراضي): fetch حقيقي إلى Laravel API عبر adapters.
+ * - وضع الـ Mock (NEXT_PUBLIC_USE_MOCK=true بالحرف فقط): يقرأ من mock/ مباشرة.
  *
  * ⭐ نقطة التبديل: NEXT_PUBLIC_USE_MOCK + NEXT_PUBLIC_API_BASE_URL في .env.local
+ * أي قيمة تانية للـ mock، أو API من غير عنوان، بتوقف التحميل — شوف data-source.ts.
  */
 import { mockApi } from './mock';
 import { ApiError } from './errors';
@@ -51,9 +52,12 @@ import type {
 } from '@/types';
 import type { RefundPreview } from '@/lib/cancellation/engine';
 import { VAT_RATE, INVOICE_SELLER } from '@/lib/constants/brand';
+import { resolveDataSource } from './data-source';
 
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK !== 'false';
-const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
+// Throws on a missing or unreadable setting — at build, not in front of a customer.
+const SOURCE = resolveDataSource(process.env.NEXT_PUBLIC_USE_MOCK, process.env.NEXT_PUBLIC_API_BASE_URL);
+const USE_MOCK = SOURCE.mock;
+const API_URL = SOURCE.mock ? '' : SOURCE.apiBaseUrl;
 
 /** Dev-only proxy path — kept in sync with `DEV_PROXY_PATH` in next.config.js. */
 const DEV_PROXY_PATH = '/api/backend';
