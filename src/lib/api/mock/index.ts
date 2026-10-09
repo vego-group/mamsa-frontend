@@ -202,6 +202,18 @@ const fail = (msg: string) => Promise.reject(new Error(msg));
 const failCode = (status: number, code: string, retryAfter?: number, remainingAttempts?: number): Promise<never> =>
   Promise.reject(new ApiError(status, ERROR_CODE_MESSAGES[code] ?? code, code, retryAfter, remainingAttempts));
 
+/** For tests: no response hands the code back, here or on the real API. */
+export { MOCK_OTP };
+
+/**
+ * The one number the mock's SMS provider cannot reach. Every request that texts
+ * it a code fails as the backend reports it: 503 SMS_SEND_FAILED with the
+ * backend's own copy, character for character (an em dash, no full stop).
+ */
+export const MOCK_SMS_FAILS_FOR = '0500000503';
+const smsSendFailed = (): Promise<never> =>
+  Promise.reject(new ApiError(503, 'تعذّر إرسال رمز التحقق — حاول مرة أخرى بعد قليل', 'SMS_SEND_FAILED'));
+
 function genId(prefix: string): string {
   return `${prefix}-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
 }
@@ -247,7 +259,7 @@ function computeMockPricing(unit: Unit, nights: number): MockPricing {
 
 export const mockApi = {
   auth: {
-    requestOtp: async (_phone: string) => ok({ sent: true as const, debugOtp: MOCK_OTP }),
+    requestOtp: async (phone: string) => (phone === MOCK_SMS_FAILS_FOR ? smsSendFailed() : ok({ sent: true as const })),
 
     verifyOtp: async (phone: string, code: string) => {
       if (code !== MOCK_OTP) return fail('رمز التحقق غير صحيح');
@@ -260,6 +272,7 @@ export const mockApi = {
     },
 
     register: async (data: { firstName: string; lastName: string; email: string; phone: string }) => {
+      if (data.phone === MOCK_SMS_FAILS_FOR) return smsSendFailed();
       currentUser = {
         ...MOCK_CURRENT_USER,
         firstName: data.firstName,
@@ -267,7 +280,7 @@ export const mockApi = {
         email: data.email,
         phone: data.phone,
       };
-      return ok({ sent: true as const, debugOtp: MOCK_OTP });
+      return ok({ sent: true as const });
     },
 
     logout: async () => {
@@ -628,7 +641,7 @@ export const mockApi = {
       return ok(currentUser);
     },
 
-    changePhone: async (_newPhone: string) => ok({ sent: true as const, debugOtp: MOCK_OTP }),
+    changePhone: async (newPhone: string) => (newPhone === MOCK_SMS_FAILS_FOR ? smsSendFailed() : ok({ sent: true as const })),
 
     /** Step 1: request a code for a new/unverified email. */
     requestEmailVerification: async (newEmail: string) => {

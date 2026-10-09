@@ -429,9 +429,6 @@
       "didNotReceive": "Didn't receive the code?",
       "resendWithCooldown": "Resend code ({seconds})",
       "resend": "Resend code"
-    },
-    "debugOtp": {
-      "label": "Test code (dev environment):"
     }
   },
   "validation": {

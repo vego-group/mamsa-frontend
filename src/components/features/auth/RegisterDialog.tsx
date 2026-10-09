@@ -8,6 +8,7 @@ import { useTranslations } from 'next-intl';
 import { useUiStore } from '@/stores/ui';
 import { useAuthStore } from '@/stores/auth';
 import { authApi, ApiError } from '@/lib/api/client';
+import { isSmsSendFailure } from '@/lib/api/errors';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,7 +26,8 @@ export function RegisterDialog() {
   const isOpen = authDialog === 'register';
   const [step, setStep] = useState<'form' | 'otp' | 'already-registered'>('form');
   const [phone, setPhone] = useState('');
-  const [debugOtp, setDebugOtp] = useState<string | undefined>();
+  // The last send failed at the SMS provider: the button reads "retry" and stays live.
+  const [sendFailed, setSendFailed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
@@ -55,25 +57,32 @@ export function RegisterDialog() {
     setStep('form');
     setError(null);
     setCooldown(0);
-    setDebugOtp(undefined);
+    setSendFailed(false);
     form.reset();
   };
 
   const onSubmitForm = async (values: RegisterFormValues) => {
     setSubmitting(true);
     setError(null);
+    setSendFailed(false);
     const normalized = normalizeSaudiPhone(values.phone)!;
     try {
       // register() sends intent="register" — the backend rejects phones that
       // already have a completed profile, before sending any OTP.
-      const res = await authApi.register({ ...values, phone: toSaudiLocal(normalized)! });
+      await authApi.register({ ...values, phone: toSaudiLocal(normalized)! });
       setPhone(normalized); // E.164 for display
-      setDebugOtp(res.debugOtp);
       setStep('otp');
     } catch (e) {
       if (e instanceof ApiError && e.code === 'PHONE_ALREADY_REGISTERED') {
         setPhone(normalized);
         setStep('already-registered');
+        return;
+      }
+      // The SMS provider failed: the server's words, and a retry that is live at
+      // once — the attempt cost no quota and started no cooldown.
+      if (isSmsSendFailure(e)) {
+        setError(e.message);
+        setSendFailed(true);
         return;
       }
       const msg = e instanceof Error ? e.message : t('genericError');
@@ -165,6 +174,8 @@ export function RegisterDialog() {
                   ? t('resendIn', { seconds: cooldown })
                   : submitting
                   ? tc('loading')
+                  : sendFailed
+                  ? tc('retry')
                   : t('sendCode')}
               </Button>
               <p className="text-center text-xs text-brand-muted">
@@ -184,7 +195,6 @@ export function RegisterDialog() {
         {step === 'otp' && (
           <OtpVerificationForm
             displayPhone={formatPhoneDisplay(phone)}
-            debugOtp={debugOtp}
             onSubmit={onVerifyOtp}
             onResend={() => authApi.resendOtp(toSaudiLocal(phone)!, 'register')}
             onBack={() => setStep('form')}
