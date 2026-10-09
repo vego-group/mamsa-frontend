@@ -1,8 +1,10 @@
 node_modules/
 .next/
 out/
-.env.local
-.env.*.local
+# Real environment values never enter the repo — only the template does.
+.env
+.env.*
+!.env.example
 *.log
 .DS_Store
 .vercel
