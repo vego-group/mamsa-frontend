@@ -1,13 +1,16 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { MOCK_OTP, mockApi } from './index';
+import { mockApi } from './index';
 import { MOCK_UNITS, cardIdOf, findUnitById } from '@/data/mock/units';
 import { MOCK_BOOKINGS } from '@/data/mock/bookings';
 
 const UNIT_ID = 'U-001';
 
+/** Any six digits sign in on the mock; a fresh code each time, so nothing depends on a value. */
+const anyCode = () => String(Math.floor(Math.random() * 1_000_000)).padStart(6, '0');
+
 async function login() {
   await mockApi.auth.requestOtp('0500000000');
-  await mockApi.auth.verifyOtp('0500000000', MOCK_OTP);
+  await mockApi.auth.verifyOtp('0500000000', anyCode());
 }
 
 afterEach(async () => {
@@ -339,5 +342,36 @@ describe('mock — the SMS provider failing', () => {
 
   it('sends normally to any other number', async () => {
     await expect(mockApi.auth.requestOtp('0500000504')).resolves.toMatchObject({ sent: true });
+  });
+});
+
+/**
+ * The mock accepts any six digits — it has no code of its own, so none is
+ * written anywhere in the repo. Anything that is not exactly six digits is
+ * still refused, the way the real form never sends it.
+ */
+describe('mock — any six digits sign in', () => {
+  it('accepts twenty different random codes for a phone', async () => {
+    for (let i = 0; i < 20; i++) {
+      await mockApi.auth.requestOtp('0500000000');
+      await expect(mockApi.auth.verifyOtp('0500000000', anyCode())).resolves.toMatchObject({
+        accessToken: expect.any(String),
+      });
+    }
+  });
+
+  it('accepts a random code for an email', async () => {
+    await login();
+    await mockApi.account.requestEmailVerification(`any-${Date.now()}@example.com`);
+    await expect(mockApi.account.verifyEmail(anyCode())).resolves.toMatchObject({ verified: true });
+  });
+
+  it.each([
+    ['five digits', anyCode().slice(1)],
+    ['seven digits', `${anyCode()}7`],
+    ['letters', 'abcdef'],
+    ['empty', ''],
+  ])('refuses %s', async (_label, code) => {
+    await expect(mockApi.auth.verifyOtp('0500000000', code)).rejects.toThrow();
   });
 });

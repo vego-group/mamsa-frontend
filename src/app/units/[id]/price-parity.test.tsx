@@ -5,8 +5,11 @@ import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import arMessages from '../../../../messages/ar.json';
 import UnitDetailsPage from './unit-page-client';
-import { MOCK_OTP, mockApi } from '@/lib/api/mock';
+import { mockApi } from '@/lib/api/mock';
 import { formatSAR } from '@/lib/utils/format';
+
+/** Any six digits sign in on the mock; a fresh code each time, so nothing depends on a value. */
+const anyCode = () => String(Math.floor(Math.random() * 1_000_000)).padStart(6, '0');
 
 /**
  * THE regression this whole VAT-inclusive change exists to prevent.
@@ -59,7 +62,7 @@ describe('Price parity — one number from search to tax invoice', () => {
   it('quote, booking, and invoice all report the same gross for the same stay', async () => {
     vi.useRealTimers(); // the mock API awaits real promises here
     await mockApi.auth.requestOtp('0500000000');
-    await mockApi.auth.verifyOtp('0500000000', MOCK_OTP);
+    await mockApi.auth.verifyOtp('0500000000', anyCode());
 
     const checkInDate = '2026-09-10';
     const checkOutDate = '2026-09-12'; // 2 nights

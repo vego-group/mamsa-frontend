@@ -8,8 +8,11 @@ import { render, cleanup, act } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import arMessages from '../../../../../messages/ar.json';
 import ConfirmationPage from './page';
-import { MOCK_OTP, mockApi } from '@/lib/api/mock';
+import { mockApi } from '@/lib/api/mock';
 import { findUnitById } from '@/data/mock/units';
+
+/** Any six digits sign in on the mock; a fresh code each time, so nothing depends on a value. */
+const anyCode = () => String(Math.floor(Math.random() * 1_000_000)).padStart(6, '0');
 
 let bookingId = '';
 
@@ -43,7 +46,7 @@ function book(unitId: string, checkInDate: string, checkOutDate: string) {
 
 beforeEach(async () => {
   await mockApi.auth.requestOtp('0500000000');
-  await mockApi.auth.verifyOtp('0500000000', MOCK_OTP);
+  await mockApi.auth.verifyOtp('0500000000', anyCode());
 });
 
 afterEach(async () => {

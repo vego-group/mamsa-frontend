@@ -109,8 +109,10 @@ describe('EmailVerificationCard — shared component across contexts', () => {
 
     const digitInputs = screen.getAllByRole('textbox') as HTMLInputElement[];
     expect(digitInputs).toHaveLength(6);
+    // Any six digits verify on the mock; a fresh code each run.
+    const code = String(Math.floor(Math.random() * 1_000_000)).padStart(6, '0');
     for (let i = 0; i < 6; i++) {
-      fireEvent.change(digitInputs[i]!, { target: { value: '111222'[i] } });
+      fireEvent.change(digitInputs[i]!, { target: { value: code[i] } });
     }
     await flushMockLatency();
 
