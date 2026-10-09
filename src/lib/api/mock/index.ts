@@ -29,14 +29,14 @@ import { diffNights } from '@/lib/utils/format';
 import { quoteFromNightly } from '@/lib/pricing';
 import { todayISO } from '@/stores/search';
 
-// Matches the backend's OTP_FIXED_CODE convention for staging, so the same code
-// works whether you're pointed at the local mock or a staging backend.
-const MOCK_OTP = process.env.NEXT_PUBLIC_MOCK_OTP ?? '111222';
+/**
+ * The mock has no code of its own: any six digits sign in, for a phone and
+ * for an email alike. Nothing is protected here, and a code written down in
+ * this repo is exactly what must not exist. Anything that is not six digits
+ * is still refused — the real form never sends it.
+ */
+const isSixDigits = (code: string) => /^\d{6}$/.test(code);
 
-// The real backend uses the SAME fixed code for phone and email OTP on
-// staging (confirmed in NEXTJS-EMAIL-VERIFICATION.md §1), so the mock
-// mirrors that instead of using a separate value.
-const MOCK_EMAIL_OTP = MOCK_OTP;
 const EMAIL_RESEND_COOLDOWN_SECONDS = 60;
 const EMAIL_MAX_ATTEMPTS = 5;
 
@@ -202,9 +202,6 @@ const fail = (msg: string) => Promise.reject(new Error(msg));
 const failCode = (status: number, code: string, retryAfter?: number, remainingAttempts?: number): Promise<never> =>
   Promise.reject(new ApiError(status, ERROR_CODE_MESSAGES[code] ?? code, code, retryAfter, remainingAttempts));
 
-/** For tests: no response hands the code back, here or on the real API. */
-export { MOCK_OTP };
-
 /**
  * The one number the mock's SMS provider cannot reach. Every request that texts
  * it a code fails as the backend reports it: 503 SMS_SEND_FAILED with the
@@ -262,7 +259,7 @@ export const mockApi = {
     requestOtp: async (phone: string) => (phone === MOCK_SMS_FAILS_FOR ? smsSendFailed() : ok({ sent: true as const })),
 
     verifyOtp: async (phone: string, code: string) => {
-      if (code !== MOCK_OTP) return fail('رمز التحقق غير صحيح');
+      if (!isSixDigits(code)) return fail('رمز التحقق غير صحيح');
       currentUser = { ...MOCK_CURRENT_USER, phone };
       return ok({
         user: currentUser,
@@ -661,7 +658,7 @@ export const mockApi = {
     verifyEmail: async (code: string) => {
       if (!pendingEmail) return failCode(422, 'OTP_EXPIRED');
       if (emailAttempts >= EMAIL_MAX_ATTEMPTS) return failCode(422, 'OTP_MAX_ATTEMPTS');
-      if (code !== MOCK_EMAIL_OTP) {
+      if (!isSixDigits(code)) {
         emailAttempts += 1;
         if (emailAttempts >= EMAIL_MAX_ATTEMPTS) return failCode(422, 'OTP_MAX_ATTEMPTS');
         return failCode(422, 'OTP_INVALID', undefined, EMAIL_MAX_ATTEMPTS - emailAttempts);
