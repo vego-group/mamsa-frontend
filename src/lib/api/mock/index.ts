@@ -30,9 +30,8 @@ import { quoteFromNightly } from '@/lib/pricing';
 import { todayISO } from '@/stores/search';
 
 // Matches the backend's OTP_FIXED_CODE convention for staging, so the same code
-// works whether you're pointed at the local mock or a staging backend. Exported
-// for tests: no response hands the code back, here or on the real API.
-export const MOCK_OTP = process.env.NEXT_PUBLIC_MOCK_OTP ?? '111222';
+// works whether you're pointed at the local mock or a staging backend.
+const MOCK_OTP = process.env.NEXT_PUBLIC_MOCK_OTP ?? '111222';
 
 // The real backend uses the SAME fixed code for phone and email OTP on
 // staging (confirmed in NEXTJS-EMAIL-VERIFICATION.md §1), so the mock
@@ -202,6 +201,9 @@ const ok = <T>(value: T) => Promise.resolve(value);
 const fail = (msg: string) => Promise.reject(new Error(msg));
 const failCode = (status: number, code: string, retryAfter?: number, remainingAttempts?: number): Promise<never> =>
   Promise.reject(new ApiError(status, ERROR_CODE_MESSAGES[code] ?? code, code, retryAfter, remainingAttempts));
+
+/** For tests: no response hands the code back, here or on the real API. */
+export { MOCK_OTP };
 
 /**
  * The one number the mock's SMS provider cannot reach. Every request that texts
