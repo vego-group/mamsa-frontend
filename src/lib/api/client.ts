@@ -59,10 +59,11 @@ const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
 const DEV_PROXY_PATH = '/api/backend';
 
 /**
- * In local development the browser cannot reach the API directly: its CORS
- * allowlist holds only the production origins, so every client-side call is
- * blocked on any localhost port and surfaces as an opaque `TypeError: Failed to
- * fetch` (see docs/backend/mamsa-cors-localhost-task.md). Browser traffic
+ * In local development the browser cannot reach the production API directly:
+ * its CORS allowlist holds only the production origins, so every client-side
+ * call is blocked on any localhost port and surfaces as an opaque `TypeError:
+ * Failed to fetch`. Only the backend adding localhost to that allowlist fixes it
+ * (staging has, production had not as of 2026-10-09). Browser traffic
  * therefore goes through the Next dev server, which proxies it — same origin,
  * no preflight. Server-side calls keep the absolute URL: they are not subject
  * to CORS, and a relative path has nothing to resolve against there.
