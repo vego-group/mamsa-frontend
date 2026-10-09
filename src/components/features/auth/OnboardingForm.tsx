@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { FileText, Loader2, Upload, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils/cn';
+import { isSmsSendFailure } from '@/lib/api/errors';
 
 export type PartnerType = 'individual' | 'company';
 
@@ -84,6 +85,7 @@ export function OnboardingForm({
   onSubmit,
 }: OnboardingFormProps) {
   const t = useTranslations('partnerOnboarding.form');
+  const tc = useTranslations('common');
   const [touched, setTouched] = useState<{
     name?: boolean;
     phone?: boolean;
@@ -93,6 +95,8 @@ export function OnboardingForm({
   }>({});
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  // The last send failed at the SMS provider: the button reads "retry" and stays live.
+  const [sendFailed, setSendFailed] = useState(false);
 
   const isCompany = partnerType === 'company';
   const nameValid = name.trim().length >= 3;
@@ -117,12 +121,16 @@ export function OnboardingForm({
     e.preventDefault();
     setTouched({ name: true, phone: true, email: true, id: true, idFile: true });
     setServerError(null);
+    setSendFailed(false);
     if (!formValid) return;
     setSubmitting(true);
     try {
       await onSubmit();
     } catch (err) {
       setServerError(err instanceof Error ? err.message : t('sendError'));
+      // The SMS provider failed: the attempt cost no quota and started no
+      // cooldown, so the button offers a retry at once.
+      setSendFailed(isSmsSendFailure(err));
     } finally {
       setSubmitting(false);
     }
@@ -277,7 +285,7 @@ export function OnboardingForm({
               : 'cursor-not-allowed border border-brand-border bg-brand-cream/70 text-brand-muted',
           )}
         >
-          {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : t('sendCode')}
+          {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : sendFailed ? tc('retry') : t('sendCode')}
         </button>
       </div>
     </form>

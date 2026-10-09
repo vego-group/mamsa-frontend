@@ -273,14 +273,17 @@ interface RawAuthResult {
 }
 
 /**
- * Shape returned whenever an OTP is (re)dispatched. `debugOtp` is only ever
- * present in non-production backend environments — the UI shows it verbatim
- * when set and hides it otherwise, so no environment flag is needed here.
+ * All a screen learns from sending a code: that it went out. Everything else in
+ * the response is dropped here on purpose — staging can add test-only fields
+ * that production never sends, and no screen may come to depend on one. A send
+ * that failed throws instead (e.g. 503 SMS_SEND_FAILED, which costs the guest
+ * no quota and no cooldown).
  */
 interface OtpDispatch {
   sent: true;
-  debugOtp?: string;
 }
+
+const otpSent = (): OtpDispatch => ({ sent: true });
 
 /**
  * `intent` tells the backend which flow this is, so it can reject early
@@ -295,11 +298,11 @@ type OtpIntent = 'login' | 'register';
 export const authApi = {
   requestOtp: (phone: string, intent?: OtpIntent): Promise<OtpDispatch> =>
     USE_MOCK
-      ? withLatency(mockApi.auth.requestOtp(phone))
-      : http<{ debug_otp?: string } | null>('/auth/request-otp', {
+      ? withLatency(mockApi.auth.requestOtp(phone)).then(otpSent)
+      : http<unknown>('/auth/request-otp', {
           method: 'POST',
           body: JSON.stringify(intent ? { phone, intent } : { phone }),
-        }).then((d) => ({ sent: true, debugOtp: d?.debug_otp })),
+        }).then(otpSent),
 
   verifyOtp: (phone: string, code: string) =>
     USE_MOCK
@@ -316,20 +319,20 @@ export const authApi = {
 
   resendOtp: (phone: string, intent?: OtpIntent): Promise<OtpDispatch> =>
     USE_MOCK
-      ? withLatency(mockApi.auth.requestOtp(phone))
-      : http<{ debug_otp?: string } | null>('/auth/resend-otp', {
+      ? withLatency(mockApi.auth.requestOtp(phone)).then(otpSent)
+      : http<unknown>('/auth/resend-otp', {
           method: 'POST',
           body: JSON.stringify(intent ? { phone, intent } : { phone }),
-        }).then((d) => ({ sent: true, debugOtp: d?.debug_otp })),
+        }).then(otpSent),
 
   /** OTP-only registration just triggers the OTP; profile is completed after verify. */
   register: (data: { firstName: string; lastName: string; email: string; phone: string }): Promise<OtpDispatch> =>
     USE_MOCK
-      ? withLatency(mockApi.auth.register(data))
-      : http<{ debug_otp?: string } | null>('/auth/request-otp', {
+      ? withLatency(mockApi.auth.register(data)).then(otpSent)
+      : http<unknown>('/auth/request-otp', {
           method: 'POST',
           body: JSON.stringify({ phone: data.phone, intent: 'register' }),
-        }).then((d) => ({ sent: true, debugOtp: d?.debug_otp })),
+        }).then(otpSent),
 
   /**
    * Partner sign-up: verifies the phone OTP and creates a pending partner account.
@@ -1183,11 +1186,11 @@ export const accountApi = {
   /** Step 1: request an OTP to the new phone number. */
   changePhone: (newPhone: string): Promise<OtpDispatch> =>
     USE_MOCK
-      ? withLatency(mockApi.account.changePhone(newPhone))
-      : http<{ debug_otp?: string } | null>('/user/change-phone', {
+      ? withLatency(mockApi.account.changePhone(newPhone)).then(otpSent)
+      : http<unknown>('/user/change-phone', {
           method: 'POST',
           body: JSON.stringify({ new_phone: newPhone }),
-        }).then((d) => ({ sent: true, debugOtp: d?.debug_otp })),
+        }).then(otpSent),
 
   /** Step 2: verify the OTP and switch the phone. */
   verifyChangePhone: (newPhone: string, code: string) =>

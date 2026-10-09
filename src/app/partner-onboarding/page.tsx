@@ -39,7 +39,6 @@ export default function PartnerOnboardingPage() {
   const [crNumber, setCrNumber] = useState('');
   const [crFile, setCrFile] = useState<File | null>(null);
   const [crFileError, setCrFileError] = useState<string | null>(null);
-  const [debugOtp, setDebugOtp] = useState<string | undefined>();
 
   // Normalised +9665XXXXXXXX, or null when invalid.
   const e164 = normalizeSaudiPhone(phone);
@@ -47,8 +46,7 @@ export default function PartnerOnboardingPage() {
   const phone05 = e164 ? `0${e164.slice(4)}` : '';
 
   const handleProfileSubmit = async () => {
-    const res = await authApi.requestOtp(phone05);
-    setDebugOtp(res.debugOtp);
+    await authApi.requestOtp(phone05);
     setStep('otp');
   };
 
@@ -149,7 +147,6 @@ export default function PartnerOnboardingPage() {
                 <OtpVerificationForm
                   variant="onboarding"
                   displayPhone={phone}
-                  debugOtp={debugOtp}
                   onSubmit={handleVerify}
                   onResend={() => authApi.resendOtp(phone05)}
                 />

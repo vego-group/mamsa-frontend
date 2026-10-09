@@ -13,6 +13,7 @@ import { PhoneInput } from '@/components/ui/phone-input';
 import { Badge } from '@/components/ui/badge';
 import { useAuthStore } from '@/stores/auth';
 import { accountApi } from '@/lib/api/client';
+import { isSmsSendFailure } from '@/lib/api/errors';
 import { makeChangePhoneSchema, type ChangePhoneValues } from '@/lib/validation/schemas';
 import { formatPhoneDisplay, normalizeSaudiPhone, toSaudiLocal } from '@/lib/utils/phone';
 import { OtpVerificationForm } from '@/components/features/auth/OtpVerificationForm';
@@ -24,7 +25,8 @@ export default function ChangePhonePage() {
   const { user, updateUser } = useAuthStore();
   const [step, setStep] = useState<'form' | 'otp'>('form');
   const [newPhone, setNewPhone] = useState('');
-  const [debugOtp, setDebugOtp] = useState<string | undefined>();
+  // The last send failed at the SMS provider: the button reads "retry" and stays live.
+  const [sendFailed, setSendFailed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -38,15 +40,18 @@ export default function ChangePhonePage() {
   const onSubmit = async (values: ChangePhoneValues) => {
     setSubmitting(true);
     setError(null);
+    setSendFailed(false);
     try {
       const e164 = normalizeSaudiPhone(values.newPhone)!;
       // Backend expects the local 05XXXXXXXX form; sends the OTP to the new number.
-      const res = await accountApi.changePhone(toSaudiLocal(e164)!);
+      await accountApi.changePhone(toSaudiLocal(e164)!);
       setNewPhone(e164); // keep E.164 in state for display/store
-      setDebugOtp(res.debugOtp);
       setStep('otp');
     } catch (e) {
       setError(e instanceof Error ? e.message : t('genericError'));
+      // The SMS provider failed: the attempt cost no quota and started no
+      // cooldown, so the button offers a retry at once.
+      setSendFailed(isSmsSendFailure(e));
     } finally {
       setSubmitting(false);
     }
@@ -112,13 +117,12 @@ export default function ChangePhonePage() {
             </div>
             {error && <p className="text-sm text-status-danger">{error}</p>}
             <Button type="submit" disabled={submitting}>
-              {submitting ? t('sending') : t('sendCode')}
+              {submitting ? t('sending') : sendFailed ? tc('retry') : t('sendCode')}
             </Button>
           </form>
         ) : (
           <OtpVerificationForm
             displayPhone={formatPhoneDisplay(newPhone)}
-            debugOtp={debugOtp}
             onSubmit={onVerify}
             onResend={() => accountApi.changePhone(toSaudiLocal(newPhone)!)}
             onBack={() => setStep('form')}

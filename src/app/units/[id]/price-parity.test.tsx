@@ -5,7 +5,7 @@ import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import arMessages from '../../../../messages/ar.json';
 import UnitDetailsPage from './unit-page-client';
-import { mockApi } from '@/lib/api/mock';
+import { MOCK_OTP, mockApi } from '@/lib/api/mock';
 import { formatSAR } from '@/lib/utils/format';
 
 /**
@@ -58,8 +58,8 @@ afterEach(() => {
 describe('Price parity — one number from search to tax invoice', () => {
   it('quote, booking, and invoice all report the same gross for the same stay', async () => {
     vi.useRealTimers(); // the mock API awaits real promises here
-    const { debugOtp } = await mockApi.auth.requestOtp('0500000000');
-    await mockApi.auth.verifyOtp('0500000000', debugOtp!);
+    await mockApi.auth.requestOtp('0500000000');
+    await mockApi.auth.verifyOtp('0500000000', MOCK_OTP);
 
     const checkInDate = '2026-09-10';
     const checkOutDate = '2026-09-12'; // 2 nights

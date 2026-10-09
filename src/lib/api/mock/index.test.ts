@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { mockApi } from './index';
+import { MOCK_OTP, mockApi } from './index';
 import { MOCK_UNITS, cardIdOf, findUnitById } from '@/data/mock/units';
 import { MOCK_BOOKINGS } from '@/data/mock/bookings';
 
 const UNIT_ID = 'U-001';
 
 async function login() {
-  const { debugOtp } = await mockApi.auth.requestOtp('0500000000');
-  await mockApi.auth.verifyOtp('0500000000', debugOtp!);
+  await mockApi.auth.requestOtp('0500000000');
+  await mockApi.auth.verifyOtp('0500000000', MOCK_OTP);
 }
 
 afterEach(async () => {
@@ -312,5 +312,32 @@ describe('fetching units by id — the favourites path', () => {
     expect(await unitsApi.byIds([])).toEqual([]);
     expect(spy).not.toHaveBeenCalled();
     spy.mockRestore();
+  });
+});
+
+/**
+ * The SMS provider failing, as the backend reports it: 503 SMS_SEND_FAILED and
+ * this exact copy (an em dash U+2014 with a space on each side, no full stop).
+ * The mock answers that way for one number, on every request that texts a code.
+ */
+describe('mock — the SMS provider failing', () => {
+  const FAILS_FOR = '0500000503';
+  const MESSAGE = 'تعذّر إرسال رمز التحقق — حاول مرة أخرى بعد قليل';
+
+  it('spells the copy exactly as the backend does', () => {
+    expect(MESSAGE).toContain(' \u2014 ');
+    expect(MESSAGE.endsWith('.')).toBe(false);
+  });
+
+  it.each([
+    ['requestOtp', () => mockApi.auth.requestOtp(FAILS_FOR)],
+    ['register', () => mockApi.auth.register({ firstName: 'فهد', lastName: 'يحيى', email: 'f@example.com', phone: FAILS_FOR })],
+    ['changePhone', () => mockApi.account.changePhone(FAILS_FOR)],
+  ])('%s answers 503 SMS_SEND_FAILED with the backend’s copy', async (_name, send) => {
+    await expect(send()).rejects.toMatchObject({ status: 503, code: 'SMS_SEND_FAILED', message: MESSAGE });
+  });
+
+  it('sends normally to any other number', async () => {
+    await expect(mockApi.auth.requestOtp('0500000504')).resolves.toMatchObject({ sent: true });
   });
 });

@@ -5,8 +5,8 @@
  *
  * Replaces the former OtpStep (login/register dialogs, change-phone page) and
  * OnboardingOtp (partner sign-up). The verification logic — digit boxes,
- * paste handling, auto-submit on completion, resend cooldown, live debug-OTP
- * hint — is identical everywhere; only the visual skin differs, selected via
+ * paste handling, auto-submit on completion, resend cooldown — is identical
+ * everywhere; only the visual skin differs, selected via
  * `variant`:
  *
  *  - "dialog"      square boxes, Button submit, back-link + resend row,
@@ -21,15 +21,14 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { OTP_CONFIG } from '@/lib/constants/brand';
 import { cn } from '@/lib/utils/cn';
-import { DebugOtpHint } from './DebugOtpHint';
+import { ApiError, isSmsSendFailure, resolveErrorMessage } from '@/lib/api/errors';
 
 interface OtpVerificationFormProps {
   /** Phone shown in the prompt (already formatted for display). */
   displayPhone: string;
-  /** Test code from the last dispatch (request/resend), shown via DebugOtpHint. */
-  debugOtp?: string;
   onSubmit: (code: string) => Promise<void>;
-  onResend: () => Promise<{ debugOtp?: string; cooldownSeconds?: number } | void>;
+  /** Sends a fresh code. A rejection is shown on the form — see handleResend. */
+  onResend: () => Promise<{ sent?: boolean; cooldownSeconds?: number } | void>;
   /** Renders the "change number" link (dialog variant only). */
   onBack?: () => void;
   /** Visual skin — see file header. Defaults to "dialog". */
@@ -57,7 +56,6 @@ interface OtpVerificationFormProps {
 
 export function OtpVerificationForm({
   displayPhone,
-  debugOtp,
   onSubmit,
   onResend,
   onBack,
@@ -71,12 +69,14 @@ export function OtpVerificationForm({
   resendCooldownText,
 }: OtpVerificationFormProps) {
   const t = useTranslations(variant === 'onboarding' ? 'auth.onboardingOtp' : 'auth.otp');
+  const tc = useTranslations('common');
   const [digits, setDigits] = useState<string[]>(() => Array(length).fill(''));
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(initialCooldownSeconds ?? cooldownSeconds);
-  // Seeded from the initial dispatch; refreshed locally whenever the user hits resend.
-  const [liveDebugOtp, setLiveDebugOtp] = useState(debugOtp);
+  const [resending, setResending] = useState(false);
+  // The last resend failed at the SMS provider: the button reads "retry" and stays live.
+  const [sendFailed, setSendFailed] = useState(false);
   const inputsRef = useRef<Array<HTMLInputElement | null>>([]);
 
   useEffect(() => {
@@ -131,14 +131,31 @@ export function OtpVerificationForm({
   };
 
   const handleResend = async () => {
-    if (cooldown > 0) return;
-    const result = await onResend();
-    if (result?.debugOtp) setLiveDebugOtp(result.debugOtp);
-    // Prefer the server's authoritative cooldown (e.g. resend_available_in,
-    // or retry_after on a 429) over the fixed default when it's given.
-    setCooldown(result?.cooldownSeconds ?? cooldownSeconds);
+    if (cooldown > 0 || resending) return;
+    setResending(true);
     setError(null);
+    try {
+      const result = await onResend();
+      setSendFailed(false);
+      // Prefer the server's authoritative cooldown (e.g. resend_available_in)
+      // over the fixed default when it's given.
+      setCooldown(result?.cooldownSeconds ?? cooldownSeconds);
+    } catch (e) {
+      // Stay on this step either way, with the server's own words.
+      setError(resolveErrorMessage(e, tc('loadFailed')));
+      if (isSmsSendFailure(e)) {
+        // Cost the guest nothing — no quota, no cooldown: retry is live at once.
+        setSendFailed(true);
+      } else if (e instanceof ApiError && e.retryAfter) {
+        // A rate limit says how long to wait; count that down.
+        setCooldown(e.retryAfter);
+      }
+    } finally {
+      setResending(false);
+    }
   };
+
+  const resendText = sendFailed ? tc('retry') : t('resend');
 
   const complete = digits.every((d) => d);
 
@@ -209,14 +226,12 @@ export function OtpVerificationForm({
           <button
             type="button"
             onClick={handleResend}
-            disabled={cooldown > 0}
+            disabled={cooldown > 0 || resending}
             className="font-bold text-brand-primary hover:underline disabled:cursor-not-allowed disabled:text-brand-muted disabled:no-underline"
           >
-            {cooldown > 0 ? t('resendWithCooldown', { seconds: cooldown }) : t('resend')}
+            {cooldown > 0 ? t('resendWithCooldown', { seconds: cooldown }) : resendText}
           </button>
         </p>
-
-        <DebugOtpHint code={liveDebugOtp} />
       </div>
     );
   }
@@ -261,14 +276,12 @@ export function OtpVerificationForm({
         <button
           type="button"
           onClick={handleResend}
-          disabled={cooldown > 0}
+          disabled={cooldown > 0 || resending}
           className="text-brand-primary disabled:cursor-not-allowed disabled:text-brand-muted"
         >
-          {cooldown > 0 ? (resendCooldownText ? resendCooldownText(cooldown) : t('resendIn', { seconds: cooldown })) : t('resend')}
+          {cooldown > 0 ? (resendCooldownText ? resendCooldownText(cooldown) : t('resendIn', { seconds: cooldown })) : resendText}
         </button>
       </div>
-
-      <DebugOtpHint code={liveDebugOtp} />
     </div>
   );
 }
