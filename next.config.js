@@ -21,13 +21,15 @@ const nextConfig = {
   // Apple Pay domain verification: Apple's crawler fetches this file and
   // rejects redirects or wrong content types. Any future middleware/rewrite
   // must keep /.well-known/* untouched.
-  // Local development only. The API's CORS allowlist holds just the production
-  // origins, so every browser call from localhost — any port — is blocked before
-  // it is sent and surfaces as an opaque `TypeError: Failed to fetch` (raised
-  // with the backend on 2026-08-17, see docs/backend/mamsa-cors-localhost-task.md,
-  // still open). Routing those calls through the Next server makes them
-  // same-origin, so CORS never enters the picture. Deployed builds are untouched:
-  // this rewrite is not emitted for them, and the browser talks to the API direct.
+  // Local development only. The production API's CORS allowlist holds just the
+  // production origins, so every browser call from localhost — any port — is
+  // blocked before it is sent and surfaces as an opaque `TypeError: Failed to
+  // fetch`. The real fix is the backend adding localhost to that allowlist (asked
+  // on 2026-08-17): as of 2026-10-09 staging allows localhost:3000 and :3001,
+  // production still does not. Routing those calls through the Next server
+  // makes them same-origin, so CORS never enters the picture. Deployed builds
+  // are untouched: this rewrite is not emitted for them, and the browser talks
+  // to the API direct.
   async rewrites() {
     if (process.env.NODE_ENV !== 'development') return [];
     const api = process.env.NEXT_PUBLIC_API_BASE_URL;
