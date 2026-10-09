@@ -42,6 +42,16 @@ export const ERROR_CODE_MESSAGES: Record<string, string> = {
   BOOKING_EXCEEDS_PERMIT_VALIDITY: 'هذه الوحدة غير متاحة للتواريخ المختارة. جرّب تواريخ أقرب.',
 };
 
+/**
+ * The SMS provider failed to send a code (503 SMS_SEND_FAILED). Unlike every
+ * other refusal on the send path it costs the guest nothing — no daily quota,
+ * no cooldown — so a screen shows the server's own message (it is deliberately
+ * not in ERROR_CODE_MESSAGES) and offers an immediate retry, never a countdown.
+ */
+export function isSmsSendFailure(e: unknown): e is ApiError {
+  return e instanceof ApiError && e.code === 'SMS_SEND_FAILED';
+}
+
 /** Resolves a caught error to Arabic display text, preferring the code-based lookup over raw `message`. */
 export function resolveErrorMessage(e: unknown, fallback: string): string {
   if (e instanceof ApiError && e.code) {

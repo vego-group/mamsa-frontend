@@ -20,6 +20,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 const messages = {
+  common: { retry: 'إعادة المحاولة', loadFailed: 'تعذّر تحميل البيانات' },
   partnerOnboarding: {
     agreeTo: 'بالمتابعة، فإنك توافق على',
     terms: 'الشروط',
@@ -311,5 +312,28 @@ describe('Company sign-up — commercial registration scan', () => {
 
     expect(await screen.findByText('صيغة الملف غير مدعومة (jpg, png, pdf).')).toBeTruthy();
     expect(screen.getByText('إنشاء حساب شريك جديد')).toBeTruthy();
+  });
+});
+
+/**
+ * The SMS provider failing on the first code: 503 SMS_SEND_FAILED costs the
+ * partner no quota and no cooldown, so the form shows the server's words, keeps
+ * everything typed, and its button becomes a live "إعادة المحاولة".
+ * (On the mock, whose SMS provider fails for one number.)
+ */
+describe('Partner sign-up — the SMS provider fails', () => {
+  it('shows the server’s words and an immediate retry on the form', async () => {
+    renderPage();
+    fillIdentityFields();
+    fireEvent.change(screen.getByPlaceholderText('5XXXXXXXX'), { target: { value: '500000503' } });
+    attach(fakeFile('id.jpg', 'image/jpeg', 400_000));
+    await waitFor(() => expect(submitButton().disabled).toBe(false));
+    fireEvent.click(submitButton());
+
+    expect(await screen.findByText('تعذّر إرسال رمز التحقق — حاول مرة أخرى بعد قليل')).toBeTruthy();
+    const retry = screen.getByRole('button', { name: 'إعادة المحاولة' }) as HTMLButtonElement;
+    expect(retry.disabled).toBe(false);
+    expect((screen.getByPlaceholderText('مثال : فهد') as HTMLInputElement).value).toBe('فهد يحيى');
+    expect(screen.queryByText('تحقق من جوالك')).toBeNull();
   });
 });

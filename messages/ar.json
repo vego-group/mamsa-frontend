@@ -429,9 +429,6 @@
       "didNotReceive": "لم تستلم الرمز ؟",
       "resendWithCooldown": "اعاده ارسال الرمز ({seconds})",
       "resend": "اعاده ارسال الرمز"
-    },
-    "debugOtp": {
-      "label": "رمز الاختبار (بيئة التطوير):"
     }
   },
   "validation": {

@@ -8,6 +8,7 @@ import { useTranslations } from 'next-intl';
 import { useUiStore } from '@/stores/ui';
 import { useAuthStore } from '@/stores/auth';
 import { authApi, ApiError } from '@/lib/api/client';
+import { isSmsSendFailure } from '@/lib/api/errors';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -24,7 +25,8 @@ export function LoginDialog() {
   const isOpen = authDialog === 'login';
   const [step, setStep] = useState<'phone' | 'otp' | 'not-registered'>('phone');
   const [phone, setPhone] = useState('');
-  const [debugOtp, setDebugOtp] = useState<string | undefined>();
+  // The last send failed at the SMS provider: the button reads "retry" and stays live.
+  const [sendFailed, setSendFailed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
@@ -54,25 +56,32 @@ export function LoginDialog() {
     setStep('phone');
     setError(null);
     setCooldown(0);
-    setDebugOtp(undefined);
+    setSendFailed(false);
     form.reset();
   };
 
   const onSubmitPhone = async (values: LoginFormValues) => {
     setSubmitting(true);
     setError(null);
+    setSendFailed(false);
     const normalized = normalizeSaudiPhone(values.phone)!;
     try {
       // intent="login": the backend rejects unregistered numbers here, before
       // sending any OTP or creating a user row.
-      const res = await authApi.requestOtp(toSaudiLocal(normalized)!, 'login');
+      await authApi.requestOtp(toSaudiLocal(normalized)!, 'login');
       setPhone(normalized); // E.164 for display
-      setDebugOtp(res.debugOtp);
       setStep('otp');
     } catch (e) {
       if (e instanceof ApiError && e.code === 'PHONE_NOT_REGISTERED') {
         setPhone(normalized);
         setStep('not-registered');
+        return;
+      }
+      // The SMS provider failed: the server's words, and a retry that is live at
+      // once — the attempt cost no quota and started no cooldown.
+      if (isSmsSendFailure(e)) {
+        setError(e.message);
+        setSendFailed(true);
         return;
       }
       const msg = e instanceof Error ? e.message : t('genericError');
@@ -137,6 +146,8 @@ export function LoginDialog() {
                   ? t('resendIn', { seconds: cooldown })
                   : submitting
                   ? tc('loading')
+                  : sendFailed
+                  ? tc('retry')
                   : t('sendCode')}
               </Button>
               <p className="text-center text-xs text-brand-muted">
@@ -156,7 +167,6 @@ export function LoginDialog() {
         {step === 'otp' && (
           <OtpVerificationForm
             displayPhone={formatPhoneDisplay(phone)}
-            debugOtp={debugOtp}
             onSubmit={onVerifyOtp}
             onResend={() => authApi.resendOtp(toSaudiLocal(phone)!, 'login')}
             onBack={() => setStep('phone')}

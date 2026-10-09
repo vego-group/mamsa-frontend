@@ -8,7 +8,7 @@ import { render, cleanup, act } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import arMessages from '../../../../../messages/ar.json';
 import ConfirmationPage from './page';
-import { mockApi } from '@/lib/api/mock';
+import { MOCK_OTP, mockApi } from '@/lib/api/mock';
 import { findUnitById } from '@/data/mock/units';
 
 let bookingId = '';
@@ -42,8 +42,8 @@ function book(unitId: string, checkInDate: string, checkOutDate: string) {
 }
 
 beforeEach(async () => {
-  const { debugOtp } = await mockApi.auth.requestOtp('0500000000');
-  await mockApi.auth.verifyOtp('0500000000', debugOtp!);
+  await mockApi.auth.requestOtp('0500000000');
+  await mockApi.auth.verifyOtp('0500000000', MOCK_OTP);
 });
 
 afterEach(async () => {
