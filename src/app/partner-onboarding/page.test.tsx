@@ -337,3 +337,75 @@ describe('Partner sign-up — the SMS provider fails', () => {
     expect(screen.queryByText('تحقق من جوالك')).toBeNull();
   });
 });
+
+/**
+ * The code step must not blame the code for what is not the code. Measured on
+ * staging: a wrong code answers 422 with the error on the `code` field; a
+ * missing scan answers 422 on `national_id_file`. A scan goes back to the form
+ * (above); a wrong code keeps the generic copy; anything else shows the
+ * server's own words, and the partner stays on the code step with what they
+ * typed. Both error shapes count — the backend is moving from `errors` to
+ * `fields`.
+ */
+describe('Partner sign-up — what the code step says when registration fails', () => {
+  const refuse = (body: unknown, status = 422) =>
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } }),
+    );
+
+  async function reachCodeStepAndEnter() {
+    renderPage();
+    fillIdentityFields();
+    attach(fakeFile('id.jpg', 'image/jpeg', 400_000));
+    await waitFor(() => expect(submitButton().disabled).toBe(false));
+    fireEvent.click(submitButton());
+    await enterOtp('482913');
+  }
+
+  const codeBoxes = () => screen.getAllByRole('textbox') as HTMLInputElement[];
+
+  it('returns to the form for a scan error in the new shape too', async () => {
+    refuse({
+      success: false,
+      message: 'صورة الهوية الوطنية مطلوبة.',
+      code: 'VALIDATION',
+      fields: { national_id_file: ['صورة الهوية الوطنية مطلوبة.'] },
+    });
+    await reachCodeStepAndEnter();
+    expect(await screen.findByText('صورة الهوية الوطنية مطلوبة.')).toBeTruthy();
+    expect(screen.getByText('إنشاء حساب شريك جديد')).toBeTruthy();
+  });
+
+  it.each([
+    ['old', { message: 'رمز غير صحيح. المحاولات المتبقية: 2', errors: { code: ['رمز غير صحيح. المحاولات المتبقية: 2'] } }],
+    ['new', { success: false, message: 'رمز غير صحيح. المحاولات المتبقية: 2', code: 'VALIDATION', fields: { code: ['رمز غير صحيح. المحاولات المتبقية: 2'] } }],
+  ])('keeps the generic copy for a wrong code (%s shape)', async (_shape, body) => {
+    refuse(body);
+    await reachCodeStepAndEnter();
+    expect(await screen.findByText('رمز خاطئ')).toBeTruthy();
+    expect(codeBoxes().every((box) => box.value === '')).toBe(true);
+    expect(codeBoxes()[0]!.getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it.each([
+    ['old', { message: 'The email has already been taken.', errors: { email: ['The email has already been taken.'] } }],
+    ['new', { success: false, message: 'البريد الإلكتروني مستخدم بالفعل.', code: 'VALIDATION', fields: { email: ['البريد الإلكتروني مستخدم بالفعل.'] } }],
+  ])('shows the server’s words for any other error, and keeps the partner on the code step (%s shape)', async (_shape, body) => {
+    refuse(body);
+    await reachCodeStepAndEnter();
+    const words = (body as { message: string }).message;
+    expect(await screen.findByText(words)).toBeTruthy();
+    expect(screen.queryByText('رمز خاطئ')).toBeNull();
+    expect(screen.getByText('تحقق من جوالك')).toBeTruthy();
+    // The code itself was never the problem: kept, and not marked wrong.
+    expect(codeBoxes().map((box) => box.value).join('')).toBe('482913');
+    expect(codeBoxes()[0]!.getAttribute('aria-invalid')).toBeNull();
+  });
+
+  it('says the connection failed when there is no answer at all, not that the code is wrong', async () => {
+    fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
+    await reachCodeStepAndEnter();
+    expect(await screen.findByText('تعذّر تحميل البيانات')).toBeTruthy();
+    expect(screen.queryByText('رمز خاطئ')).toBeNull();
+  });
+});

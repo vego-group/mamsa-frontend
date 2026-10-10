@@ -11,9 +11,10 @@
  *
  *  - "dialog"      square boxes, Button submit, back-link + resend row,
  *                  shows the server's error message on failure.
- *  - "onboarding"  round boxes that turn red on error, pill submit button
- *                  with spinner, "didn't receive?" resend line, generic
- *                  wrong-code error.
+ *  - "onboarding"  round boxes that turn red when the code is refused, pill
+ *                  submit button with spinner, "didn't receive?" resend line;
+ *                  generic wrong-code copy for a refused code, the server's
+ *                  own words for any other failure.
  */
 import { useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
@@ -21,7 +22,7 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { OTP_CONFIG } from '@/lib/constants/brand';
 import { cn } from '@/lib/utils/cn';
-import { ApiError, isSmsSendFailure, resolveErrorMessage } from '@/lib/api/errors';
+import { ApiError, isOtpCodeError, isSmsSendFailure, resolveErrorMessage } from '@/lib/api/errors';
 
 interface OtpVerificationFormProps {
   /** Phone shown in the prompt (already formatted for display). */
@@ -73,6 +74,8 @@ export function OtpVerificationForm({
   const [digits, setDigits] = useState<string[]>(() => Array(length).fill(''));
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The server refused the code itself (not something else at this step).
+  const [codeRejected, setCodeRejected] = useState(false);
   const [cooldown, setCooldown] = useState(initialCooldownSeconds ?? cooldownSeconds);
   const [resending, setResending] = useState(false);
   // The last resend failed at the SMS provider: the button reads "retry" and stays live.
@@ -94,13 +97,26 @@ export function OtpVerificationForm({
   const submit = async (code: string) => {
     setSubmitting(true);
     setError(null);
+    setCodeRejected(false);
     try {
       await onSubmit(code);
     } catch (e) {
-      // Dialog flows surface the server's message; onboarding keeps it generic.
-      setError(variant === 'dialog' && e instanceof Error ? e.message : t('wrongCode'));
-      setDigits(Array(length).fill(''));
-      inputsRef.current[0]?.focus();
+      if (variant === 'dialog') {
+        // Dialog flows surface the server's message and start the code afresh.
+        setError(e instanceof Error ? e.message : t('wrongCode'));
+        setDigits(Array(length).fill(''));
+        inputsRef.current[0]?.focus();
+      } else if (isOtpCodeError(e)) {
+        // The code itself was refused: the generic copy, and a fresh start.
+        setCodeRejected(true);
+        setError(t('wrongCode'));
+        setDigits(Array(length).fill(''));
+        inputsRef.current[0]?.focus();
+      } else {
+        // Not the code's fault — never say it is. The server's own words (or
+        // a connection failure), and the code stays as typed.
+        setError(e instanceof ApiError ? resolveErrorMessage(e, tc('loadFailed')) : tc('loadFailed'));
+      }
     } finally {
       setSubmitting(false);
     }
@@ -134,6 +150,7 @@ export function OtpVerificationForm({
     if (cooldown > 0 || resending) return;
     setResending(true);
     setError(null);
+    setCodeRejected(false);
     try {
       const result = await onResend();
       setSendFailed(false);
@@ -174,11 +191,12 @@ export function OtpVerificationForm({
           onChange={(e) => handleChange(i, e.target.value)}
           onKeyDown={(e) => handleKeyDown(i, e)}
           onPaste={handlePaste}
+          aria-invalid={codeRejected || undefined}
           className={
             variant === 'onboarding'
               ? cn(
                   'h-14 w-14 rounded-full border text-center text-lg font-semibold text-brand-ink transition focus:outline-none focus:ring-2',
-                  error
+                  codeRejected
                     ? 'border-status-danger text-status-danger focus:ring-status-danger/20'
                     : 'border-brand-border focus:border-brand-primary focus:ring-brand-primary/20',
                 )

@@ -52,6 +52,19 @@ export function isSmsSendFailure(e: unknown): e is ApiError {
   return e instanceof ApiError && e.code === 'SMS_SEND_FAILED';
 }
 
+/**
+ * The OTP itself was refused — wrong, expired, or out of attempts. On the phone
+ * flows the API answers a wrong code with a validation error on the `code` field
+ * (measured on staging, 2026-10-10); the email flow names it with an OTP_* code.
+ * Anything else that fails at a code step is not the code's fault, and must not
+ * be shown as if it were.
+ */
+const OTP_CODES = new Set(['OTP_INVALID', 'OTP_EXPIRED', 'OTP_MAX_ATTEMPTS']);
+
+export function isOtpCodeError(e: unknown): e is ApiError {
+  return e instanceof ApiError && (Boolean(e.fields?.code?.length) || (e.code != null && OTP_CODES.has(e.code)));
+}
+
 /** Resolves a caught error to Arabic display text, preferring the code-based lookup over raw `message`. */
 export function resolveErrorMessage(e: unknown, fallback: string): string {
   if (e instanceof ApiError && e.code) {
