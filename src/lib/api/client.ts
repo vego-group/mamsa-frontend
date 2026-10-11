@@ -190,8 +190,6 @@ async function http<T>(
     headers: {
       Accept: 'application/json',
       ...(isMultipart ? {} : { 'Content-Type': 'application/json' }),
-      // Skip the ngrok browser-warning interstitial (harmless on a real domain).
-      'ngrok-skip-browser-warning': '1',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(init.headers ?? {}),
     },
