@@ -217,17 +217,21 @@ async function http<T>(
       const body = (await res.json()) as {
         message?: string;
         code?: string;
+        fields?: Record<string, string[]>;
         errors?: Record<string, string[]>;
         retry_after?: number;
         remaining_attempts?: number;
       };
-      message =
-        body.message ??
-        (body.errors ? Object.values(body.errors).flat()[0] ?? message : message);
+      // TEMPORARY BRIDGE — remove `?? body.errors` once the backend's unified
+      // error shape is live on every environment. The backend is replacing
+      // Laravel's `{ message, errors }` with `{ success, message, code, fields }`
+      // across /api/v1; reading the new key first and the old one as a fallback
+      // lets either side ship first. Not a design: only `fields` should remain.
+      fields = body.fields ?? body.errors;
+      message = body.message ?? (fields ? Object.values(fields).flat()[0] ?? message : message);
       code = body.code;
       retryAfter = body.retry_after;
       remainingAttempts = body.remaining_attempts;
-      fields = body.errors;
     } catch {
       /* non-JSON error body */
     }
