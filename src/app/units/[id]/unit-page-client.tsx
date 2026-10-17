@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
-  Heart, Share2, Star, ChevronLeft, MapPin, Users, BedDouble, Bath, DoorOpen,
+  Heart, Star, ChevronLeft, MapPin, Users, BedDouble, Bath, DoorOpen,
   Home as HomeIcon, Wifi, Snowflake, Car, Waves, UtensilsCrossed, Tv, Trees,
   ShieldCheck, KeyRound, WashingMachine, Clock, BadgeCheck, Baby, Flame,
   ArrowUpDown, Umbrella, PartyPopper, X, type LucideIcon,
@@ -428,9 +428,6 @@ function UnitDetailsView({ initialUnit, serverReviews }: UnitDetailsProps) {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm">
-            <Share2 className="h-4 w-4" /> {t('share')}
-          </Button>
           <Button variant="ghost" size="sm" onClick={() => toggle(unit.id)}>
             <Heart className={cn('h-4 w-4', isFav && 'fill-status-danger text-status-danger')} />
             {isFav ? t('saved') : t('save')}
