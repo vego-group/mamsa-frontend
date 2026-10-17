@@ -44,11 +44,7 @@ async function get<T>(path: string): Promise<T> {
   let res: Response;
   try {
     res = await fetch(`${baseUrl}${path}`, {
-      headers: {
-        Accept: 'application/json',
-        // Skip the ngrok browser-warning interstitial (harmless on a real domain).
-        'ngrok-skip-browser-warning': '1',
-      },
+      headers: { Accept: 'application/json' },
       cache: 'no-store',
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
